@@ -1,6 +1,7 @@
-"""Jenkins-side execution of the mechanical merge-conflict fix.
+"""Jenkins-side execution of the merge-conflict fix.
 
-Rebases the current branch onto its base, polls the resulting PR's
+Rebases the current branch onto its base - git-only first, then the LLM
+rebase on conflict / rebase_failed - polls the resulting PR's
 ``mergeable_state`` until it settles, and transitions the workflow label
 accordingly. Runs inside the Jenkins job's own checkout, dispatched from
 ``status-71:merge-conflict`` via the ``fix-conflict`` CLI verb.
@@ -15,11 +16,7 @@ from mcp_coder.workflow_steps.merge import (
     resolve_merge_issue_number,
     run_auto_merge,
 )
-from mcp_coder.workflow_steps.rebase import (
-    RebaseOutcome,
-    _attempt_rebase_and_push,
-    _poll_mergeable_state,
-)
+from mcp_coder.workflow_steps.rebase import RebaseOutcome, _poll_mergeable_state
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
@@ -27,6 +24,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     run_guarded,
 )
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
+from mcp_coder.workflows.rebase_automated import rebase_with_llm_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +41,7 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
         ("Reason", None if outcome.ok else outcome.reason),
         ("Base", outcome.base_branch),
         (files_label, ", ".join(outcome.files) if outcome.files else None),
+        ("LLM rebase", outcome.llm_detail),
     ]
     comment = build_failure_comment(
         project_dir, title="Fix Conflict", kind="Failed", fields=fields
@@ -61,12 +60,26 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
     )
 
 
-def run_fix_conflict_workflow(project_dir: Path, auto_merge: bool = False) -> int:
+def run_fix_conflict_workflow(
+    project_dir: Path,
+    provider: str,
+    mcp_config: str | None = None,
+    settings_override: str | None = None,
+    auto_merge: bool = False,
+) -> int:
     """Rebase the current branch and resolve the merge-conflict escalation.
 
     With ``auto_merge``, a resolved conflict hands over to the auto-merge
     helper instead of returning to status-10; its CI poll waits for CI on
     the rebased HEAD before merging.
+
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider for the fallback rebase session
+        mcp_config: MCP config path for the fallback rebase session
+        settings_override: Already-resolved settings path; None uses the
+            least-privilege rebase settings.
+        auto_merge: Hand a resolved conflict over to the auto-merge helper.
 
     Returns:
         0 on status-10: a settled non-dirty state, or "unknown" after a
@@ -87,7 +100,9 @@ def run_fix_conflict_workflow(project_dir: Path, auto_merge: bool = False) -> in
             logger.error("Could not determine current branch")
             return 1
 
-        outcome = _attempt_rebase_and_push(project_dir)
+        outcome = rebase_with_llm_fallback(
+            project_dir, provider, mcp_config, settings_override
+        )
         logger.info("Rebase attempt result: %s", outcome.reason)
 
         state = _poll_mergeable_state(project_dir, branch)

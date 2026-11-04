@@ -1,6 +1,14 @@
-"""Unit tests for the least-privilege REBASE_LLM_PERMISSIONS constant."""
+"""Unit tests for the least-privilege rebase permissions and settings file."""
 
-from mcp_coder.workflows.rebase_permissions import REBASE_LLM_PERMISSIONS
+import json
+from pathlib import Path
+
+import pytest
+
+from mcp_coder.workflows.rebase_permissions import (
+    REBASE_LLM_PERMISSIONS,
+    rebase_settings_file,
+)
 
 
 def test_allow_list_is_non_empty_list() -> None:
@@ -50,3 +58,46 @@ def test_allow_list_excludes_uv_lock() -> None:
     """Lockfile handling is out of scope for this repo."""
     allow = REBASE_LLM_PERMISSIONS["permissions"]["allow"]
     assert all("uv lock" not in entry for entry in allow)
+
+
+def test_allow_list_excludes_move_file() -> None:
+    """Conflict resolution edits in place; no move_file grant."""
+    allow = REBASE_LLM_PERMISSIONS["permissions"]["allow"]
+    assert "mcp__mcp-workspace__move_file" not in allow
+
+
+class TestRebaseSettingsFile:
+    """Test the rebase_settings_file context manager."""
+
+    def test_default_temp_file_exists_inside_block_and_is_removed(self) -> None:
+        """The temp file holds the constant inside the block and is gone after."""
+        with rebase_settings_file() as path:
+            settings_path = Path(path)
+            assert settings_path.is_absolute()
+            assert settings_path.suffix == ".json"
+            assert settings_path.exists()
+            with settings_path.open(encoding="utf-8") as handle:
+                assert json.load(handle) == REBASE_LLM_PERMISSIONS
+
+        assert not settings_path.exists()
+
+    def test_temp_file_removed_when_body_raises(self) -> None:
+        """The temp file is deleted even if the with-body raises."""
+        captured: list[Path] = []
+        with pytest.raises(RuntimeError, match="boom"):
+            with rebase_settings_file() as path:
+                captured.append(Path(path))
+                raise RuntimeError("boom")
+
+        assert len(captured) == 1
+        assert not captured[0].exists()
+
+    def test_override_yielded_unchanged_and_not_deleted(self, tmp_path: Path) -> None:
+        """An override path is passed through and left in place."""
+        override = tmp_path / "custom.json"
+        override.write_text("{}", encoding="utf-8")
+
+        with rebase_settings_file(str(override)) as path:
+            assert path == str(override)
+
+        assert override.exists()

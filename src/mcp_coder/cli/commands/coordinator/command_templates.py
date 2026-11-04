@@ -241,8 +241,10 @@ exit $RC
 FIX_CONFLICT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
 export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
-mcp-coder --log-level {log_level} fix-conflict --project-dir /workspace/repo
+which claude && claude --version
+mcp-coder --log-level {log_level} fix-conflict --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
 
@@ -485,9 +487,10 @@ if "%VIRTUAL_ENV%"=="" (
 )
 
 set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} fix-conflict --project-dir %WORKSPACE%\repo
+mcp-coder --log-level {log_level} fix-conflict --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
 echo RC=%RC%
 

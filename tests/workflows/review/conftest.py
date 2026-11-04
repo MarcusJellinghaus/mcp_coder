@@ -165,7 +165,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         return_value=RebaseOutcome("ok", "main", "abc1234")
     )
     monkeypatch.setattr(
-        steps, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push
+        steps, "rebase_with_llm_fallback", mocks.attempt_rebase_and_push
     )
     mocks.check_and_fix_ci = MagicMock(return_value=True)
     monkeypatch.setattr(steps, "check_and_fix_ci", mocks.check_and_fix_ci)

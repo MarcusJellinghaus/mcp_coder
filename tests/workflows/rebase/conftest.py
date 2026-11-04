@@ -17,6 +17,7 @@ from git import Repo
 from mcp_coder.workflow_steps import rebase as rebase_step_module
 from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows.rebase import (
+    RebaseRunResult,
     _check_pr_info_absent_on_base,
     _preflight,
     _rebase_success_shape,
@@ -168,7 +169,9 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         lambda _pd, files: "CONFLICT:" + ",".join(files),
     )
     monkeypatch.setattr(
-        rebase_module, "_build_regression_fix_prompt", lambda text: "FIX:" + text
+        rebase_module,
+        "_build_regression_fix_prompt",
+        lambda text, _markers=None: "FIX:" + text,
     )
 
     # Checks + formatter.
@@ -242,7 +245,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
 
-def _run(tmp_path: Path, base_branch: str | None = None) -> int:
+def _run(tmp_path: Path, base_branch: str | None = None) -> RebaseRunResult:
     return run_rebase_workflow(tmp_path, provider="claude", base_branch=base_branch)
 
 

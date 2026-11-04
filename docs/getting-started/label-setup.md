@@ -321,9 +321,9 @@ After a PR is created (`status-10:pr-created`), the coordinator checks it on eve
 | Label | Description |
 |-------|-------------|
 | `status-71:merge-conflict` | PR no longer mergeable; picked up by the bot for `fix-conflict` |
-| `status-72:fixing-merge-conflict` | Mechanical rebase in progress (auto/in-progress) |
+| `status-72:fixing-merge-conflict` | Rebase in progress to resolve merge conflict (auto/in-progress) |
 | `status-73:merge-conflict-failed` | The rebase job died without finishing (crash watchdog) — needs a human |
-| `status-74:pr-merge-conflict` | fix-conflict could not get the PR mergeable (conflict, rebase failed, or no open PR) — needs a human |
+| `status-74:pr-merge-conflict` | fix-conflict could not get the PR mergeable (the LLM rebase failed or the PR is still conflicting, or no open PR) — needs a human |
 | `status-81:failing-ci` | PR's CI is failing; picked up by the bot for `fix-ci` |
 | `status-82:fixing-ci` | CI auto-fix loop in progress (auto/in-progress) |
 | `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |

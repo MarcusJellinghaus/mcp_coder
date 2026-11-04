@@ -11,12 +11,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 # Deliberate in-body failures go through implement's `_fail` -> this handler.
 # (The SIGTERM / unexpected-exit net lives in run_guarded and is exercised in
-# test_core_workflow.py, not here.)
+# test_core_sigterm.py and test_core_workflow.py, not here.)
 _DELIBERATE_HANDLER = (
     "mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure"
 )
@@ -48,7 +49,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "timeout")
 
@@ -83,7 +84,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "mcp_unavailable")
 
@@ -118,7 +119,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_changes_after_retries")
 
@@ -153,7 +154,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(
             False, "no_progress_after_retries", "Step 2: Failure surface"
@@ -194,7 +195,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(
             False, "error", "Cannot read pr_info/TASK_TRACKER.md: file missing"
@@ -230,7 +231,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "error")
 
@@ -270,7 +271,7 @@ class TestBlockedRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(
             False, "blocked", "pytest times out at 300s"
@@ -308,7 +309,7 @@ class TestBlockedRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "blocked", "cannot verify")
 
@@ -340,7 +341,7 @@ class TestBlockedRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(
             False, "blocked", "mcp-tools-py pytest never returns"
@@ -378,7 +379,7 @@ class TestBlockedRouting:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "timeout", "why")
 

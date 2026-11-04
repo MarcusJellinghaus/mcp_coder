@@ -35,7 +35,7 @@ def test_reset_failure_reported_as_failed(
     patched.reset.return_value = _GIT_FAIL
 
     with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
-        assert _run(tmp_path) == 1
+        assert _run(tmp_path).exit_code == 1
 
     output = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
     aborted = [m for m in output if m.startswith("Aborted:")]
@@ -53,7 +53,7 @@ def test_reset_success_reported_as_restored(
     patched.push.return_value = {"success": False, "error": "stale info"}
 
     with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
-        assert _run(tmp_path) == 2
+        assert _run(tmp_path).exit_code == 2
 
     output = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
     assert "Aborted: force-push rejected; pre-rebase state restored" in output
@@ -67,7 +67,7 @@ def test_unknown_rebase_state_in_except_skips_reset_and_abort(
     patched.prompt.side_effect = LLMTimeoutError("no output for 600s")
     patched.mid_rebase.side_effect = ValueError("not a git repository")
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.reset.assert_not_called()
     patched.abort.assert_not_called()
 
@@ -78,7 +78,7 @@ def test_finally_does_not_abort_when_not_mid_rebase(
     """The finally net aborts only when ``is_rebase_in_progress`` is True."""
     patched.success_shape.return_value = False
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.abort.assert_not_called()
 
 
@@ -91,7 +91,7 @@ def test_finally_aborts_when_mid_rebase(
         "assets/img.png", binary=("assets/img.png",)
     )
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.abort.assert_called_once_with(tmp_path)
 
 
@@ -106,7 +106,7 @@ def test_abort_failure_is_logged(
     patched.abort.return_value = {**_GIT_FAIL, "stderr": "abort exploded"}
 
     with caplog.at_level(logging.ERROR, logger="mcp_coder.workflows.rebase"):
-        assert _run(tmp_path) == 1
+        assert _run(tmp_path).exit_code == 1
 
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert any("rebase --abort failed: abort exploded" in m for m in errors)
@@ -119,7 +119,7 @@ def test_success_shape_raise_resets_to_pre_sha(
     monkeypatch.setattr(rebase_module, "_rebase_success_shape", _REAL_SUCCESS_SHAPE)
     patched.mid_rebase.side_effect = ValueError("not a git repository")
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.reset.assert_called_once_with(tmp_path, "presha")
     patched.push.assert_not_called()
     patched.abort.assert_not_called()

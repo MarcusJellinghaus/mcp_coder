@@ -230,7 +230,7 @@ Default timeouts:
 | status-09:pr-creating | 30 minutes |
 | status-14i:plan-reviewing | 30 minutes |
 | status-17i:code-reviewing | 120 minutes |
-| status-72:fixing-merge-conflict | 30 minutes (two CI waits with `auto_merge`) |
+| status-72:fixing-merge-conflict | 60 minutes (LLM rebase; two CI waits with `auto_merge`) |
 
 `09` with `auto_merge` can take ≈ 35 minutes in the worst case; the stale warning is accepted.
 
@@ -284,7 +284,7 @@ The section is honoured only when the issue body is trusted:
 
 **Fallback** when there is no usable section (missing, empty, untrusted or malformed):
 
-- **Base branch detection** — `gh-tool get-base-branch`, `rebase`, the implement workflow's rebase step, `fix-conflict`, `git-tool`, create-pr, review — falls through to the open PR's base → git merge-base → default branch. For `mcp-coder rebase`, a result other than `main`/`master` needs `--base-branch`.
+- **Base branch detection** — `gh-tool get-base-branch`, `rebase`, the implement workflow's rebase step, `fix-conflict`, `git-tool`, create-pr, review — falls through to the open PR's base → git merge-base → default branch. For `mcp-coder rebase`, a result other than `main`/`master` needs `--base-branch`. This guard does not apply to automated callers (review, fix-conflict): they pass the detected base explicitly to the LLM rebase.
 - **Branch creation** — `create-plan`, `gh-tool checkout-issue-branch` — starts from the default branch.
 
 ### Validation

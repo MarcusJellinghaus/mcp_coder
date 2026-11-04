@@ -88,7 +88,7 @@ class TestRunPytestCheck:
     """Unit tests for the run_pytest_check wrapper."""
 
     def test_forwards_project_dir_and_python_executable(self, tmp_path: Path) -> None:
-        """Wrapper passes project_dir as str and sys.executable, nothing else."""
+        """Wrapper passes project_dir as str, sys.executable and the defaults."""
         expected: dict[str, Any] = {
             "success": True,
             "summary": {"passed": 1, "failed": 0},
@@ -106,18 +106,30 @@ class TestRunPytestCheck:
         mock_check.assert_called_once_with(
             project_dir=str(tmp_path),
             python_executable=sys.executable,
+            markers=None,
+            timeout_seconds=300,
         )
 
-    def test_library_defaults_not_overridden(self, tmp_path: Path) -> None:
-        """No markers, timeout_seconds, or extra_args kwargs are passed."""
+    def test_forwards_markers_and_timeout(self, tmp_path: Path) -> None:
+        """Explicit markers and timeout_seconds reach the library unchanged."""
+        with patch(
+            "mcp_coder.mcp_tools_py._check_code_with_pytest", return_value={}
+        ) as mock_check:
+            run_pytest_check(tmp_path, markers=["not slow"], timeout_seconds=1800)
+
+        _, kwargs = mock_check.call_args
+        assert kwargs["markers"] == ["not slow"]
+        assert kwargs["timeout_seconds"] == 1800
+
+    def test_extra_args_not_passed(self, tmp_path: Path) -> None:
+        """No extra_args kwarg is passed (library default applies)."""
         with patch(
             "mcp_coder.mcp_tools_py._check_code_with_pytest", return_value={}
         ) as mock_check:
             run_pytest_check(tmp_path)
 
         _, kwargs = mock_check.call_args
-        for forbidden in ("markers", "timeout_seconds", "extra_args"):
-            assert forbidden not in kwargs
+        assert "extra_args" not in kwargs
 
     def test_accepts_str_project_dir(self, tmp_path: Path) -> None:
         """A str project_dir is forwarded as str unchanged."""

@@ -15,15 +15,26 @@ Deliberately narrower than SKILL.md:
 - **no ``uv lock``** — lockfile handling is out of scope for this repo (no tracked
   lockfile exists).
 - **no reference-project tools** — the rebase session works on this repo only.
+- **no ``move_file``** — conflict resolution edits files in place; renames are
+  not part of resolving a conflict.
 
-The CLI (Step 7) materializes this dict to a runtime temp settings file and passes
-its path to ``prompt_llm`` as ``settings_file``.
+``rebase_settings_file`` materializes this dict to a temp settings file for the
+duration of a ``with`` block; the CLI and automated callers pass the yielded path
+to the rebase workflow as ``settings_file``.
 
 TODO: fold this into the configurable-permissions system from EPIC #1038
 (sub-issue #1054, "Claude provider — static settings translation") once it lands.
 """
 
+import json
+import logging
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 REBASE_LLM_PERMISSIONS: dict[str, Any] = {
     "permissions": {
@@ -39,7 +50,6 @@ REBASE_LLM_PERMISSIONS: dict[str, Any] = {
             "mcp__mcp-workspace__edit_file",
             "mcp__mcp-workspace__append_file",
             "mcp__mcp-workspace__delete_this_file",
-            "mcp__mcp-workspace__move_file",
             "mcp__mcp-workspace__list_directory",
             "mcp__mcp-workspace__search_files",
         ]
@@ -47,3 +57,33 @@ REBASE_LLM_PERMISSIONS: dict[str, Any] = {
     "enableAllProjectMcpServers": True,
     "enabledMcpjsonServers": ["mcp-tools-py", "mcp-workspace"],
 }
+
+
+@contextmanager
+def rebase_settings_file(override: str | None = None) -> Iterator[str]:
+    """Yield the settings path for the rebase LLM session.
+
+    ``override`` (an already-resolved path) is yielded unchanged. Otherwise
+    ``REBASE_LLM_PERMISSIONS`` is written to a temp JSON file that exists for the
+    whole ``with`` block and is deleted afterwards.
+
+    Args:
+        override: Already-resolved settings path, or None for the default.
+
+    Yields:
+        Absolute path to the settings file.
+    """
+    if override is not None:
+        yield override
+        return
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, encoding="utf-8"
+    ) as handle:
+        json.dump(REBASE_LLM_PERMISSIONS, handle)
+        temp_path = handle.name
+    logger.debug("Materialized least-privilege rebase settings to %s", temp_path)
+    try:
+        yield temp_path
+    finally:
+        Path(temp_path).unlink(missing_ok=True)

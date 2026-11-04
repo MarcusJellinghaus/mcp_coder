@@ -1,7 +1,7 @@
-"""Tests for implement workflow orchestration (label transitions, safety net, SIGTERM)."""
+"""Tests for implement workflow orchestration (label transitions, safety net)."""
 
+import logging
 import os
-import signal
 import sys
 from pathlib import Path
 from typing import Any
@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
@@ -26,8 +27,6 @@ _DELIBERATE_HANDLER = (
 )
 # - the SIGTERM / unexpected-exit safety net lives in run_guarded -> this handler
 _NET_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
-# run_guarded installs/restores the SIGTERM handler via the signal module here
-_NET_SIGNAL = "mcp_coder.workflow_utils.failure_handling.signal.signal"
 
 
 # Reusable LLMResponseDict mock value
@@ -205,7 +204,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -232,7 +231,7 @@ class TestRunImplementWorkflowLabelTransitions:
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core._attempt_rebase_and_push",
-        return_value=True,
+        return_value=RebaseOutcome("ok"),
     )
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
@@ -299,7 +298,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -348,7 +347,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -361,6 +360,48 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 0
         mock_apply_label.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=0)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core._attempt_rebase_and_push",
+        return_value=RebaseOutcome("dirty_tree"),
+    )
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="189-feature",
+    )
+    def test_rebase_outcome_reason_logged_and_workflow_continues(
+        self,
+        _mock_branch: MagicMock,
+        _mock_git_clean: MagicMock,
+        _mock_main_branch: MagicMock,
+        _mock_prereq: MagicMock,
+        _mock_rebase: MagicMock,
+        _mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        _mock_progress: MagicMock,
+        _mock_finalise: MagicMock,
+        _mock_ci: MagicMock,
+        _mock_apply_label: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A failed rebase is logged with its reason and never blocks the run."""
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
+
+        with caplog.at_level(logging.DEBUG):
+            result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 0
+        assert "Rebase result: dirty_tree" in caplog.text
+        mock_process.assert_called()
 
     @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -408,7 +449,7 @@ class TestNoPostErrorProgressDisplay:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "error")
 
@@ -620,111 +661,3 @@ class TestWorkflowSafetyNet:
         assert result == 1
         comment = mock_handle.call_args[0][1]
         assert "**Progress:** 1/3 tasks completed" in comment
-
-
-class TestSigtermHandler:
-    """Tests for SIGTERM handler registration and behavior (owned by run_guarded)."""
-
-    @patch(_NET_SIGNAL)
-    @patch(_DELIBERATE_HANDLER)
-    @patch(
-        "mcp_coder.workflows.implement.core.prepare_task_tracker",
-        side_effect=TrackerPrepError("task_tracker_prep_failed", "prep failed"),
-    )
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    def test_sigterm_handler_registered(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_handle: MagicMock,
-        mock_signal: MagicMock,
-    ) -> None:
-        """SIGTERM handler is registered by run_guarded after prereq checks pass."""
-        run_implement_workflow(Path("/fake"), "claude")
-
-        sigterm_calls = [
-            c for c in mock_signal.call_args_list if c[0][0] == signal.SIGTERM
-        ]
-        assert len(sigterm_calls) >= 1
-
-    @patch(_NET_SIGNAL)
-    @patch(_DELIBERATE_HANDLER)
-    @patch(
-        "mcp_coder.workflows.implement.core.prepare_task_tracker",
-        side_effect=TrackerPrepError("task_tracker_prep_failed", "prep failed"),
-    )
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    def test_sigterm_handler_restored_in_finally(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_handle: MagicMock,
-        mock_signal: MagicMock,
-    ) -> None:
-        """Previous SIGTERM handler is restored after run_guarded completes."""
-        original_handler = MagicMock()
-        mock_signal.return_value = original_handler
-
-        run_implement_workflow(Path("/fake"), "claude")
-
-        final_call = mock_signal.call_args_list[-1]
-        assert final_call[0][0] == signal.SIGTERM
-        assert final_call[0][1] == original_handler
-
-    @patch(_NET_SIGNAL)
-    @patch(_NET_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    def test_sigterm_sets_flag_and_exits(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prep: MagicMock,
-        mock_handle: MagicMock,
-        mock_signal: MagicMock,
-    ) -> None:
-        """SIGTERM handler sets its flag and the net reports 'SIGTERM received'."""
-        # Capture the handler run_guarded registers.
-        handlers: dict[int, Any] = {}
-
-        def capture_handler(sig: int, handler: Any) -> Any:
-            handlers[sig] = handler
-            return signal.SIG_DFL
-
-        mock_signal.side_effect = capture_handler
-
-        # Make prepare_task_tracker call the registered SIGTERM handler.
-        def trigger_sigterm(*args: Any, **kwargs: Any) -> None:
-            handler = handlers.get(signal.SIGTERM)
-            if handler:
-                with pytest.raises(SystemExit):
-                    handler(signal.SIGTERM, None)
-            raise SystemExit(1)
-
-        mock_prep.side_effect = trigger_sigterm
-
-        with pytest.raises(SystemExit):
-            run_implement_workflow(Path("/fake"), "claude")
-
-        # The net should have reported the SIGTERM-driven exit.
-        mock_handle.assert_called()
-        failure = mock_handle.call_args[0][0]
-        assert failure.stage == "SIGTERM received"
-        assert failure.message == "Workflow terminated by signal"

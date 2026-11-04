@@ -6,17 +6,24 @@ from ``implement/rebase.py`` so multiple workflows can share it.
 """
 
 import logging
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from mcp_coder.mcp_workspace_git import (
+    commit_paths,
     get_full_status,
     get_remote_branch_commit_sha,
+    git_diff,
+    has_staged_changes,
+    is_staged_diff_cr_only,
     probe_rebase_conflicts,
     rebase_onto_branch,
+    renormalize_paths,
     reset_hard,
+    unstage_paths,
 )
 from mcp_coder.mcp_workspace_github import PullRequestManager
 from mcp_coder.workflow_steps.commit import push_changes
@@ -54,12 +61,15 @@ class RebaseOutcome:
         base_sha: Short SHA of ``origin/<base_branch>`` after the attempt.
         files: Uncommitted files (``dirty_tree``) or likely conflicting
             files (``conflict``); empty otherwise.
+        llm_detail: What the LLM rebase fallback did, or why it was skipped;
+            None when it did not run.
     """
 
     reason: RebaseReason
     base_branch: str | None = None
     base_sha: str | None = None
     files: tuple[str, ...] = ()
+    llm_detail: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -98,6 +108,66 @@ def _uncommitted_tracked_files(project_dir: Path) -> list[str]:
     # DEFAULT_IGNORED_BUILD_ARTIFACTS is NOT filtered - git refuses on a
     # modified uv.lock like any other tracked modification.
     return sorted(set(status["staged"] + status["modified"]))
+
+
+def _staged_diff_adds_cr(project_dir: Path) -> bool:
+    """Return True if the staged diff adds a line ending in CR.
+
+    ``is_staged_diff_cr_only`` passes in both directions; this tells CRLF -> LF
+    (a normalization) from LF -> CRLF (no ``text`` attribute, so the CRLF working
+    copy would be committed as is). The whole index is inspected: everything
+    staged is among the dirty files handled together.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if any added line of the staged diff ends in CR.
+    """
+    diff = git_diff(
+        project_dir, args=["--cached"], compact=False, max_lines=sys.maxsize
+    )
+    return any(
+        line.startswith("+") and line.endswith("\r") for line in diff.split("\n")
+    )
+
+
+def _clear_line_ending_dirt(project_dir: Path, files: list[str]) -> bool:
+    """Renormalize ``files``; commit if anything is staged. All-or-nothing.
+
+    Args:
+        project_dir: Path to the project directory
+        files: Dirty tracked files, relative to ``project_dir``
+
+    Returns:
+        True when the tree no longer blocks the rebase; False (paths unstaged
+        again) when any file has a real change, is deleted, would gain CRs in
+        the commit, or git fails.
+    """
+    # git cannot stage a deletion through --renormalize, and a deletion is a
+    # real change anyway.
+    if any(not (project_dir / f).exists() for f in files):
+        return False
+
+    paths = [project_dir / f for f in files]
+    try:
+        renormalized = renormalize_paths(paths, project_dir)["success"]
+        if (
+            renormalized
+            and is_staged_diff_cr_only(paths, project_dir)
+            and not _staged_diff_adds_cr(project_dir)
+        ):
+            if not has_staged_changes(project_dir):
+                return True  # Stat-only dirt: nothing to commit.
+            commit = commit_paths("chore: renormalize line endings", paths, project_dir)
+            if commit["success"]:
+                return True
+            logger.warning("Renormalize commit failed: %s", commit["error"])
+    except Exception:  # pylint: disable=broad-exception-caught
+        # has_staged_changes raises on a git failure; this must not fail the workflow.
+        logger.warning("Could not clear line-ending dirt", exc_info=True)
+    unstage_paths(paths, project_dir)
+    return False
 
 
 def _base_sha(project_dir: Path, base: str) -> str | None:
@@ -140,19 +210,25 @@ def _classify_failed_rebase(
 def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
     """Attempt to rebase onto parent branch and push. Never fails workflow.
 
+    Line-ending-only dirt does not block the rebase: it is renormalized and
+    committed first, and the push carries that commit to origin.
+
     Args:
         project_dir: Path to the project directory
 
     Returns:
         RebaseOutcome with reason ``"ok"`` if rebase and push succeeded.
         Otherwise the reason is ``"dirty_tree"`` (staged or modified tracked
-        files; untracked files alone do not count), ``"no_base"`` (no target
+        files with more than line-ending changes; untracked files alone do
+        not count), ``"no_base"`` (no target
         detected), ``"base_missing"`` (base not on origin), ``"conflict"`` /
         ``"rebase_failed"`` (rebase did not complete) or ``"push_failed"``.
     """
     # Checked before target detection: detect_base_branch fetches from the
     # remote, and there is no point paying for it when the rebase cannot start.
     dirty = _uncommitted_tracked_files(project_dir)
+    if dirty and _clear_line_ending_dirt(project_dir, dirty):
+        dirty = _uncommitted_tracked_files(project_dir)
     if dirty:
         logger.warning(
             "Skipping rebase: the working tree has staged or modified tracked "

@@ -10,12 +10,10 @@ Exit-code contract (see ``workflows/rebase.py`` / ``pr_info`` summary):
 """
 
 import argparse
-import json
 import logging
-import tempfile
 
 from ...utils.log_utils import OUTPUT
-from ...workflows.rebase_permissions import REBASE_LLM_PERMISSIONS
+from ...workflows.rebase_permissions import rebase_settings_file
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
@@ -28,35 +26,29 @@ from ..utils import (
 logger = logging.getLogger(__name__)
 
 
-def _resolve_rebase_settings(settings_arg: str | None, project_dir: str | None) -> str:
-    """Resolve the Claude settings file for the rebase LLM session.
+def _resolve_rebase_settings(
+    settings_arg: str | None, project_dir: str | None
+) -> str | None:
+    """Resolve an explicit ``--settings`` path for the rebase LLM session.
 
     When ``--settings`` is provided explicitly, delegate to the standard
-    resolver. Otherwise materialize the least-privilege ``REBASE_LLM_PERMISSIONS``
-    constant to a runtime temp JSON file and return its path, bypassing the broad
-    ``settings.local.json`` auto-detect. The temp file lives for the duration of
-    the process/session.
+    resolver. Otherwise return None so ``rebase_settings_file`` materializes the
+    least-privilege ``REBASE_LLM_PERMISSIONS``, bypassing the broad
+    ``settings.local.json`` auto-detect.
 
     Args:
         settings_arg: Explicit ``--settings`` path, or None.
         project_dir: Project directory used as the base for relative paths.
 
     Returns:
-        Absolute path to the settings file to pass as ``settings_file``.
+        Absolute path to the explicit settings file, or None.
     """
-    if settings_arg is not None:
-        resolved = resolve_claude_settings_path(settings_arg, project_dir=project_dir)
-        # Explicit paths are strict: the resolver returns a str or raises.
-        assert resolved is not None  # noqa: S101  # nosec B101
-        return resolved
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False, encoding="utf-8"
-    ) as handle:
-        json.dump(REBASE_LLM_PERMISSIONS, handle)
-        temp_path = handle.name
-    logger.debug("Materialized least-privilege rebase settings to %s", temp_path)
-    return temp_path
+    if settings_arg is None:
+        return None
+    resolved = resolve_claude_settings_path(settings_arg, project_dir=project_dir)
+    # Explicit paths are strict: the resolver returns a str or raises.
+    assert resolved is not None  # noqa: S101  # nosec B101
+    return resolved
 
 
 def execute_rebase(args: argparse.Namespace) -> int:
@@ -87,18 +79,19 @@ def execute_rebase(args: argparse.Namespace) -> int:
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
         )
-        settings_file = _resolve_rebase_settings(args.settings, args.project_dir)
+        explicit_settings = _resolve_rebase_settings(args.settings, args.project_dir)
 
         # Import here to avoid circular dependency during module load
         from ...workflows.rebase import run_rebase_workflow
 
-        return run_rebase_workflow(
-            project_dir,
-            provider,
-            args.base_branch,
-            mcp_config,
-            settings_file,
-        )
+        with rebase_settings_file(explicit_settings) as settings_file:
+            return run_rebase_workflow(
+                project_dir,
+                provider,
+                args.base_branch,
+                mcp_config,
+                settings_file,
+            ).exit_code
 
     except ValueError as e:
         logger.error(f"Invalid project directory: {e}")

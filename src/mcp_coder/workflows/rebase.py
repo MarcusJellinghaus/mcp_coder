@@ -10,8 +10,10 @@ repository state plus a set-difference of failure keys; the LLM never
 self-reports an outcome.
 """
 
+import json
 import logging
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
@@ -250,6 +252,11 @@ _REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
 
 _ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
 
+_MARKER_RETRY_PROMPT = (
+    "Conflict markers remain in: {files}. Edit these files so they contain the "
+    "final merged content with no conflict markers. Same tools and rules as before."
+)
+
 # Stage labels mirror the wording of the "Rebase Conflict Resolution" prompt.
 _STAGE_LABELS: tuple[tuple[int, str], ...] = (
     (1, "common ancestor (merge base)"),
@@ -341,14 +348,28 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
     return template.replace("[conflict_context]", "\n\n".join(blocks))
 
 
-def _build_regression_fix_prompt(regression_text: str) -> str:
+def _build_regression_fix_prompt(
+    regression_text: str, markers: list[str] | None = None
+) -> str:
     """Build the regression-fix prompt with the failure-key text inlined.
+
+    With ``markers``, the prompt tells the LLM to pass the same pytest marker
+    filter the deterministic checks used; without, the placeholder is removed.
 
     Returns:
         The assembled regression-fix prompt string.
     """
+    filter_text = ""
+    if markers:
+        filter_text = (
+            "When you run `mcp__mcp-tools-py__run_pytest_check`, pass "
+            f"markers={json.dumps(markers)} so tests that reach external "
+            "services are excluded."
+        )
     template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
-    return template.replace("[regression_output]", regression_text)
+    return template.replace("[regression_output]", regression_text).replace(
+        "[pytest_marker_filter]", filter_text
+    )
 
 
 def _format_failure_keys(keys: set[FailureKey]) -> str:
@@ -370,13 +391,44 @@ _MAX_SAME_FILE_CONFLICTS = 3  # /rebase abort rule 4
 _MAX_FIX_ATTEMPTS = 2  # /rebase abort rule 5
 
 
+@dataclass(frozen=True)
+class RebaseRunResult:
+    """Outcome of one ``run_rebase_workflow`` call."""
+
+    exit_code: int  # 0 success/no-op, 1 aborted, 2 error / push rejected
+    reason: str  # human-readable; never "" on a non-zero exit
+    push_rejected: bool = False  # True only for the force-push rejection
+
+
+def _end(
+    exit_code: int, reason: str, *, push_rejected: bool = False
+) -> RebaseRunResult:
+    """Log the end of the run and build the result.
+
+    Exit ``1`` and the force-push rejection log ``Aborted: <reason>`` at OUTPUT
+    level, any other exit ``2`` logs the reason as an error, and exit ``0``
+    logs it at OUTPUT level.
+
+    Returns:
+        The ``RebaseRunResult`` for ``exit_code`` / ``reason``.
+    """
+    if exit_code == 1 or push_rejected:
+        logger.log(OUTPUT, "Aborted: %s", reason)
+    elif exit_code == 2:
+        logger.error("%s", reason)
+    else:
+        logger.log(OUTPUT, "%s", reason)
+    return RebaseRunResult(exit_code, reason, push_rejected)
+
+
 def run_rebase_workflow(
     project_dir: Path,
     provider: str,
     base_branch: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-) -> int:
+    markers: list[str] | None = None,
+) -> RebaseRunResult:
     """Orchestrate the automated rebase (Python-driven).
 
     Composes the deterministic shell: pre-flight guards -> base-branch guard ->
@@ -388,21 +440,24 @@ def run_rebase_workflow(
 
     See the exit-code contract in ``summary.md``.
 
+    ``markers`` (pytest ``-m`` expressions) filter every check run and are
+    passed on to the regression-fix prompt; ``None`` runs the full suite.
+
     Returns:
-        ``0`` (success or no-op), ``1`` (aborted -> needs-human), or ``2``
-        (error / push rejected).
+        A ``RebaseRunResult``: ``exit_code`` ``0`` (success or no-op), ``1``
+        (aborted -> needs-human) or ``2`` (error / push rejected), a
+        human-readable ``reason``, and ``push_rejected`` set only when the
+        force-push was rejected.
     """
     logger.log(OUTPUT, "Starting automated rebase...")
 
     err = _preflight(project_dir)
     if err:
-        logger.error("Pre-flight failed: %s", err)
-        return 2
+        return _end(2, f"Pre-flight failed: {err}")
 
     base, base_err = _resolve_base_branch(project_dir, base_branch)
     if base_err:
-        logger.error("Base-branch guard failed: %s", base_err)
-        return 2
+        return _end(2, f"Base-branch guard failed: {base_err}")
     # Guaranteed by _resolve_base_branch when base_err is falsy.
     assert base is not None  # noqa: S101  # nosec B101
 
@@ -410,13 +465,11 @@ def run_rebase_workflow(
 
     missing_err = check_base_branch_on_origin(project_dir, base)
     if missing_err:
-        logger.error("Base-branch guard failed: %s", missing_err)
-        return 2
+        return _end(2, f"Base-branch guard failed: {missing_err}")
 
     pr_info_err = _check_pr_info_absent_on_base(project_dir, base)
     if pr_info_err:
-        logger.error("pr_info/ guard failed: %s", pr_info_err)
-        return 2
+        return _end(2, f"pr_info/ guard failed: {pr_info_err}")
 
     needed, reason = needs_rebase(project_dir, base)
     if not needed:
@@ -424,23 +477,19 @@ def run_rebase_workflow(
         # failure, detached HEAD, ...) via an "error: " reason prefix; those are
         # errors (exit 2), not a genuine up-to-date no-op (exit 0).
         if reason.startswith("error:"):
-            logger.error("Rebase check failed for origin/%s: %s", base, reason)
-            return 2
-        logger.log(OUTPUT, "Already current with origin/%s; nothing to do", base)
-        return 0
+            return _end(2, f"Rebase check failed for origin/{base}: {reason}")
+        return _end(0, f"Already current with origin/{base}; nothing to do")
 
     pre_sha = get_latest_commit_sha(project_dir)
     if pre_sha is None:
-        logger.error("Could not resolve HEAD commit before rebase")
-        return 2
+        return _end(2, "Could not resolve HEAD commit before rebase")
 
     logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
     try:
-        baseline = _run_all_checks(project_dir)
+        baseline = _run_all_checks(project_dir, markers)
     except CheckRunError as exc:
         # No git mutation has happened yet — plain infrastructure error.
-        logger.error("Baseline checks failed to run: %s", exc)
-        return 2
+        return _end(2, f"Baseline checks failed to run: {exc}")
     if baseline:
         logger.log(
             OUTPUT,
@@ -463,18 +512,11 @@ def run_rebase_workflow(
         result: RebaseResult = rebase_start(project_dir, f"origin/{base}")
         while result["status"] != "completed":
             if result["status"] == "error":
-                logger.log(
-                    OUTPUT,
-                    "Aborted: git rebase failed unexpectedly: %s",
-                    (result["stderr"] or "").strip() or result["error"],
-                )
-                return 1
+                detail = (result["stderr"] or "").strip() or result["error"]
+                return _end(1, f"git rebase failed unexpectedly: {detail}")
             info = get_conflict_blob_info(project_dir)
             if not info["success"]:
-                logger.log(
-                    OUTPUT, "Aborted: could not read conflicts: %s", info["error"]
-                )
-                return 1
+                return _end(1, f"could not read conflicts: {info['error']}")
             files = [entry["path"] for entry in info["entries"]]
             if not files:
                 if not has_staged_changes(project_dir):
@@ -485,19 +527,17 @@ def run_rebase_workflow(
                     )
                     result = rebase_skip(project_dir)
                     continue
-                logger.log(
-                    OUTPUT,
-                    "Aborted: rebase stopped without conflicted files: %s",
-                    (result["stderr"] or "").strip(),
+                return _end(
+                    1,
+                    "rebase stopped without conflicted files: "
+                    f"{(result['stderr'] or '').strip()}",
                 )
-                return 1
             binary = next(
                 (entry["path"] for entry in info["entries"] if entry["is_binary"]),
                 None,
             )
             if binary:
-                logger.log(OUTPUT, "Aborted: binary conflict in %s", binary)
-                return 1
+                return _end(1, f"binary conflict in {binary}")
             conflict_counts.update(files)
             repeated = [
                 f
@@ -505,19 +545,16 @@ def run_rebase_workflow(
                 if count >= _MAX_SAME_FILE_CONFLICTS
             ]
             if repeated:
-                logger.log(
-                    OUTPUT,
-                    "Aborted: %s conflicted at %d rebase stops",
-                    repeated[0],
-                    conflict_counts[repeated[0]],
+                return _end(
+                    1,
+                    f"{repeated[0]} conflicted at "
+                    f"{conflict_counts[repeated[0]]} rebase stops",
                 )
-                return 1
             pr_info_files = [f for f in files if f.startswith("pr_info/")]
             for file in pr_info_files:
                 # Keep the feature side; removed if the feature branch deleted it.
                 if not resolve_take_theirs_or_remove(project_dir, file)["success"]:
-                    logger.log(OUTPUT, "Aborted: could not auto-resolve %s", file)
-                    return 1
+                    return _end(1, f"could not auto-resolve {file}")
             others = [f for f in files if f not in pr_info_files]
             if others:
                 logger.log(
@@ -538,16 +575,28 @@ def run_rebase_workflow(
                     f for f in others if _has_conflict_markers(project_dir, f)
                 ]
                 if unresolved:
-                    logger.log(
-                        OUTPUT,
-                        "Aborted: conflict markers remain in %s",
-                        ", ".join(unresolved),
+                    # One retry per stop, resuming the same session.
+                    _, session_id = _prompt_in_session(
+                        _MARKER_RETRY_PROMPT.format(files=", ".join(unresolved)),
+                        session_id,
+                        project_dir=project_dir,
+                        provider=provider,
+                        env_vars=env_vars,
+                        mcp_config=mcp_config,
+                        settings_file=settings_file,
+                        step_name=f"conflict_{stop}_retry",
                     )
-                    return 1
+                    unresolved = [
+                        f for f in unresolved if _has_conflict_markers(project_dir, f)
+                    ]
+                if unresolved:
+                    return _end(
+                        1, f"conflict markers remain in {', '.join(unresolved)}"
+                    )
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        regressions = _run_all_checks(project_dir) - baseline
+        regressions = _run_all_checks(project_dir, markers) - baseline
         attempt = 0
         last_text: str | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
@@ -564,7 +613,7 @@ def run_rebase_workflow(
                 _MAX_FIX_ATTEMPTS,
             )
             _, session_id = _prompt_in_session(
-                _build_regression_fix_prompt(text),
+                _build_regression_fix_prompt(text, markers),
                 session_id,
                 project_dir=project_dir,
                 provider=provider,
@@ -579,58 +628,42 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            regressions = _run_all_checks(project_dir) - baseline
+            regressions = _run_all_checks(project_dir, markers) - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)
-            logger.log(
-                OUTPUT,
-                "Aborted: %d unfixed regression(s)%s",
-                len(regressions),
-                note,
-            )
-            return 1
+            return _end(1, f"{len(regressions)} unfixed regression(s){note}")
 
         if not _rebase_success_shape(project_dir, pre_sha):
             # Reset is safe here: the rebase completed, so the finally net
             # won't act — same never-leave-rebased-unpushed invariant as the
             # other post-rebase failure paths.
             note = _restore_note(project_dir, pre_sha)
-            logger.log(
-                OUTPUT,
-                "Aborted: git state does not corroborate a successful rebase%s",
-                note,
-            )
-            return 1
+            return _end(1, f"git state does not corroborate a successful rebase{note}")
 
         logger.log(OUTPUT, "Force-pushing (with lease)...")
         push_result = git_push(project_dir, force_with_lease=True)
         if push_result["success"]:
-            logger.log(OUTPUT, "Rebased and force-pushed onto origin/%s", base)
-            return 0
+            return _end(0, f"Rebased and force-pushed onto origin/{base}")
 
         logger.error("Force-push rejected/failed: %s", push_result.get("error"))
         note = _restore_note(project_dir, pre_sha)  # never leave unpushed commits
-        logger.log(OUTPUT, "Aborted: force-push rejected%s", note)
-        return 2
+        return _end(2, f"force-push rejected{note}", push_rejected=True)
     except CheckRunError as exc:
         # Verification/re-check infrastructure failure: the rebase already
         # completed, so the finally net cannot restore — explicit reset.
         note = _restore_note(project_dir, pre_sha)
         logger.error("Verification checks failed to run: %s", exc)
-        logger.log(OUTPUT, "Aborted: checks failed to run%s", note)
-        return 1
+        return _end(1, f"Verification checks failed to run: {exc}{note}")
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # LLM failure/timeout or unexpected error. Mid-rebase: the finally net
         # aborts. Post-rebase (regression-fix phase): explicit reset — same
         # never-leave-rebased-unpushed invariant as the paths above. Unknown
         # rebase state: neither (logged by the probe).
         logger.error("Rebase failed: %s", exc)
+        detail = str(exc) or type(exc).__name__
         if _rebase_in_progress_or_none(project_dir) is False:
-            note = _restore_note(project_dir, pre_sha)
-            logger.log(OUTPUT, "Aborted: %s%s", exc, note)
-        else:
-            logger.log(OUTPUT, "Aborted: %s", exc)
-        return 1
+            return _end(1, f"{detail}{_restore_note(project_dir, pre_sha)}")
+        return _end(1, detail)
     finally:
         if _rebase_in_progress_or_none(project_dir):
             _abort_rebase(project_dir)

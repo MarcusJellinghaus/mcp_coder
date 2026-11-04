@@ -239,13 +239,15 @@ mcp-coder implement --mcp-config .mcp.json --settings .claude/settings.local.jso
 
 ### rebase
 
-Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. This is the same rebase step the `review-implementation` workflow runs between rounds.
+Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. `review-implementation` and `fix-conflict` run a git-only rebase first and fall back to this LLM rebase on a conflict or failed rebase, passing the detected base explicitly and a pytest marker filter that skips the LLM / Jenkins / install integration tests.
 
 ```bash
 mcp-coder rebase [OPTIONS]
 ```
 
 The base branch is auto-detected. A base named in the issue's `### Base Branch` section is used as-is, but only when the issue body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation)); otherwise detection falls back. A base found from an open PR, git merge-base or the default branch is accepted automatically only when it is `main` or `master`; otherwise pass `--base-branch`. The command fails if the base does not exist on origin.
+
+The regression check after the rebase runs pytest with a 1800 s timeout. The automated LLM rebase runs pytest in the mcp-coder tool environment (`sys.executable`), so the target repo's test dependencies must be installed there.
 
 ```bash
 mcp-coder rebase
@@ -262,7 +264,7 @@ Run an automated review of the implemented code on the current branch. The issue
 mcp-coder review-implementation [OPTIONS]
 ```
 
-A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5), applies fixes via MCP edit tools, and re-runs the shared rebase and CI steps between rounds. It ends in a 3-way decision: **success** advances the issue to `status-08:ready-pr`; **needs-human** routes to `status-07:code-review` for the interactive supervisor; **error** sets a `status-17f-*` failure label (`status-17f-ci:code-review-ci-fix-needed` when CI is still red at the rounds cap).
+A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5), applies fixes via MCP edit tools, and re-runs the shared rebase and CI steps between rounds. The rebase gate falls back to the [LLM rebase](#rebase) when the git-only rebase hits a conflict or fails, and hands off to a human (with the LLM rebase's reason in the comment) only if that fails too. It ends in a 3-way decision: **success** advances the issue to `status-08:ready-pr`; **needs-human** routes to `status-07:code-review` for the interactive supervisor; **error** sets a `status-17f-*` failure label (`status-17f-ci:code-review-ci-fix-needed` when CI is still red at the rounds cap).
 
 Two gates can also fail the run before it advances: `status-17f-tasks:code-review-open-tasks` when `## Tasks` in `pr_info/TASK_TRACKER.md` still has unchecked items (recover with `/implementation_finalise`), and `status-17f-ci-unknown:code-review-ci-unknown` when the final gate cannot prove CI green because the status is pending, not configured, unknown or unavailable (recover with `/check_branch_status`). Each round appends to `pr_info/implementation_review_log_{n}.md`. The coordinator dispatches it only with `auto_review_implementation = true`; otherwise run it manually.
 
@@ -283,13 +285,13 @@ mcp-coder create-pr [OPTIONS]
 
 **Prerequisites:** clean working directory; all tasks complete in `pr_info/TASK_TRACKER.md`; on a feature branch (not main); GitHub credentials configured.
 
-**Post-creation checks.** Once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-74:pr-merge-conflict` (still conflicting) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
+**Post-creation checks.** Once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-71:merge-conflict` (still conflicting; picked up by `fix-conflict`) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged, and a still-conflicting PR exits 1 because nothing hands it to `fix-conflict`. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
 
 **Description refresh.** If the post-creation rebase pushed new commits, the PR title and body are regenerated from the full branch diff (closing references kept). This is best-effort and never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
 
 **Auto-merge.** `--auto-merge` / `--no-auto-merge` (default: the repo's `auto_merge` flag, else off). When on and CI is green on HEAD, the PR is squash-merged after the description refresh → `status-99:merged`, or `status-99f:merge-failed` with a comment when GitHub refuses. Same flag and outcomes on `fix-ci` and `fix-conflict`; caveats in [Auto-merge](configuration/config.md#auto-merge).
 
-**Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`; 1 for `status-74` and `status-99f`.
+**Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`, and for `status-71` once create-pr has written it; 1 for `status-74` and `status-99f`, and for a create-pr run that leaves a still-conflicting PR with no label written.
 
 ```bash
 mcp-coder create-pr
@@ -304,13 +306,13 @@ mcp-coder create-pr --auto-merge
 Rebase a PR onto its base branch to resolve a merge conflict. Jenkins-dispatched for `status-71:merge-conflict` (see [PR follow-up](processes-prompts/processes/71-pr-follow-up.md)); normally run by the coordinator, not by hand.
 
 ```bash
-mcp-coder fix-conflict [--project-dir PATH] [--auto-merge | --no-auto-merge]
+mcp-coder fix-conflict [--project-dir PATH] [--llm-method METHOD] [--mcp-config PATH] [--settings PATH] [--auto-merge | --no-auto-merge]
 ```
 
-Runs the mechanical rebase only, with no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
+Runs a git-only rebase first. On a conflict or failed rebase it falls back to the [LLM rebase](#rebase), then pushes with a plain push. The LLM session uses least-privilege rebase permissions; `--settings` overrides them (there is no settings auto-detection). It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
 
 - settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
-- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting and uncommitted files). Exits 1.
+- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, LLM rebase reason, base, conflicting and uncommitted files). Exits 1.
 
 With `--auto-merge`, the success path then waits for CI on HEAD and squash-merges → `status-99:merged` / `status-99f:merge-failed` (see [create-pr](#create-pr)).
 

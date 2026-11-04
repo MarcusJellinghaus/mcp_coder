@@ -128,11 +128,11 @@ class TestRunPostCreation:
         mocks.ci_poll.assert_called_once()
 
     def test_dirty_after_rebase_returns_merge_conflict(self, mocks: _Mocks) -> None:
-        """Still dirty after the rebase → pr_merge_conflict; CI not polled."""
+        """Still dirty after the rebase → merge_conflict; CI not polled."""
         mocks.poll.side_effect = ["dirty", "dirty"]
         mocks.rebase.return_value = RebaseOutcome(reason="conflict", base_branch="main")
 
-        assert _label(mocks) == "pr_merge_conflict"
+        assert _label(mocks) == "merge_conflict"
 
         mocks.rebase.assert_called_once_with(_PROJECT)
         mocks.ci_manager_cls.assert_not_called()
@@ -213,11 +213,11 @@ class TestRunPostCreationRefresh:
         assert names.index("ci_poll") < names.index("refresh")
 
     def test_merge_conflict_still_refreshes(self, mocks: _Mocks) -> None:
-        """HEAD changed but still dirty → refresh runs, label pr_merge_conflict."""
+        """HEAD changed but still dirty → refresh runs, label merge_conflict."""
         mocks.poll.side_effect = ["dirty", "dirty"]
         mocks.sha.side_effect = ["before", "after"]
 
-        assert _label(mocks) == "pr_merge_conflict"
+        assert _label(mocks) == "merge_conflict"
 
         mocks.refresh.assert_called_once_with(_PROJECT, _BRANCH, _PROVIDER, None, None)
 
@@ -370,30 +370,27 @@ class TestRunPostCreationAutoMerge:
     def test_merge_conflict_does_not_merge(
         self, mocks: _Mocks, merge: tuple[MagicMock, MagicMock]
     ) -> None:
-        """pr_merge_conflict → helper not called."""
+        """merge_conflict → helper not called."""
         mocks.poll.side_effect = ["dirty", "dirty"]
 
         self._run(auto_merge=True)
 
         merge[0].assert_not_called()
-        assert mocks.apply_label.call_args.args[1] == "pr_merge_conflict"
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
 
 
 class TestApplyPostCreationLabel:
     """Tests for apply_post_creation_label: final label write + exit code."""
 
-    @pytest.mark.parametrize(
-        ("label", "expected"),
-        [("pr_merge_conflict", 1), ("failing_ci", 0), ("pr_created", 0)],
-    )
-    def test_exit_code_per_label(self, label: str, expected: int) -> None:
-        """pr_merge_conflict (74) exits 1; failing_ci / pr_created exit 0."""
+    @pytest.mark.parametrize("label", ["merge_conflict", "failing_ci", "pr_created"])
+    def test_exit_code_per_label(self, label: str) -> None:
+        """Every phase B label is handled: exit 0 once it is written."""
         with patch(f"{_MODULE}.apply_final_label", return_value=0) as mock_apply:
             result = apply_post_creation_label(
                 _PROJECT, label, issue_number=_ISSUE, update_issue_labels=True
             )
 
-        assert result == expected
+        assert result == 0
         mock_apply.assert_called_once_with(_PROJECT, "pr_creating", label, _ISSUE)
 
     def test_label_write_failure_returns_1(
@@ -413,12 +410,12 @@ class TestApplyPostCreationLabel:
 
     @pytest.mark.parametrize(
         ("label", "expected"),
-        [("pr_merge_conflict", 1), ("failing_ci", 0), ("pr_created", 0)],
+        [("merge_conflict", 1), ("failing_ci", 0), ("pr_created", 0)],
     )
     def test_labels_off_skips_write_keeps_exit_code(
         self, label: str, expected: int
     ) -> None:
-        """update_issue_labels=False → no label write; 74 still exits 1."""
+        """update_issue_labels=False → no label write; a conflict still exits 1."""
         with patch(f"{_MODULE}.apply_final_label") as mock_apply:
             result = apply_post_creation_label(
                 _PROJECT, label, issue_number=_ISSUE, update_issue_labels=False
@@ -426,6 +423,22 @@ class TestApplyPostCreationLabel:
 
         assert result == expected
         mock_apply.assert_not_called()
+
+    def test_merge_conflict_without_issue_returns_1(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Labels on but no linked issue → nothing triggers fix-conflict → exit 1."""
+        with (
+            patch(f"{_MODULE}.apply_final_label") as mock_apply,
+            caplog.at_level(logging.DEBUG),
+        ):
+            result = apply_post_creation_label(
+                _PROJECT, "merge_conflict", issue_number=None, update_issue_labels=True
+            )
+
+        assert result == 1
+        mock_apply.assert_not_called()
+        assert "fix-conflict was not triggered" in caplog.text
 
     def test_no_issue_skips_write_with_warning(
         self, caplog: pytest.LogCaptureFixture

@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.failure_reporting import (
     CATEGORY_DISPLAY,
@@ -401,7 +402,7 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_diff.return_value = ""
         # Trigger failure at task tracker preparation
         mock_prepare.side_effect = TrackerPrepError(
@@ -452,7 +453,7 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_diff.return_value = ""
         mock_prepare.side_effect = TrackerPrepError(  # Trigger failure
             "task_tracker_prep_failed", "prep failed"
@@ -498,7 +499,7 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_diff.return_value = ""
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "timeout")

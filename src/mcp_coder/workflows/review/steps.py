@@ -22,12 +22,13 @@ from mcp_coder.mcp_workspace_git import (
     get_latest_commit_sha,
 )
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
-from mcp_coder.workflow_steps.rebase import RebaseOutcome, _attempt_rebase_and_push
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import (
     exception_summary,
     llm_failure_reason,
 )
+from mcp_coder.workflows.rebase_automated import rebase_with_llm_fallback
 
 from .config import ReviewConfig
 
@@ -74,8 +75,10 @@ def _after_steps(
     ``review-implementation`` it enforces two gates in order:
 
     1. **Rebase gate (mandated — never success on an unresolved rebase):** the
-       branch is rebased onto its base branch via ``_attempt_rebase_and_push``.
-       If that cannot complete cleanly (e.g. a merge conflict) the return is
+       branch is rebased onto its base branch via ``rebase_with_llm_fallback``:
+       a git-only rebase first, then the LLM rebase on ``conflict`` /
+       ``rebase_failed`` (with the least-privilege rebase settings, not
+       ``settings_file``). If that cannot complete cleanly the return is
        ``"rebase"``, which the caller routes to a needs-human handoff
        (``07:code-review``) — never a success and never a failure label.
     2. **CI gate:** ``check_and_fix_ci`` runs its own retries (reusing
@@ -89,9 +92,9 @@ def _after_steps(
     Args:
         config: The review workflow config.
         project_dir: Repository root.
-        provider: LLM provider.
-        mcp_config: Optional MCP config path.
-        settings_file: Optional Claude settings file.
+        provider: LLM provider (LLM rebase and CI fixes).
+        mcp_config: Optional MCP config path (LLM rebase and CI fixes).
+        settings_file: Optional Claude settings file, for the CI fixes only.
         is_dismiss: Whether this runs on the final dismiss gate (vs mid-loop).
             Logged for diagnostics; the caller owns the terminal-vs-finding
             interpretation of a red CI result.
@@ -113,10 +116,8 @@ def _after_steps(
         return None, None, None
 
     # --- rebase gate (mandated: never success on an unresolved rebase) ---
-    outcome = _attempt_rebase_and_push(project_dir)
+    outcome = rebase_with_llm_fallback(project_dir, provider, mcp_config)
     if not outcome.ok:
-        # An LLM conflict-resolving rebase attempt before this fallback is
-        # #1266's follow-up; until then every non-ok outcome hands off.
         logger.warning(
             "Rebase gate did not pass (%s); routing to needs-human", outcome.reason
         )
