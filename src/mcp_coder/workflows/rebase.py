@@ -48,7 +48,11 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
-from mcp_coder.workflow_steps.rebase import _check_branch_not_moved, _reset_hard
+from mcp_coder.workflow_steps.rebase import (
+    BranchCheck,
+    _check_branch_not_moved,
+    _reset_hard,
+)
 from mcp_coder.workflow_utils.base_branch import (
     check_base_branch_on_origin,
     detect_base_branch_with_source,
@@ -398,10 +402,15 @@ class RebaseRunResult:
     exit_code: int  # 0 success/no-op, 1 aborted, 2 error / push rejected
     reason: str  # human-readable; never "" on a non-zero exit
     push_rejected: bool = False  # True only for the force-push rejection
+    branch_check: BranchCheck | None = None  # Set only when this check stopped the run
 
 
 def _end(
-    exit_code: int, reason: str, *, push_rejected: bool = False
+    exit_code: int,
+    reason: str,
+    *,
+    push_rejected: bool = False,
+    branch_check: BranchCheck | None = None,
 ) -> RebaseRunResult:
     """Log the end of the run and build the result.
 
@@ -418,7 +427,7 @@ def _end(
         logger.error("%s", reason)
     else:
         logger.log(OUTPUT, "%s", reason)
-    return RebaseRunResult(exit_code, reason, push_rejected)
+    return RebaseRunResult(exit_code, reason, push_rejected, branch_check)
 
 
 def run_rebase_workflow(
@@ -487,8 +496,13 @@ def run_rebase_workflow(
         return _end(2, "Could not resolve HEAD commit before rebase")
 
     # needs_rebase has just fetched, so the tracking ref is current.
-    if _check_branch_not_moved(project_dir, pre_sha) in ("moved", "error"):
-        return _end(2, "Branch check failed; nothing rebased or pushed")
+    branch_check = _check_branch_not_moved(project_dir, pre_sha)
+    if branch_check in ("moved", "error"):
+        return _end(
+            2,
+            "Branch check failed; nothing rebased or pushed",
+            branch_check=branch_check,
+        )
 
     logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
     try:
@@ -647,9 +661,14 @@ def run_rebase_workflow(
             return _end(1, f"git state does not corroborate a successful rebase{note}")
 
         # A fetch during the checks or LLM steps could have outdated the first check.
-        if _check_branch_not_moved(project_dir, pre_sha) in ("moved", "error"):
+        branch_check = _check_branch_not_moved(project_dir, pre_sha)
+        if branch_check in ("moved", "error"):
             note = _restore_note(project_dir, pre_sha)
-            return _end(2, f"Branch check failed; nothing pushed{note}")
+            return _end(
+                2,
+                f"Branch check failed; nothing pushed{note}",
+                branch_check=branch_check,
+            )
 
         logger.log(OUTPUT, "Force-pushing (with lease)...")
         push_result = git_push(project_dir, force_with_lease=True)

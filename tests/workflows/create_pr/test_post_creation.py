@@ -408,7 +408,7 @@ class TestRunPostCreationBranchMoved:
         )
 
     def test_posts_comment(self, mocks: _Mocks) -> None:
-        """Comments on, issue set → one comment; label pr_merge_conflict."""
+        """Comments on, issue set → one comment; label merge_conflict."""
         with patch(f"{_MODULE}.post_issue_comment") as mock_post:
             self._run()
 
@@ -419,7 +419,7 @@ class TestRunPostCreationBranchMoved:
         assert "**Stage:** Post-creation rebase" in body
         assert f"**Reason:** {BRANCH_MOVED_REASON}" in body
         assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in body
-        assert mocks.apply_label.call_args.args[1] == "pr_merge_conflict"
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
 
     @pytest.mark.parametrize(
         ("post", "issue"), [(False, _ISSUE), (True, None)], ids=["no_post", "no_issue"]
@@ -432,7 +432,7 @@ class TestRunPostCreationBranchMoved:
             self._run(post=post, issue=issue)
 
         mock_post.assert_not_called()
-        assert mocks.apply_label.call_args.args[1] == "pr_merge_conflict"
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
 
     @pytest.mark.parametrize("reason", ["push_failed", "conflict"])
     def test_other_reason_posts_no_comment(self, mocks: _Mocks, reason: str) -> None:
@@ -467,7 +467,7 @@ class TestRunPostCreationBranchMoved:
 
         mock_manager.assert_called_once_with(_PROJECT)
         assert result == 0
-        assert mocks.apply_label.call_args.args[1] == "pr_merge_conflict"
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
 
 
 class TestApplyPostCreationLabel:

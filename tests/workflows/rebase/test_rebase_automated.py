@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from git import Repo
 
-from mcp_coder.workflow_steps.rebase import RebaseOutcome, RebaseReason
+from mcp_coder.workflow_steps.rebase import BranchCheck, RebaseOutcome, RebaseReason
 from mcp_coder.workflows import rebase_automated as module
 from mcp_coder.workflows.rebase import RebaseRunResult
 from mcp_coder.workflows.rebase_automated import (
@@ -139,6 +139,29 @@ def test_llm_push_rejected_flag(tmp_path: Path, mocks: SimpleNamespace) -> None:
     assert result.reason == "push_failed"
     assert result.files == ()
     assert result.llm_detail == "Force-push rejected"
+    mocks.push.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("branch_check", "reason"),
+    [("moved", "branch_moved"), ("error", "push_failed")],
+)
+def test_llm_branch_check_stop(
+    tmp_path: Path,
+    mocks: SimpleNamespace,
+    branch_check: BranchCheck,
+    reason: RebaseReason,
+) -> None:
+    mocks.run.side_effect = None
+    mocks.run.return_value = RebaseRunResult(
+        2, "Branch check failed", branch_check=branch_check
+    )
+
+    result = _call(tmp_path)
+
+    assert result.reason == reason
+    assert result.files == ()
+    assert result.llm_detail == "Branch check failed"
     mocks.push.assert_not_called()
 
 

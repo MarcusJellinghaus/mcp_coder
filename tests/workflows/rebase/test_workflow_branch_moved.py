@@ -20,8 +20,9 @@ class TestFirstCheck:
     ) -> None:
         patched.merge_base.return_value = "false"
 
-        assert _run(tmp_path) == 2
+        result = _run(tmp_path)
 
+        assert (result.exit_code, result.branch_check) == (2, "moved")
         patched.all_checks.assert_not_called()
         patched.reset.assert_not_called()
         patched.push.assert_not_called()
@@ -31,8 +32,9 @@ class TestFirstCheck:
     ) -> None:
         patched.merge_base.side_effect = RuntimeError("boom")
 
-        assert _run(tmp_path) == 2
+        result = _run(tmp_path)
 
+        assert (result.exit_code, result.branch_check) == (2, "error")
         patched.all_checks.assert_not_called()
         patched.reset.assert_not_called()
         patched.push.assert_not_called()
@@ -46,8 +48,9 @@ class TestSecondCheck:
     ) -> None:
         patched.merge_base.side_effect = ["true", "false"]
 
-        assert _run(tmp_path) == 2
+        result = _run(tmp_path)
 
+        assert (result.exit_code, result.branch_check) == (2, "moved")
         patched.reset.assert_called_once()
         assert patched.reset.call_args.args[1] == "presha"
         patched.push.assert_not_called()
@@ -57,16 +60,18 @@ class TestSecondCheck:
     ) -> None:
         patched.merge_base.side_effect = ["true", RuntimeError("boom")]
 
-        assert _run(tmp_path) == 2
+        result = _run(tmp_path)
 
+        assert (result.exit_code, result.branch_check) == (2, "error")
         patched.reset.assert_called_once()
         assert patched.reset.call_args.args[1] == "presha"
         patched.push.assert_not_called()
 
 
 def test_both_checks_pass_pushes(patched: SimpleNamespace, tmp_path: Path) -> None:
-    assert _run(tmp_path) == 0
+    result = _run(tmp_path)
 
+    assert (result.exit_code, result.branch_check) == (0, None)
     assert patched.merge_base.call_count == 2
     patched.reset.assert_not_called()
     patched.push.assert_called_once()
@@ -86,7 +91,7 @@ def all_checks(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 
 def _run_real(remote: BareRemote) -> int:
-    return run_rebase_workflow(remote.local_dir, provider="claude")
+    return run_rebase_workflow(remote.local_dir, provider="claude").exit_code
 
 
 @pytest.mark.git_integration
@@ -112,7 +117,9 @@ class TestRealGit:
         pre_sha = bare_remote.local.head.commit.hexsha
         pushed: list[str] = []
 
-        def foreign_push_on_second_call(_project_dir: Path) -> set[object]:
+        def foreign_push_on_second_call(
+            _project_dir: Path, _markers: list[str] | None
+        ) -> set[object]:
             if all_checks.call_count == 2:
                 pushed.append(bare_remote.push_foreign("foreign1"))
                 bare_remote.local.git.fetch("origin")

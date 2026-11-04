@@ -318,7 +318,7 @@ def test_branch_moved_verdict_adds_next_step_without_second_comment() -> None:
         patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
         patch(f"{MODULE}.post_issue_comment") as mock_post,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     mock_fail.assert_called_once()
@@ -342,7 +342,7 @@ def test_other_reason_verdict_has_no_next_step() -> None:
         patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
         patch(f"{MODULE}.post_issue_comment") as mock_post,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     assert "**Next step:**" not in mock_fail.call_args[0][1]
@@ -362,7 +362,7 @@ def test_branch_moved_without_verdict_comments_and_goes_to_pr_created() -> None:
         patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
         patch(f"{MODULE}.post_issue_comment") as mock_post,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 0
     mock_post.assert_called_once()
@@ -398,7 +398,7 @@ def test_branch_moved_without_verdict_comments_before_auto_merge() -> None:
     ):
         calls.attach_mock(mock_post, "comment")
         calls.attach_mock(mock_merge, "merge")
-        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER, auto_merge=True)
 
     assert result == 0
     assert [c[0] for c in calls.mock_calls] == ["comment", "merge"]
@@ -416,7 +416,7 @@ def test_branch_moved_on_branch_without_issue_number_skips_comment() -> None:
         patches[6] as _mock_fail,
         patch(f"{MODULE}.post_issue_comment") as mock_post,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 0
     mock_post.assert_not_called()
@@ -437,7 +437,7 @@ def test_settled_ok_rebase_posts_no_comment() -> None:
         patches[6],
         patch(f"{MODULE}.post_issue_comment") as mock_post,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 0
     mock_post.assert_not_called()
