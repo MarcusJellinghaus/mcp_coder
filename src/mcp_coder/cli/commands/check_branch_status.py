@@ -31,7 +31,11 @@ from ...mcp_workspace_github import (
 )
 from ...utils.log_utils import OUTPUT
 from ...workflow_steps.ci import check_and_fix_ci
-from ...workflow_steps.commit import check_formatter_config
+from ...workflow_steps.commit import (
+    BRANCH_MOVED_NEXT_STEP,
+    PushRejectedError,
+    check_formatter_config,
+)
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
@@ -516,6 +520,10 @@ def _run_auto_fixes(
                 return False
 
         # Should never reach here
+        return False
+
+    except PushRejectedError as exc:
+        logger.error("CI fix stopped: %s. %s", exc, BRANCH_MOVED_NEXT_STEP)
         return False
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
