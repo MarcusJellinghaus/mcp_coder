@@ -124,6 +124,7 @@ The real-git tests must run before the implementation, so this file must collect
 Must stop. Each asserts outcome `branch_moved`, an unchanged `remote_sha`, and local HEAD back at the captured SHA:
 
 - foreign commit with an unpushed local commit
+- foreign commit with an unpushed local commit and `move_base`, so the rebase really moves HEAD. This is the only real-git case where the HEAD assertion proves the reset; in the others the rebase leaves HEAD where it was
 - stale checkout with no local commits
 - remote rewritten by someone else's rebase
 - a tag `origin/feature` at the local HEAD alongside a foreign commit
@@ -141,10 +142,11 @@ Unit tests, mocking the collaborators with `tmp_path`:
 | `git_merge_base` raises | `push_failed`; `push_changes` not called; `reset_hard` called with the captured SHA |
 | `get_current_branch_name` returns `None` | Same |
 | `git_merge_base` returns unexpected text | Same |
-| `reset_hard` fails, on `moved` | `branch_moved`; no push |
+| `git_merge_base` returns `"false"` | `branch_moved`; `push_changes` not called; `reset_hard` called with the captured SHA |
+| `reset_hard` fails, on `moved` | `branch_moved`; no push; `reset_hard` called with the captured SHA |
 | `reset_hard` fails, on `error` | `push_failed`; no push |
 | `get_latest_commit_sha` returns `None` | `rebase_failed`; `rebase_onto_branch` and `push_changes` not called |
-| `moved` | Warning contains `BRANCH_MOVED_REASON` and `BRANCH_MOVED_NEXT_STEP` |
+| `moved` | Warning contains `BRANCH_MOVED_REASON` and `BRANCH_MOVED_NEXT_STEP`; `reset_hard` called with the captured SHA |
 | `git_merge_base` call | Arguments are the remote SHA and pre-rebase SHA, never a name |
 
 This file needs `get_remote_branch_commit_sha` to branch on its argument, because `_base_sha` uses the same function.
