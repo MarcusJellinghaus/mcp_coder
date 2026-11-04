@@ -160,6 +160,6 @@ Once the conflict or CI problem is fixed by hand, hand the PR back with `mcp-cod
 | `status-74:pr-merge-conflict` | LLM rebase failed or the PR is still conflicting, or no open PR found (see the issue comment) |
 | `status-83:ci-fix-failed` | `fix-ci` crashed, or the job died |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) |
-| `status-99f:merge-failed` | `auto_merge` could not merge: refused, error, or failed rebase (see the issue comment) |
+| `status-99f:merge-failed` | `auto_merge` could not merge: refused, error, failed rebase, or failed alert check (see the issue comment) |
 
 `status-99:merged` means `auto_merge` squash-merged the PR — nothing to do.

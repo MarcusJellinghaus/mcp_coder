@@ -33,6 +33,7 @@ token = "ghp_your_github_token_here"
    - `Issues: Read`
    - `Actions: Read`
    - `Commit statuses: Read`
+   - `Code scanning alerts: Read`
 
    `verify` reads branch protection from both classic protection and rulesets.
    Classic protection needs `Administration: Read`; without it, the protection rows
@@ -47,18 +48,16 @@ token = "ghp_your_github_token_here"
    Effective rules do not expose bypass actors, so "protected" does not mean "nobody
    can bypass".
 
-   **Code scanning alerts (`check_branch_status`)** — to let `check_branch_status`
-   read code-scanning alerts, also grant `Code scanning alerts: Read`
-   (`security_events` read). The permission name is unconfirmed until a live check runs.
-   It is kept out of the list above.
+   **Code scanning alerts** — `Code scanning alerts: Read` (`security_events` read) is
+   needed by `check_branch_status`, the coordinator and auto-merge. Without it, the
+   coordinator silently does nothing about alerts and auto-merge merges with only a
+   warning.
 
 2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public
    repositories only). Classic scopes grant permissions in bundles, so a `repo`-scope
-   token satisfies the permission-list checks above.
-   - `security_events` is the classic scope GitHub associates with code-scanning alerts;
-     it is not a confirmed requirement. The scope name is unverified: the live check
-     covers the fine-grained permission only.
-   - Whether `repo` also covers the code-scanning alerts endpoint is unverified.
+   token satisfies the other permission-list checks above.
+   - For code-scanning alerts, add `security_events` alongside `repo`, and confirm with
+     the Code scanning alerts row of `mcp-coder verify`.
 
 **How to create:** go to GitHub → Settings → Developer settings → Personal access
 tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
@@ -232,7 +231,7 @@ Default timeouts:
 | status-17i:code-reviewing | 120 minutes |
 | status-72:fixing-merge-conflict | 60 minutes (LLM rebase; two CI waits with `auto_merge`) |
 
-`09` with `auto_merge` can take ≈ 35 minutes in the worst case; the stale warning is accepted.
+The `auto_merge` alert wait adds up to ≈ 10 minutes across two merge attempts, so `09` can take ≈ 45 minutes in the worst case and `72` can exceed its 30; the stale warning is accepted.
 
 The `status-14i` / `status-17i` labels are the in-progress states for the optional automated review workflows (enabled via `auto_review_plan` / `auto_review_implementation`).
 

@@ -33,7 +33,7 @@ status-10:pr-created
   └─ review feedback  → status-91  (human, /pr_comment_triage) → status-10:pr-created
 ```
 
-**With [`auto_merge`](../../configuration/config.md#auto-merge)**, the green ends of `fix-conflict` and `fix-ci` squash-merge the PR instead of returning to `status-10`: merged → `status-99:merged`; refused or errored → `status-99f:merge-failed` (human, `/check_branch_status`). A merge-time rebase conflict → `status-74`; CI red on HEAD → `status-81`.
+**With [`auto_merge`](../../configuration/config.md#auto-merge)**, the green ends of `fix-conflict` and `fix-ci` squash-merge the PR instead of returning to `status-10`: merged → `status-99:merged`; refused or errored → `status-99f:merge-failed` (human, `/check_branch_status`). A merge-time rebase conflict → `status-74`; CI red on HEAD → `status-81`; a failed alert check → `status-99f`. An open code-scanning alert → `status-10`, which the coordinator escalates to `status-91`; after triage the PR needs a manual merge, unless a later `fix-conflict` or `fix-ci` run merges it.
 
 **Detection order at `status-10`:** conflict → CI → alerts → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
 
@@ -66,7 +66,7 @@ status-10:pr-created
 | `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase (git-only and LLM). See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | `fix-ci` crashed or the job died | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created` |
-| `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, or its rebase failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, its rebase failed, or its alert check failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
 | — (label stays `status-72` / `status-82`) | Current branch could not be determined → exit 1 | Check the Jenkins log; set `status-71:merge-conflict` / `status-81:failing-ci` to retry |
 
 ## Review feedback rules

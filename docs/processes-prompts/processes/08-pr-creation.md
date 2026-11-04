@@ -39,7 +39,8 @@ Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MA
 | CI failed | `status-81:failing-ci` (Jenkins runs `fix-ci`) |
 | Crash after the PR exists | `status-10:pr-created` (crash comment posted) |
 | [`auto_merge`](../../configuration/config.md#auto-merge) on, CI green on HEAD, merged | `status-99:merged` |
-| `auto_merge` on, merge refused or errored | `status-99f:merge-failed` (comment posted) |
+| `auto_merge` on, open code-scanning alert | `status-10:pr-created` (coordinator escalates to `status-91`) |
+| `auto_merge` on, merge refused or errored, or alert check failed | `status-99f:merge-failed` (comment posted) |
 | `auto_merge` on, rebase conflict at merge time | `status-74:pr-merge-conflict` |
 
 `74` and `99f` exit 1; the other outcomes exit 0. A still-`dirty` PR also exits 1 when no label is written (`--no-update-issue-labels` or no linked issue), because nothing hands it to `fix-conflict`.

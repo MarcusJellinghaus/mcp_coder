@@ -57,9 +57,9 @@ Details: [step_4.md](./steps/step_4.md)
 
 Details: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (docs only, no new tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs only, no new tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
