@@ -17,7 +17,7 @@ from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 # Deliberate in-body failures go through implement's `_fail` -> this handler.
 # (The SIGTERM / unexpected-exit net lives in run_guarded and is exercised in
-# test_core_workflow.py, not here.)
+# test_core_sigterm.py and test_core_workflow.py, not here.)
 _DELIBERATE_HANDLER = (
     "mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure"
 )
