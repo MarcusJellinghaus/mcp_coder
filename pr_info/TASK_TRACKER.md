@@ -21,6 +21,47 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Coordinator `_check_alerts`
+
+Details: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Auto-merge CodeQL wait and alert gate
+
+Details: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `pr_comment_triage` skill covers alerts
+
+Details: [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (skill text only, no new tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `status-91` label and PR-health docs
+
+Details: [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (label test + `labels.json` + docs)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Auto-merge and token docs
+
+Details: [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (docs only, no new tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary: prepare the PR title and description
