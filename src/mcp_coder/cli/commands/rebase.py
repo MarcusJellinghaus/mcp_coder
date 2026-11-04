@@ -6,7 +6,8 @@ resolves conflicts + verifies via a single LLM session, and force-pushes with
 ``--force-with-lease``.
 
 Exit-code contract (see ``workflows/rebase.py`` / ``pr_info`` summary):
-    0 = success or no-op, 1 = aborted (needs human), 2 = error / push rejected.
+    0 = success or no-op, 1 = aborted (needs human),
+    2 = error / push rejected / branch moved.
 """
 
 import argparse
