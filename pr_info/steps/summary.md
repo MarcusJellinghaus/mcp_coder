@@ -94,6 +94,7 @@ The comment's `Error` field holds `str(exc)`. Its `Next step` field holds the sh
 
 ### Modified: tests
 
+- `tests/workflow_steps/test_ci_check_and_fix.py` (imports only)
 - `tests/workflows/implement/test_core_failure_categories.py`
 - `tests/workflows/implement/test_failure_reporting.py`
 - `tests/workflows/fix_ci/test_core.py`
@@ -135,4 +136,6 @@ Run these before finishing a step, and fix anything they report:
 - `mcp__mcp-tools-py__run_format_code`
 - `mcp__mcp-tools-py__run_pylint_check`
 - `mcp__mcp-tools-py__run_mypy_check`
+- `mcp__mcp-tools-py__run_lint_imports_check`
+- `mcp__mcp-tools-py__run_ruff_check`
 - `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"]`

@@ -2,7 +2,7 @@
 
 ## LLM prompt
 
-> Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_9.md`. Write the tests first, and confirm the false-success test fails before changing the code. Run the checks listed in the summary. Make exactly one commit's worth of change.
+> Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_9.md`. First add only the `get_latest_commit_sha` and `get_working_tree_status` imports to `ci_fix_helpers.py`, so the tests' patch targets exist. Then write the tests, and confirm the false-success test fails on its result assertion (`True` vs `False`) before changing any other code. An `AttributeError` does not count as that failure. Run the checks listed in the summary. Make exactly one commit's worth of change.
 
 ## WHERE
 
@@ -108,7 +108,7 @@ If `unlink` fails after the tree read as clean, the helper returns `False`, so `
 
 **`test_ci_fix_loop.py`**, using `patch_ci_fix_externals` with `ci.run_formatters` patched, and patching `ci_fix_helpers.get_working_tree_status` and `ci_fix_helpers.get_latest_commit_sha` to control the result:
 
-- **False success, written first:** clean tree and unchanged HEAD on every attempt, CI still failing. Result is `False`, `prompt_llm` is called `2 * CI_MAX_FIX_ATTEMPTS` times, and `commit_changes` and `push_changes` are not called.
+- **False success, written first:** clean tree and unchanged HEAD on every attempt, CI still failing. Assert the result first, so the red run shows `True` where `False` is expected. Result is `False`, `prompt_llm` is called `2 * CI_MAX_FIX_ATTEMPTS` times, and `commit_changes` and `push_changes` are not called.
 - **Formatter-only change:** a tree that becomes dirty only through `run_formatters` still commits.
 - **Failed push then no change:** attempt 1 is dirty and `push_changes` returns `False`; attempt 2 is clean with HEAD unchanged since that attempt began. `commit_changes` is called once, `push_changes` twice. When the retry succeeds, the loop waits for a new run as usual; give it a new green run and assert `True`.
 - **Retry rejected:** the second `push_changes` raises `PushRejectedError`, and it propagates.

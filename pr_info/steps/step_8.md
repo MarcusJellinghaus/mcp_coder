@@ -8,6 +8,7 @@
 
 - `src/mcp_coder/workflow_steps/ci_fix_helpers.py` (new)
 - `src/mcp_coder/workflow_steps/ci.py`
+- `tests/workflow_steps/test_ci_check_and_fix.py` (imports only)
 
 ## WHAT
 
@@ -16,7 +17,8 @@ Move `_read_problem_description(temp_file: Path, fallback_response: str) -> str`
 ## HOW
 
 - Use `mcp__mcp-tools-py__move_symbol`, or move it by hand.
-- `ci.py` calls the function, so it must import it from `.ci_fix_helpers`. Existing tests importing it from `ci` keep working. If the tool rewrites those imports to the new module, that is fine too.
+- `ci.py` calls the function, so it must import it from `.ci_fix_helpers`.
+- On either path, every import in `TestReadProblemDescription` (`tests/workflow_steps/test_ci_check_and_fix.py`) must import from `mcp_coder.workflow_steps.ci_fix_helpers`. Do not leave tests importing it from `ci`: that relies on an implicit re-export, which mypy's `strict = true` rejects.
 
 ## ALGORITHM
 

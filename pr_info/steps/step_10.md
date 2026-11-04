@@ -54,8 +54,6 @@ No new tests. These existing tests must pass:
 
 Finally, run the full set once:
 
-- `mcp__mcp-tools-py__run_lint_imports_check`
-- `mcp__mcp-tools-py__run_ruff_check`
 - `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto"]` and `markers=["git_integration"]`
 - `mcp__mcp-workspace__check_file_size` with `max_lines=750`
 
