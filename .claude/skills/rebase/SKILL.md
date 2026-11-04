@@ -63,7 +63,7 @@ If the base branch is not `main` or `master`, ask the user to confirm before pro
 ## Workflow
 
 1. Call `mcp__mcp-workspace__git` with command `"fetch"` and args `["origin"]`
-2. Run the Branch Moved Check (below), which also captures `PRE_SHA`. On `"false"`: stop and report. Nothing to undo.
+2. Run the Branch Moved Check (below), which also captures `PRE_SHA`. If it stops: report it. Nothing to undo.
 3. `git rebase origin/${BASE_BRANCH}`
 4. For each conflict:
    - If file is under `pr_info/`: auto-resolve with `git checkout --theirs <file>` (keep feature branch version), then `git add <file>` — no user input needed
@@ -74,7 +74,7 @@ If the base branch is not `main` or `master`, ask the user to confirm before pro
 5. Run code checks: `mcp__mcp-tools-py__run_pytest_check`, `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`
 6. Fix any issues from merge
 7. Report summary and ask for user confirmation
-8. Repeat the Branch Moved Check against the same `PRE_SHA`. On `"false"`: stop, and print `git reset --hard <PRE_SHA>` for the human to run.
+8. Repeat the Branch Moved Check against the same `PRE_SHA`. If it stops: do not push, and print `git reset --hard <PRE_SHA>` for the human to run.
 9. `git push --force-with-lease`
 
 ## Branch Moved Check
@@ -86,14 +86,16 @@ All calls go through `mcp__mcp-workspace__git`:
 1. `branch` = command `"branch"`, args `["--show-current"]`
 2. `PRE_SHA` = command `"rev_parse"`, args `["HEAD"]`. Capture this once, before the rebase; the repeat in workflow step 8 reuses it. Do not read `HEAD` again.
 3. Command `"rev_parse"`, args `["--verify", "refs/remotes/origin/<branch>"]`
-   - Error: the ref is absent. Skip the rest of this check and rely on the lease.
+   - Error `fatal: Needed a single revision`: the ref is absent. Skip the rest of this check and rely on the lease.
+   - Any other error: stop as described in the workflow step, and report it.
 4. Command `"merge_base"`, args `["--is-ancestor", "refs/remotes/origin/<branch>", PRE_SHA]`
    - `"true"`: continue.
    - `"false"`: someone else pushed to the branch. Stop as described in the workflow step, and report it.
+   - Error: not a pass. Stop as described in the workflow step, and report it.
 
 Use `refs/remotes/origin/<branch>`, not the bare name: a tag named `origin/<branch>` makes the check pass wrongly.
 
-**Abort instruction:** the `git rebase --abort` line under Abort Rules does not apply to either stop. At the first, no rebase has started. At the second, the rebase has already completed.
+**Abort instruction:** an error from this check is a stop, not Abort Rule 1, and the `git rebase --abort` line under Abort Rules does not apply to either stop. At the first, no rebase has started. At the second, the rebase has already completed.
 
 **Do not work around it:** on a stop, do not fetch and push again. The next fetch only hides the foreign commit from the lease.
 
