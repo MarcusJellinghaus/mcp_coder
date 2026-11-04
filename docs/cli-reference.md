@@ -314,6 +314,8 @@ Runs a git-only rebase first. On a conflict or failed rebase it falls back to th
 - settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
 - still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, LLM rebase reason, base, conflicting and uncommitted files). Exits 1.
 
+If the rebase stops because `origin/<branch>` has commits this checkout does not have, the "Fix Conflict Failed" comment gains a next step. On the settled-state path, where no verdict comment is posted, a separate comment gives the same reason and next step. The label and exit code do not change.
+
 With `--auto-merge`, the success path then waits for CI on HEAD and squash-merges → `status-99:merged` / `status-99f:merge-failed` (see [create-pr](#create-pr)).
 
 Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`.

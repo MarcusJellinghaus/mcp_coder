@@ -6,7 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+)
 from mcp_coder.workflows.fix_conflict.core import run_fix_conflict_workflow
 
 MODULE = "mcp_coder.workflows.fix_conflict.core"
@@ -17,6 +21,7 @@ PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
 PROVIDER = "claude"
 _OK_OUTCOME = RebaseOutcome("ok", "main", "abc1234")
+_BRANCH_MOVED_OUTCOME = RebaseOutcome("branch_moved", "main", "abc1234")
 
 
 def _patch_all(
@@ -298,6 +303,144 @@ def test_final_label_failure_returns_1_without_net() -> None:
     mock_update.assert_called_once()
     mock_fail.assert_not_called()
     mock_net.assert_not_called()
+
+
+def test_branch_moved_verdict_adds_next_step_without_second_comment() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "dirty"}]], _BRANCH_MOVED_OUTCOME)
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patches[6] as mock_fail,
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 1
+    mock_fail.assert_called_once()
+    assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in mock_fail.call_args[0][1]
+    mock_post.assert_not_called()
+
+
+def test_other_reason_verdict_has_no_next_step() -> None:
+    patches, _ = _patch_all(
+        [[{"mergeable_state": "dirty"}]],
+        RebaseOutcome("conflict", "main", "abc1234", ("a.py",)),
+    )
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patches[6] as mock_fail,
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 1
+    assert "**Next step:**" not in mock_fail.call_args[0][1]
+    mock_post.assert_not_called()
+
+
+def test_branch_moved_without_verdict_comments_and_goes_to_pr_created() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]], _BRANCH_MOVED_OUTCOME)
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as mock_fail,
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 0
+    mock_post.assert_called_once()
+    project_dir, issue_number, comment = mock_post.call_args[0]
+    assert project_dir == PROJECT_DIR
+    assert issue_number == 123
+    assert comment.splitlines()[0] == "## ❌ Fix Conflict Failed"
+    assert "**Stage:** Mechanical rebase" in comment
+    assert f"**Reason:** {BRANCH_MOVED_REASON}" in comment
+    assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in comment
+    mock_update.assert_called_once_with(
+        PROJECT_DIR, "fixing_merge_conflict", "pr_created"
+    )
+    mock_fail.assert_not_called()
+
+
+def test_branch_moved_without_verdict_comments_before_auto_merge() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]], _BRANCH_MOVED_OUTCOME)
+    calls = MagicMock()
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patches[6],
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+        patch(f"{MODULE}.resolve_merge_issue_number", return_value=123),
+        patch(f"{MODULE}.run_auto_merge") as mock_merge,
+        patch(f"{MODULE}.finish_auto_merge", return_value=0),
+    ):
+        calls.attach_mock(mock_post, "comment")
+        calls.attach_mock(mock_merge, "merge")
+        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+
+    assert result == 0
+    assert [c[0] for c in calls.mock_calls] == ["comment", "merge"]
+
+
+def test_branch_moved_on_branch_without_issue_number_skips_comment() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]], _BRANCH_MOVED_OUTCOME)
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value="no-number"),
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as _mock_fail,
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 0
+    mock_post.assert_not_called()
+    mock_update.assert_called_once_with(
+        PROJECT_DIR, "fixing_merge_conflict", "pr_created"
+    )
+
+
+def test_settled_ok_rebase_posts_no_comment() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patches[6],
+        patch(f"{MODULE}.post_issue_comment") as mock_post,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 0
+    mock_post.assert_not_called()
 
 
 def test_no_current_branch_returns_1_without_rebase() -> None:

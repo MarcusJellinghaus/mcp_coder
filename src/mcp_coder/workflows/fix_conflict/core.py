@@ -10,17 +10,26 @@ accordingly. Runs inside the Jenkins job's own checkout, dispatched from
 import logging
 from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import get_current_branch_name
+from mcp_coder.mcp_workspace_git import (
+    extract_issue_number_from_branch,
+    get_current_branch_name,
+)
 from mcp_coder.workflow_steps.merge import (
     finish_auto_merge,
     resolve_merge_issue_number,
     run_auto_merge,
 )
-from mcp_coder.workflow_steps.rebase import RebaseOutcome, _poll_mergeable_state
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+    _poll_mergeable_state,
+)
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
     handle_workflow_failure,
+    post_issue_comment,
     run_guarded,
 )
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
@@ -42,6 +51,10 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
         ("Base", outcome.base_branch),
         (files_label, ", ".join(outcome.files) if outcome.files else None),
         ("LLM rebase", outcome.llm_detail),
+        (
+            "Next step",
+            BRANCH_MOVED_NEXT_STEP if outcome.reason == "branch_moved" else None,
+        ),
     ]
     comment = build_failure_comment(
         project_dir, title="Fix Conflict", kind="Failed", fields=fields
@@ -58,6 +71,24 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
         update_issue_labels=True,
         post_issue_comments=True,
     )
+
+
+def _post_branch_moved_comment(project_dir: Path, branch: str) -> None:
+    """Post the settled-state comment for a rebase stopped by a moved branch."""
+    issue_number = extract_issue_number_from_branch(branch)
+    if issue_number is None:
+        return
+    comment = build_failure_comment(
+        project_dir,
+        title="Fix Conflict",
+        kind="Failed",
+        fields=[
+            ("Stage", "Mechanical rebase"),
+            ("Reason", BRANCH_MOVED_REASON),
+            ("Next step", BRANCH_MOVED_NEXT_STEP),
+        ],
+    )
+    post_issue_comment(project_dir, issue_number, comment)
 
 
 def run_fix_conflict_workflow(
@@ -120,6 +151,8 @@ def run_fix_conflict_workflow(
         if verdict:
             _fail(project_dir, verdict, outcome)
             return 1
+        if outcome.reason == "branch_moved":
+            _post_branch_moved_comment(project_dir, branch)
         if state == "unknown":
             # Safe: status-10 detection re-checks "dirty" on every poll.
             logger.info(
