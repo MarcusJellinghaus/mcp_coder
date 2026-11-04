@@ -15,7 +15,7 @@ from mcp_coder.workflow_steps.merge import (
     resolve_merge_issue_number,
     run_auto_merge,
 )
-from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflow_steps.rebase import BRANCH_MOVED_NEXT_STEP, RebaseOutcome
 
 _MODULE = "mcp_coder.workflow_steps.merge"
 _PROJECT = Path("/fake/project")
@@ -418,6 +418,26 @@ class TestRunAutoMergeStep3:
         mocks.reset_hard.assert_not_called()
         assert outcome.label_id == "merge_failed"
         assert _fields(outcome)["Reason"] == "rebase_failed"
+
+    def test_branch_moved_adds_next_step_no_reset(self, mocks: Mocks) -> None:
+        mocks.pr_manager.merge_pull_request.return_value = REFUSED_405
+        mocks.rebase.return_value = RebaseOutcome("branch_moved", "main", "1234567")
+
+        outcome = run_auto_merge(_PROJECT, _BRANCH, verified_sha=_SHA)
+
+        mocks.reset_hard.assert_not_called()
+        assert outcome.label_id == "merge_failed"
+        assert _fields(outcome)["Reason"] == "branch_moved"
+        assert _fields(outcome)["Next step"] == BRANCH_MOVED_NEXT_STEP
+        assert mocks.pr_manager.merge_pull_request.call_count == 1
+
+    def test_push_failed_has_no_next_step(self, mocks: Mocks) -> None:
+        mocks.pr_manager.merge_pull_request.return_value = REFUSED_405
+        mocks.rebase.return_value = RebaseOutcome("push_failed", "main", "1234567")
+
+        outcome = run_auto_merge(_PROJECT, _BRANCH, verified_sha=_SHA)
+
+        assert "Next step" not in _fields(outcome)
 
 
 class TestRunAutoMergeExceptions:
