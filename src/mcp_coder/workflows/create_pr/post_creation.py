@@ -63,8 +63,9 @@ def run_post_creation(
 
     Returns:
         Exit code: 1 on the auto-merge outcomes "pr_merge_conflict" /
-        "merge_failed" or when the label write fails, else 0 ("merge_conflict"
-        / "failing_ci" / "pr_created" / "merged").
+        "merge_failed", on "merge_conflict" with no label written, or when the
+        label write fails, else 0 ("merge_conflict" / "failing_ci" /
+        "pr_created" / "merged").
     """
     head_before = get_latest_commit_sha(project_dir)
     label, verified_sha = _check_mergeability_and_ci(project_dir, branch, head_before)
@@ -109,10 +110,12 @@ def apply_post_creation_label(
         update_issue_labels: If True, apply the label to the issue.
 
     Returns:
-        Exit code: 1 when the label write fails, else 0.
+        Exit code: 1 when the label write fails, or on "merge_conflict" with
+        no label written (nothing hands the PR to fix-conflict), else 0.
     """
     rc = 0
-    if update_issue_labels and issue_number:
+    label_written = bool(update_issue_labels and issue_number)
+    if label_written:
         logger.log(OUTPUT, "Updating GitHub issue label...")
         rc = apply_final_label(project_dir, "pr_creating", label, issue_number)
         if rc == 0:
@@ -124,6 +127,9 @@ def apply_post_creation_label(
 
     if rc != 0:
         logger.error("Create PR workflow failed: final issue label not applied")
+    elif label == "merge_conflict" and not label_written:
+        logger.error("PR still has merge conflicts and fix-conflict was not triggered")
+        rc = 1
     elif update_issue_labels and issue_number is None:
         logger.log(OUTPUT, "Create PR workflow completed with warnings")
     else:

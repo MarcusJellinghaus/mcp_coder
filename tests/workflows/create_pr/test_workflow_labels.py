@@ -471,19 +471,23 @@ class TestPhaseB:
             Path("/test"), "pr_creating", label, 123
         )
 
-    @pytest.mark.parametrize("label", ["pr_created", "merge_conflict", "failing_ci"])
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [("pr_created", 0), ("merge_conflict", 1), ("failing_ci", 0)],
+    )
     def test_labels_off_still_runs_phase_b(
         self,
         label: str,
+        expected: int,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
     ) -> None:
-        """Phase B runs with update_issue_labels=False and sets no label."""
+        """Phase B runs with labels off and sets no label; a conflict exits 1."""
         mock_post_creation.return_value = (label, None)
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
-        assert result == 0
+        assert result == expected
         mock_post_creation.assert_called_once()
         phase_a_ok["apply_label"].assert_not_called()
 

@@ -42,7 +42,7 @@ Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MA
 | `auto_merge` on, merge refused or errored | `status-99f:merge-failed` (comment posted) |
 | `auto_merge` on, rebase conflict at merge time | `status-74:pr-merge-conflict` |
 
-`74` and `99f` exit 1; the other outcomes exit 0.
+`74` and `99f` exit 1; the other outcomes exit 0. A still-`dirty` PR also exits 1 when no label is written (`--no-update-issue-labels` or no linked issue), because nothing hands it to `fix-conflict`.
 
 **Resume.** If the branch already has an open PR, `create-pr` skips straight to the post-creation checks — after cleanup/commit/push if `pr_info/` is still on the branch. Recovering from `09f` with `set-status status-08:ready-pr` is therefore safe even when Jenkins killed the job after the PR was opened. `status-09:pr-creating` goes stale after 30 min, to cover the CI wait.
 

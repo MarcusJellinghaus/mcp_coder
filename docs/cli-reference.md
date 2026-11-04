@@ -285,7 +285,7 @@ mcp-coder create-pr [OPTIONS]
 
 **Prerequisites:** clean working directory; all tasks complete in `pr_info/TASK_TRACKER.md`; on a feature branch (not main); GitHub credentials configured.
 
-**Post-creation checks.** Once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-71:merge-conflict` (still conflicting; picked up by `fix-conflict`) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
+**Post-creation checks.** Once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-71:merge-conflict` (still conflicting; picked up by `fix-conflict`) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged, and a still-conflicting PR exits 1 because nothing hands it to `fix-conflict`. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
 
 **Description refresh.** If the post-creation rebase pushed new commits, the PR title and body are regenerated from the full branch diff (closing references kept). This is best-effort and never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
 

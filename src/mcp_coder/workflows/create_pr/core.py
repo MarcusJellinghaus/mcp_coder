@@ -545,9 +545,10 @@ def run_create_pr_workflow(
     Returns:
         int: Exit code. 0 once the PR exists and phase B ends on pr_created,
         merge_conflict or failing_ci (10 / 71 / 81); 1 when the final label
-        could not be applied, when phase A fails, or when either phase
-        crashes. With ``auto_merge``, the merge outcome decides: 1 on
-        pr_merge_conflict (74) / merge_failed (99f).
+        could not be applied, on merge_conflict with no label written (no
+        ``update_issue_labels`` or no linked issue), when phase A fails, or
+        when either phase crashes. With ``auto_merge``, the merge outcome
+        decides: 1 on pr_merge_conflict (74) / merge_failed (99f).
 
     Note:
         The workflow runs as two phases, each wrapped in :func:`run_guarded`.

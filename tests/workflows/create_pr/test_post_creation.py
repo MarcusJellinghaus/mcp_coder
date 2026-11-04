@@ -408,16 +408,37 @@ class TestApplyPostCreationLabel:
         assert result == 1
         assert "final issue label not applied" in caplog.text
 
-    @pytest.mark.parametrize("label", ["merge_conflict", "failing_ci", "pr_created"])
-    def test_labels_off_skips_write_keeps_exit_code(self, label: str) -> None:
-        """update_issue_labels=False → no label write; exit 0."""
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [("merge_conflict", 1), ("failing_ci", 0), ("pr_created", 0)],
+    )
+    def test_labels_off_skips_write_keeps_exit_code(
+        self, label: str, expected: int
+    ) -> None:
+        """update_issue_labels=False → no label write; a conflict still exits 1."""
         with patch(f"{_MODULE}.apply_final_label") as mock_apply:
             result = apply_post_creation_label(
                 _PROJECT, label, issue_number=_ISSUE, update_issue_labels=False
             )
 
-        assert result == 0
+        assert result == expected
         mock_apply.assert_not_called()
+
+    def test_merge_conflict_without_issue_returns_1(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Labels on but no linked issue → nothing triggers fix-conflict → exit 1."""
+        with (
+            patch(f"{_MODULE}.apply_final_label") as mock_apply,
+            caplog.at_level(logging.DEBUG),
+        ):
+            result = apply_post_creation_label(
+                _PROJECT, "merge_conflict", issue_number=None, update_issue_labels=True
+            )
+
+        assert result == 1
+        mock_apply.assert_not_called()
+        assert "fix-conflict was not triggered" in caplog.text
 
     def test_no_issue_skips_write_with_warning(
         self, caplog: pytest.LogCaptureFixture
