@@ -29,6 +29,8 @@ def _check_mergeability_and_ci(
 
 The 2-tuple return stays. Document both new arguments in the docstring.
 
+Also update the `run_post_creation` docstring, whose `post_issue_comments` entry names only the auto-merge failure comment. It now gates both that comment and the `branch_moved` comment.
+
 ## HOW
 
 - `run_post_creation` passes its own `issue_number` and `post_issue_comments`.

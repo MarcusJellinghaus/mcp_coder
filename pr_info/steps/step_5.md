@@ -11,6 +11,7 @@
 | `tests/workflows/fix_conflict/test_core.py` | Both paths |
 | `src/mcp_coder/workflows/fix_conflict/core.py` | `Next step` in `_fail`, no-verdict comment |
 | `docs/cli-reference.md` | `fix-conflict` section |
+| #1376's failure comment text, only if #1376 has merged | See "#1376 failure comment" |
 
 ## WHAT
 
@@ -63,7 +64,14 @@ Labels and exit codes do not change. With no verdict, the run still goes to `pr_
 
 In `docs/cli-reference.md`, `fix-conflict` section, add after the bullet list:
 
-> If the rebase stops because `origin/<branch>` has commits this checkout does not have, the "Fix Conflict Failed" comment gains a next step. On the `status-10:pr-created` path, where no verdict comment is posted, a separate comment gives the same reason and next step. The label and exit code do not change.
+> If the rebase stops because `origin/<branch>` has commits this checkout does not have, the "Fix Conflict Failed" comment gains a next step. On the settled-state path, where no verdict comment is posted, a separate comment gives the same reason and next step. The label and exit code do not change.
+
+## #1376 failure comment
+
+The issue requires whichever of #1376 and #1382 merges second to update #1376's failure comment. Check #1376's state with `mcp__mcp-workspace__github_issue_view`.
+
+- **#1376 has merged:** find its `Next step` text in `src/` (search for the wording about re-running from a local checkout). Reword the warning that re-running can reach the overwrite, because a re-run now stops with `branch_moved`. Keep the instruction to discard the unpushed commit before re-running. Update any test that pins the text, and include the change in this step's commit.
+- **#1376 has not merged:** change nothing, and add one line to this step's commit message saying the update falls to #1376.
 
 ## Tests
 

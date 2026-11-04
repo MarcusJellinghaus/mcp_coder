@@ -110,7 +110,7 @@ foreign = git.Repo.clone_from(bare, tmp_path / "foreign", branch="feature")
 | `local`, `local_dir`, `foreign` | The clones and the checkout path |
 | `commit_local(name) -> str` | Commit a new file in `local`, not pushed |
 | `push_foreign(name) -> str` | Commit and push from `foreign` to `feature` |
-| `rewrite_remote() -> str` | `commit --amend` in `foreign`, then `push --force` |
+| `rewrite_remote() -> str` | `commit --amend` in `foreign` with a changed message or changed content, so the commit always gets a new SHA (not `--no-edit` alone: within the same second it can reproduce the same SHA), then `push --force` |
 | `move_base(name) -> str` | Commit and push to `main` from `foreign`, then return to `feature` |
 | `remote_sha(branch="feature") -> str` | The branch's SHA in the bare repo |
 | `remote_log(branch="feature") -> list[str]` | The branch's SHAs in the bare repo |
@@ -118,6 +118,8 @@ foreign = git.Repo.clone_from(bare, tmp_path / "foreign", branch="feature")
 ### `tests/workflow_steps/test_rebase_branch_moved.py`
 
 Patch only `mcp_coder.workflow_steps.rebase.detect_base_branch` to return `"main"` in the real-git tests. Mark them `@pytest.mark.git_integration`.
+
+The real-git tests must run before the implementation, so this file must collect without the new names. At module level, import only what exists today. The unit tests get `BRANCH_MOVED_REASON` and `BRANCH_MOVED_NEXT_STEP` with a local import inside the test, or read them through the module at test time. The real-git tests compare against the literal `"branch_moved"`.
 
 Must stop. Each asserts outcome `branch_moved`, an unchanged `remote_sha`, and local HEAD back at the captured SHA:
 
@@ -160,5 +162,7 @@ This file needs `get_remote_branch_commit_sha` to branch on its argument, becaus
 Copy the mock stack of `test_timeout_calls_handle_failure_with_llm_timeout`. With `mock_rebase.return_value = RebaseOutcome("branch_moved", "main", "abc1234")`, assert that `mock_process` was called, showing the workflow continues.
 
 ## Precondition
+
+Run the "must stop" tests before the implementation. Each must fail on its own assertions, with outcome `ok` and the foreign commit gone from the remote. A collection `ImportError` does not count: fix the test file's imports and run them again.
 
 If any "must stop" test passes before the implementation, write one line to `pr_info/.blocked.txt` and stop.

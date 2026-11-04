@@ -96,7 +96,7 @@ No new folders are created, apart from `pr_info/steps/`.
 2. `mcp-coder rebase` workflow
 3. Review hand-off text
 4. `create-pr` post-creation comment
-5. `fix-conflict` feedback and docs
+5. `fix-conflict` feedback and docs, plus the conditional #1376 comment update
 6. Auto-merge next step
 7. `/rebase` skill
 
@@ -136,4 +136,4 @@ No new folders are created, apart from `pr_info/steps/`.
 
 ## Dependencies
 
-#1376 is independent. If it merges first, update its failure comment, which warns that re-running from a local checkout can reach this overwrite. If this issue merges first, #1376 makes that update.
+#1376 is independent. Step 5 owns this: if #1376 has already merged, it updates #1376's failure comment, which warns that re-running from a local checkout can reach this overwrite. If #1376 has not merged, Step 5 records in its commit message that the update falls to #1376.
