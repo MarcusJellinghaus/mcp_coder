@@ -18,6 +18,8 @@ from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
+    BRANCH_MOVED_NEXT_STEP,
+    PushRejectedError,
     check_formatter_config,
     commit_changes,
     push_changes,
@@ -357,6 +359,15 @@ def run_implement_workflow(
                     reason,
                     stage="CI pipeline analysis",
                     message="LLM failure during CI failure analysis",
+                )
+            except PushRejectedError as exc:
+                return fail(
+                    "branch_moved",
+                    stage="CI pipeline fix",
+                    message=str(exc),
+                    next_step=(
+                        f"{BRANCH_MOVED_NEXT_STEP} Then set `status-05:plan-ready`."
+                    ),
                 )
             if not ci_success:
                 logger.error("CI check failed after maximum fix attempts")
