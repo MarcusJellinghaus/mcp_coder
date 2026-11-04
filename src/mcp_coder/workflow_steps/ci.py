@@ -257,8 +257,8 @@ def _run_ci_fix(
         return False
 
     # Push changes
-    if not push_changes(config.project_dir):
-        logger.error("Git push failed during CI fix - failing fast")
+    if not push_changes(config.project_dir, raise_on_rejected=True):
+        logger.error("Git push failed during CI fix")
         return False
 
     return True
@@ -643,6 +643,8 @@ def check_and_fix_ci(
             into mcp_unavailable. Fix-phase occurrences are absorbed (Decision
             10) and never reach here.
         FormatterConfigError: From run_formatters on invalid formatter config.
+        PushRejectedError: If the remote rejects a fix attempt's push because
+            the branch moved. Nothing here catches it, so the loop stops at once.
     """
     logger.info("Starting CI check and fix process...")
 
@@ -673,7 +675,7 @@ def check_and_fix_ci(
     # Store failed run IDs for comparison after fixes
     failed_run_ids = set(ci_status.get("run", {}).get("run_ids", []))
 
-    # Phase 2: Fix loop (max 3 attempts)
+    # Phase 2: Fix loop (bounded by CI_MAX_FIX_ATTEMPTS)
     env_vars = prepare_llm_environment(project_dir)
 
     # Create config for CI fix operations
