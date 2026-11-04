@@ -39,6 +39,22 @@ linked config files, docs and issues.
 - **Gaps** (bash, mcp-coder CLI or CI only): the [Repo hygiene](#repo-hygiene)
   scripts, CodeQL, Scorecard, Dependabot, `mcp-coder verify`.
 
+## CI events
+
+Which [`ci.yml`](../../.github/workflows/ci.yml) job runs on which event. First-line checks run
+on feature-branch push: fast, they catch most errors early. Backup checks run on the PR: slow,
+or redundant with earlier gates. Every check runs at least once before merge (#1354).
+
+| Job | Feature push | PR | Main push / dispatch | Why |
+|---|---|---|---|---|
+| ruff-format, ruff, mypy, file-size, no-url-deps, forbidden-calls, vulture, import-linter | ✅ | — | ✅ | First-line: no automated gate before CI (mypy, ruff-format also run in `implement`); the push run covers the PR |
+| unit-tests, integration-tests | ✅ | ✅ | ✅ | Every event: `coverage` needs them in the PR run; integration markers are excluded locally |
+| pylint | — | ✅ | ✅ | Backup: ruff is the main linter (#1163); pylint also runs locally per task and in `mcp-coder rebase` |
+| tach, deptry | — | ✅ | ✅ | Backup: rarely triggered |
+| vscodeclaude-template-install | — | ✅ | ✅ | Backup: its inputs (installer, `pyproject.toml`, sibling HEADs) rarely change |
+| check-forbidden-folders | — | ✅ | — | `pr_info/` is allowed on branches, not in a merge |
+| langchain-integration, coverage | — | ✅ | main push only | Calls real LLM APIs; `coverage` combines the test jobs of its own run and updates the badge on main |
+
 ## Lint
 
 ruff, with rule groups chosen in #1164–#1172 (`TRY` rejected, #1172), plus `D` (Google
@@ -67,9 +83,10 @@ ruff because ruff does not fully cover pylint. CI job `pylint`. See
 
 ## Architecture
 
-import-linter ([`.importlinter`](../../.importlinter)), tach ([`tach.toml`](../../tach.toml)),
-and vulture run in the PR-only `architecture` matrix (deptry too, see
-[Dependencies](#dependencies)). Pylint `R0401` catches cyclic imports on every push. See
+import-linter ([`.importlinter`](../../.importlinter)), tach ([`tach.toml`](../../tach.toml))
+and vulture run in CI, on the events in [CI events](#ci-events) (deptry too, see
+[Dependencies](#dependencies)). Cycle checks: import-linter layer contracts run on push;
+pylint `R0401` and tach run on the PR. See
 [`python.md`](python.md#architecture-enforcement). Why: [`enforcement.md`](../architecture/enforcement.md).
 
 ## File size
@@ -83,7 +100,7 @@ Small files suit an LLM's limited context window. CI job `file-size` runs
 ## Dependencies
 
 deptry (#1176, `[tool.deptry]`) checks that declared dependencies match the imports in `src`;
-PR-only CI job `deptry`. Dependabot updates `pip` and `github-actions` dependencies. See
+CI job `deptry` runs on PR and main push / dispatch (see [CI events](#ci-events)). Dependabot updates `pip` and `github-actions` dependencies. See
 [`dependabot.yml`](../../.github/dependabot.yml). Why: [`enforcement.md`](../architecture/enforcement.md).
 
 ## Coverage

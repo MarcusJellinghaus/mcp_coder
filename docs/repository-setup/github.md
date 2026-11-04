@@ -570,6 +570,7 @@ Add comprehensive CI checks to your GitHub Actions workflow.
 Create `.github/workflows/ci.yml`:
 
 ```yaml
+# Simplified template. mcp-coder's own .github/workflows/ci.yml splits checks by event (push vs PR).
 name: CI
 
 on:
@@ -590,6 +591,8 @@ jobs:
           - {name: "pylint", cmd: "pylint -E ./src ./tests"}
           - {name: "pytest", cmd: "pytest"}
           - {name: "mypy", cmd: "mypy --strict src tests"}
+          - {name: "import-linter", cmd: "lint-imports"}
+          - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4
@@ -607,9 +610,7 @@ jobs:
       fail-fast: false
       matrix:
         check:
-          - {name: "import-linter", cmd: "lint-imports"}
           - {name: "tach", cmd: "tach check"}
-          - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
           - {name: "deptry", cmd: "deptry src"}
     name: ${{ matrix.check.name }}
     steps:

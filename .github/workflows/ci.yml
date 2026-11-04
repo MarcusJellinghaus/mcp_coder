@@ -1,5 +1,12 @@
 name: Python CI
 
+# Which job runs on which event:
+#   Feature push  → first-line checks + tests: fast, catch most errors early.
+#   Pull request  → backup checks + tests: slow, or redundant with earlier gates.
+#   Main push / dispatch → both sets (post-merge safety net).
+# Every check runs at least once before merge, on push or on PR.
+# Job names are required-check names: don't rename them, and never skip a check with a step-level `if`.
+
 on:
   push:
     branches: [ "**" ]
@@ -11,6 +18,7 @@ permissions:
   contents: read
 
 jobs:
+  # PR only: pr_info/ is allowed on branches, not in a merge.
   check-forbidden-folders:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
@@ -91,19 +99,22 @@ jobs:
 
   # Matrix approach: Each check runs as independent job with individual pass/fail status
   # fail-fast: false ensures all checks complete even if one fails
-  test:
+  # First-line checks: run on every push, not again on the PR.
+  push-checks:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
         check:
           - {name: "ruff-format", cmd: "ruff version && ruff format --check src tests tools"}
-          - {name: "pylint", cmd: "pylint --version && pylint ./src ./tests"}  # configuration via pyproject.toml
           - {name: "ruff", cmd: "ruff version && ruff check src tests tools"}
           - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
           - {name: "forbidden-calls", cmd: "python tools/check_forbidden_calls.py"}
+          - {name: "import-linter", cmd: "uv pip show import-linter | grep Version && ./tools/lint_imports.sh"}
+          - {name: "vulture", cmd: "vulture --version && ./tools/vulture_check.sh"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -131,6 +142,45 @@ jobs:
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
 
+  # Backup checks: run on PR, main push and dispatch.
+  pr-checks:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - {name: "pylint", cmd: "pylint --version && pylint ./src ./tests"}  # configuration via pyproject.toml
+          - {name: "tach", cmd: "tach --version && ./tools/tach_check.sh"}
+          - {name: "deptry", cmd: "deptry --version && ./tools/deptry_check.sh"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.11
+          
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
+      
+      - name: Environment info
+        run: |
+          uname -a
+          python --version
+          uv --version
+          git --version
+          
+      - name: Run ${{ matrix.check.name }}
+        run: ${{ matrix.check.cmd }}
+
+  # Runs on push and PR: coverage needs it in the PR run.
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -163,6 +213,7 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # Runs on push and PR: coverage needs it in the PR run.
   integration-tests:
     runs-on: ubuntu-latest
     steps:
@@ -304,16 +355,18 @@ jobs:
             python tools/ci_coverage_summary.py --coverage-xml coverage.xml --output "$GITHUB_STEP_SUMMARY"
           fi
 
+  # Backup checks: run on PR, main push and dispatch.
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
   # (session_setup shells out to `mcp-coder install`; see #695). This job
   # mirrors that argv so a break in the installer contract surfaces here.
-  # Independent of `test` because it uses an activated project venv (not
+  # Not a matrix entry because it uses an activated project venv (not
   # --system) and pulls siblings at HEAD via
   # [tool.mcp-coder.install-from-github] — see #969.
   vscodeclaude-template-install:
     runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -357,43 +410,3 @@ jobs:
           mcp-tools-py --version
           mcp-workspace --version
           python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
-
-  # Architecture checks - only run on pull requests
-  # These validate module boundaries and import structure
-  architecture:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    strategy:
-      fail-fast: false
-      matrix:
-        check:
-          - {name: "import-linter", cmd: "uv pip show import-linter | grep Version && ./tools/lint_imports.sh"}
-          - {name: "tach", cmd: "tach --version && ./tools/tach_check.sh"}
-          - {name: "vulture", cmd: "vulture --version && ./tools/vulture_check.sh"}
-          - {name: "deptry", cmd: "deptry --version && ./tools/deptry_check.sh"}
-    name: ${{ matrix.check.name }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-      
-      - name: Set up Python 3.11
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: 3.11
-          
-      - name: Install dependencies
-        run: |
-          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
-          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
-      
-      - name: Environment info
-        run: |
-          uname -a
-          python --version
-          uv --version
-          git --version
-          
-      - name: Run ${{ matrix.check.name }}
-        run: ${{ matrix.check.cmd }}
