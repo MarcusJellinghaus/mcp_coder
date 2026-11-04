@@ -6,6 +6,7 @@ here from ``implement/task_processing.py`` so multiple workflows can share them.
 """
 
 import logging
+import re
 from pathlib import Path
 
 from mcp_coder.mcp_tools_py import resolve_steps, run_format_code
@@ -28,9 +29,32 @@ logger = logging.getLogger(__name__)
 # of error detail: it lands in public git history; logs carry the diagnostics.
 FALLBACK_COMMIT_MESSAGE = "chore: automated commit (message generation failed)"
 
+PUSH_REJECTED_ERROR = "Push rejected because the branch moved on the remote"
+
+# Keep in step with #1382: re-running from a local checkout can reach the
+# rebase-then-lease overwrite. Do not cite the issue number in the text itself,
+# because these comments also post to other repositories.
+BRANCH_MOVED_NEXT_STEP = (
+    "The CI fix commit was not pushed. A Jenkins run's checkout is discarded, "
+    "so the fix is lost and a re-run starts from the new branch tip. If this run "
+    "came from a local checkout, discard that commit before re-running, because "
+    "re-running from that checkout can overwrite the new commit. "
+    "Check the new commit on the branch."
+)
+
+# Git's own status line only: anchored so `[remote rejected]`, a hook echo
+# starting `remote:`, `hint:` lines and the `cmdline:` line cannot match.
+_REJECTED_STATUS_LINE = re.compile(
+    r"^[ \t]*! \[rejected\] .*\((?:fetch first|non-fast-forward)\)", re.MULTILINE
+)
+
 
 class FormatterConfigError(ValueError):
     """Formatter configuration is invalid; formatting cannot run."""
+
+
+class PushRejectedError(Exception):
+    """The remote rejected a push because the branch has moved."""
 
 
 def check_formatter_config(
@@ -177,34 +201,65 @@ def commit_changes(
         return False
 
 
-def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
+def _rejected_status_line(error: str) -> str | None:
+    """Return git's status line for a push rejected by a moved branch.
+
+    Args:
+        error: Error text from ``git_push``
+
+    Returns:
+        The stripped status line, or None if the error is any other failure.
+    """
+    match = _REJECTED_STATUS_LINE.search(error)
+    return match.group(0).strip() if match else None
+
+
+def push_changes(
+    project_dir: Path,
+    force_with_lease: bool = False,
+    *,
+    raise_on_rejected: bool = False,
+) -> bool:
     """Push changes to remote repository and return success status.
 
     Args:
         project_dir: Path to the project directory
         force_with_lease: If True, use --force-with-lease for safe force push
+        raise_on_rejected: If True, raise when the push is rejected because the
+            branch moved on the remote, instead of returning False
 
     Returns:
         True if push succeeded, False otherwise
+
+    Raises:
+        PushRejectedError: If raise_on_rejected is True and git reports the
+            branch moved on the remote.
     """
     if force_with_lease:
         logger.info("Pushing changes to remote with --force-with-lease...")
     else:
         logger.info("Pushing changes to remote...")
 
+    rejected_line = None
     try:
         push_result = git_push(project_dir, force_with_lease=force_with_lease)
 
         if not push_result["success"]:
             logger.error(f"Error pushing changes: {push_result['error']}")
-            return False
-
-        if force_with_lease:
-            logger.info("Changes force-pushed successfully to remote (with lease)")
+            if raise_on_rejected:
+                rejected_line = _rejected_status_line(push_result["error"] or "")
+            if rejected_line is None:
+                return False
         else:
-            logger.info("Changes pushed successfully to remote")
-        return True
+            if force_with_lease:
+                logger.info("Changes force-pushed successfully to remote (with lease)")
+            else:
+                logger.info("Changes pushed successfully to remote")
+            return True
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error pushing changes: {e}")
         return False
+
+    # Outside the try, so its broad except cannot swallow this.
+    raise PushRejectedError(f"{PUSH_REJECTED_ERROR}: {rejected_line}")
