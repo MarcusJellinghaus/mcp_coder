@@ -168,6 +168,9 @@ class TestPrHealthOutsideCapacityGate:
 _CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
 _STORE = "mcp_workspace.github_operations.caching._store"
 _EVENTS = "mcp_workspace.github_operations.issues.events_mixin.EventsMixin"
+_FETCH_ALERTS = (
+    "mcp_workspace.github_operations._pr_feedback_sources.fetch_code_scanning_alerts"
+)
 _ISSUE_UPDATED_AT = "2024-07-01T00:00:00+00:00"
 
 
@@ -264,9 +267,11 @@ class TestPrHealthWarmCacheCallCount:
         ci_manager = MagicMock()
         ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
         get_issue_events = MagicMock(return_value=[])
+        fetch_alerts = MagicMock(return_value=[])
         escalate = MagicMock()
 
         monkeypatch.setattr(f"{_EVENTS}.get_issue_events", get_issue_events)
+        monkeypatch.setattr(_FETCH_ALERTS, fetch_alerts)
         monkeypatch.setattr(f"{_CHECKS}.PullRequestManager", lambda **kw: pr_manager)
         monkeypatch.setattr(
             f"{_CHECKS}.IssueBranchManager", lambda **kw: branch_manager
@@ -293,6 +298,7 @@ class TestPrHealthWarmCacheCallCount:
         assert branch_manager.resolve_branch_for_issue.call_count == 4
         assert get_issue_events.call_count == 3
         assert repo.get_workflow_runs.call_count == 3
+        assert fetch_alerts.call_count == 3
         (prs_file,) = (tmp_path / "coordinator_cache").glob("*.prs.json")
         assert len(list((tmp_path / "coordinator_cache").glob("*.branches.json"))) == 1
         data = json.loads(prs_file.read_text(encoding="utf-8"))
@@ -300,7 +306,14 @@ class TestPrHealthWarmCacheCallCount:
             datetime.now(UTC) - timedelta(minutes=5)
         ).isoformat()
         prs_file.write_text(json.dumps(data), encoding="utf-8")
-        for mock in (repo, pr_manager, branch_manager, ci_manager, get_issue_events):
+        for mock in (
+            repo,
+            pr_manager,
+            branch_manager,
+            ci_manager,
+            get_issue_events,
+            fetch_alerts,
+        ):
             mock.reset_mock()
 
         check_pr_health("repo", repo_config, issues)
@@ -312,6 +325,7 @@ class TestPrHealthWarmCacheCallCount:
         ]
         repo.get_pull.assert_not_called()
         repo.get_workflow_runs.assert_not_called()
+        fetch_alerts.assert_not_called()
         pr_manager._collect_pr_feedback.assert_not_called()
         branch_manager.resolve_branch_for_issue.assert_not_called()
         get_issue_events.assert_not_called()

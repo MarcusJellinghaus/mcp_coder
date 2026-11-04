@@ -120,6 +120,7 @@ def _default_mocks() -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
     pr_cache.find_pr.return_value = _make_pr()
     pr_cache.mergeable_state.return_value = "clean"
     pr_cache.ci_status.return_value = {"run": {}, "jobs": []}
+    pr_cache.alerts.return_value = {"alerts": [], "skipped": None, "final": True}
     pr_cache.feedback.return_value = _empty_feedback()
     pr_cache.label_events.return_value = []
     return issue_manager, branch_cache, ci_manager, pr_cache

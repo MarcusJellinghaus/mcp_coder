@@ -226,7 +226,7 @@ class TestCheckReviewCommentsTrust:
         issue_manager.transition_issue_label.assert_not_called()
         assert _output_messages(caplog) == [
             "PR-health: test-repo #20: untrusted PR author @stranger"
-            " — review comments not checked"
+            " — review comments and alerts not checked"
         ]
 
     def test_events_fetched_at_most_once(
