@@ -538,3 +538,9 @@ _._feature_branch
 # autouse fixture registered via @pytest.fixture(name="mock_auto_merge") that
 # stubs resolve_auto_merge; injected by pytest.
 _.fixture_mock_auto_merge
+
+# tests/workflow_steps/test_ci_fix_helpers.py and test_ci_fix_loop.py - fixtures
+# registered via @pytest.fixture(name=...) and injected by pytest.
+_.fixture_read_sha
+_.fixture_read_status
+_.fixture_prompt_llm

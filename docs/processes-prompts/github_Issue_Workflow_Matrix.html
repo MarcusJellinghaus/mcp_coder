@@ -503,7 +503,7 @@
                 <div class="label-card highlight-red status-ci-fix-needed">
                     <div class="step-number">06f-ci</div>
                     <div class="label-name">status-06f-ci:ci-fix-needed</div>
-                    <div class="label-description">CI exhausted fix attempts, needs manual intervention</div>
+                    <div class="label-description">CI exhausted fix attempts or branch moved during CI fix, needs manual intervention</div>
                     <div class="label-commands">
                         <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
                         <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
@@ -700,7 +700,7 @@
         <!-- Row 6: PR follow-up, failing CI (81 → 82 → 83/84) -->
         <div class="row-label">PR follow-up: failing CI — fix-ci</div>
         <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
-            82 → 10 CI green; → 84 formatter-config error, LLM timeout, MCP unavailable or fix attempts exhausted (comment has a Category line); → 83 crash; branch undetermined → exit 1, stays 82.
+            82 → 10 CI green; → 84 formatter-config error, LLM timeout, MCP unavailable, fix attempts exhausted or branch moved (comment has a Category line); → 83 crash; branch undetermined → exit 1, stays 82.
         </div>
         <div class="workflow-row">
             <div class="cell-empty"></div>
@@ -733,7 +733,7 @@
                 <div class="label-card highlight-red status-pr-ci-failed">
                     <div class="step-number">84</div>
                     <div class="label-name">status-84:pr-ci-failed</div>
-                    <div class="label-description">CI auto-fix loop exhausted or hit an LLM failure - needs manual fix</div>
+                    <div class="label-description">CI auto-fix loop exhausted, hit an LLM failure, or branch moved - needs manual fix</div>
                     <div class="label-commands">
                         <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
                         <div>&#x270b; Manual / exit: fix CI → <code>set-status status-10:pr-created</code></div>
@@ -900,7 +900,7 @@
                 <div class="label-card highlight-red status-code-review-ci">
                     <div class="step-number">17f-ci</div>
                     <div class="label-name">status-17f-ci:code-review-ci-fix-needed</div>
-                    <div class="label-description">CI still failing after automated code review fix attempts</div>
+                    <div class="label-description">CI still failing after automated code review fix attempts, or branch moved during CI fix</div>
                     <div class="label-commands">
                         <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
                         <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>

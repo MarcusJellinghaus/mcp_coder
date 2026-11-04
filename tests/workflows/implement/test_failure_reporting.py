@@ -39,6 +39,7 @@ def _fail_comment(
     message: str = "err",
     project_dir: Path = PROJECT,
     diff_stat: str = "",
+    next_step: str | None = None,
 ) -> str:
     """Run _fail with handle_workflow_failure mocked and return the comment."""
     with (
@@ -56,6 +57,7 @@ def _fail_comment(
             stage=stage,
             message=message,
             start_time=time.time(),
+            next_step=next_step,
         )
     comment: str = mock_handle.call_args[1]["comment_body"]
     return comment
@@ -84,6 +86,11 @@ class TestFailureLabels:
         assert CATEGORY_DISPLAY["no_progress_after_retries"] == (
             "No Progress After Retries"
         )
+
+    def test_branch_moved_maps_to_ci_fix_needed(self) -> None:
+        """A rejected push is handed off under the CI fix label."""
+        assert FAILURE_LABELS["branch_moved"] == "ci_fix_needed"
+        assert CATEGORY_DISPLAY["branch_moved"] == "Branch Moved"
 
 
 class TestAppendDetail:
@@ -191,6 +198,17 @@ class TestFailComment:
         result = _fail_comment("no_progress_after_retries")
 
         assert "**Category:** No Progress After Retries" in result
+
+    def test_next_step_renders_field(self) -> None:
+        """A given next_step renders its field and the branch_moved category."""
+        result = _fail_comment("branch_moved", next_step="Set the label.")
+
+        assert "**Category:** Branch Moved" in result
+        assert "**Next step:** Set the label." in result
+
+    def test_no_next_step_renders_no_field(self) -> None:
+        """Without next_step the comment has no Next step line."""
+        assert "Next step" not in _fail_comment()
 
     def test_includes_tracker_progress(self, tmp_path: Path) -> None:
         """Includes the tracker's done/total when it has tasks."""

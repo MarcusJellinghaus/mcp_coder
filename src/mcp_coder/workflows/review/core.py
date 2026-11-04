@@ -586,9 +586,9 @@ def run_review_workflow(
                 # supervisor triages it within the rounds cap).
                 pending_ci_note = _CI_NOTE
             elif reason:
-                # Terminal after-steps failure (`timeout` / `general` /
-                # `mcp_unavailable`) after a committed fix: write + flush the
-                # round so it lands in the committed log before failing.
+                # Terminal after-steps failure (`branch_moved` / `timeout` /
+                # `general` / `mcp_unavailable`) after a committed fix: write +
+                # flush the round so it lands in the committed log before failing.
                 write_round_log(
                     project_dir,
                     config,

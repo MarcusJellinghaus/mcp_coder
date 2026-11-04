@@ -27,7 +27,7 @@ status-10:pr-created
   │                        └─ job crashed                   → status-73  (human)
   ├─ failing CI       → status-81 ─▶ (Jenkins: fix-ci) ─▶ status-82
   │                        ├─ CI green         → status-10:pr-created
-  │                        ├─ fix exhausted / LLM timeout / MCP unavailable / formatter-config error → status-84  (human)
+  │                        ├─ fix exhausted / LLM timeout / MCP unavailable / formatter-config error / branch moved → status-84  (human)
   │                        └─ job crashed      → status-83  (human)
   ├─ open alerts      → status-91  (human, /pr_comment_triage) → status-10:pr-created
   └─ review feedback  → status-91  (human, /pr_comment_triage) → status-10:pr-created
@@ -65,7 +65,7 @@ status-10:pr-created
 | `status-73:merge-conflict-failed` | `fix-conflict` crashed (`run_guarded` net) or the Jenkins job died without transitioning (watchdog) | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase (git-only and LLM). See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | `fix-ci` crashed or the job died | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
-| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, formatter-config error, or branch moved during the CI fix (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created`. Branch moved: check the new commit on the branch, then set the same status |
 | `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, its rebase failed, or its alert check failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
 | — (label stays `status-72` / `status-82`) | Current branch could not be determined → exit 1 | Check the Jenkins log; set `status-71:merge-conflict` / `status-81:failing-ci` to retry |
 

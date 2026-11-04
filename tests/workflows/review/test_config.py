@@ -54,6 +54,7 @@ class TestReviewImplementation:
             "ci": "code_review_ci",
             "tasks": "code_review_open_tasks",
             "ci_unknown": "code_review_ci_unknown",
+            "branch_moved": "code_review_ci",
         }
 
     def test_has_ci_failure_key(self) -> None:

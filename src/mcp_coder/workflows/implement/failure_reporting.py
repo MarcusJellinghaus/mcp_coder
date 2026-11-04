@@ -35,6 +35,7 @@ FAILURE_LABELS: dict[str, str] = {
     "no_progress_after_retries": "no_changes_after_retries",
     "blocked": "implementation_blocked",
     "ci_fix_exhausted": "ci_fix_needed",
+    "branch_moved": "ci_fix_needed",
 }
 
 # Maps a reason -> the human-readable Category text used in the failure
@@ -49,6 +50,7 @@ CATEGORY_DISPLAY: dict[str, str] = {
     "no_progress_after_retries": "No Progress After Retries",
     "blocked": "Blocked",
     "ci_fix_exhausted": "Ci Fix Exhausted",
+    "branch_moved": "Branch Moved",
 }
 
 
@@ -118,6 +120,7 @@ def _fail(
     start_time: float,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
+    next_step: str | None = None,
 ) -> int:
     """Handle a deliberate implement failure: build comment, set label, log.
 
@@ -133,6 +136,7 @@ def _fail(
         start_time: Workflow start timestamp; elapsed is derived from it.
         update_issue_labels: Whether to attempt a label transition.
         post_issue_comments: Whether to post a failure comment.
+        next_step: Recovery instructions for the comment; omitted when None.
 
     Returns:
         Always ``1`` (a deliberate, terminal failure exit code).
@@ -143,7 +147,12 @@ def _fail(
         project_dir,
         title="Implementation",
         kind="Failed",
-        fields=[("Stage", stage), ("Error", message), *fields],
+        fields=[
+            ("Stage", stage),
+            ("Error", message),
+            ("Next step", next_step),
+            *fields,
+        ],
         elapsed=elapsed,
         extra_section=extra,
     )

@@ -249,6 +249,49 @@ def test_mcp_unavailable_posts_comment_and_sets_label() -> None:
     assert "**Category:** Mcp Unavailable" in comment.splitlines()
 
 
+def test_push_rejected_posts_comment_and_sets_label() -> None:
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+        patch(
+            f"{MODULE}.check_and_fix_ci",
+            side_effect=commit.PushRejectedError("Push rejected"),
+        ),
+        patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
+        patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+    ):
+        result = run_fix_ci_workflow(
+            PROJECT_DIR,
+            "claude",
+            update_issue_labels=True,
+            post_issue_comments=True,
+        )
+
+    assert result == 1
+    mock_handle.assert_called_once()
+    failure = mock_handle.call_args[0][0]
+    comment = mock_handle.call_args[0][1]
+    assert failure.category == "pr_ci_failed"
+    assert failure.stage == "CI pipeline fix"
+    assert mock_handle.call_args[1]["from_label_id"] == "fixing_ci"
+    lines = comment.splitlines()
+    assert "**Category:** Branch Moved" in lines
+    assert "**Error:** Push rejected" in lines
+    assert f"**Next step:** {commit.BRANCH_MOVED_NEXT_STEP}" in comment
+    assert "status-10:pr-created" in comment
+
+
+def test_no_next_step_renders_no_field() -> None:
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+        patch(f"{MODULE}.check_and_fix_ci", return_value=False),
+        patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
+        patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+    ):
+        run_fix_ci_workflow(PROJECT_DIR, "claude", post_issue_comments=True)
+
+    assert "Next step" not in mock_handle.call_args[0][1]
+
+
 def test_no_current_branch_returns_one() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", return_value=None),
@@ -416,6 +459,21 @@ class TestRefreshPrDescription:
         failure = manager.handle_failure.call_args[0][0]
         assert failure.category == "pr_ci_failed"
         assert failure.stage == "CI pipeline analysis"
+
+    def test_push_rejected_skips_refresh_with_moved_head(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        """A moved HEAD here is an unpushed fix commit, not a pushed one."""
+        refresh_mocks.sha.side_effect = ["before", "after"]
+
+        result, manager = self._run(
+            refresh_mocks, {"side_effect": commit.PushRejectedError("Push rejected")}
+        )
+
+        assert result == 1
+        refresh_mocks.refresh.assert_not_called()
+        assert self._names(manager) == ["handle_failure"]
+        assert manager.handle_failure.call_args[0][0].category == "pr_ci_failed"
 
     @pytest.mark.parametrize(
         "check_kwargs",

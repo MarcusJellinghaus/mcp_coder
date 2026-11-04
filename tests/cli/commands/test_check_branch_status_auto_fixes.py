@@ -168,6 +168,39 @@ class TestRunAutoFixes:
         assert result is True
         mock_check_formatter.assert_not_called()
 
+    @pytest.mark.parametrize("fix_attempts", [1, 3])
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    def test_run_auto_fixes_push_rejected_stops_without_retry(
+        self,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_get_branch: Mock,
+        fix_attempts: int,
+        failed_ci_report: BranchStatusReport,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Rejected push → False, one call, error and next step logged."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_get_branch.return_value = "feature/test-branch"
+        mock_check_ci.side_effect = commit.PushRejectedError("branch moved text")
+
+        with caplog.at_level(logging.ERROR):
+            result = _run_auto_fixes(
+                Path("/test/project"),
+                failed_ci_report,
+                "claude",
+                None,
+                fix_attempts=fix_attempts,
+            )
+
+        assert result is False
+        mock_check_ci.assert_called_once()
+        assert "branch moved text" in caplog.text
+        assert commit.BRANCH_MOVED_NEXT_STEP in caplog.text
+
 
 class TestFixRetryLogic:
     """Test fix retry logic with multiple attempts."""

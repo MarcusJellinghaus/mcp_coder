@@ -187,7 +187,7 @@
       "internal_id": "pr_ci_failed",
       "name": "status-84:pr-ci-failed",
       "color": "b60205",
-      "description": "CI auto-fix loop exhausted or hit an LLM failure - needs manual fix",
+      "description": "CI auto-fix loop exhausted, hit an LLM failure, or branch moved - needs manual fix",
       "category": "human_action",
       "failure": true,
       "vscodeclaude": {
@@ -307,7 +307,7 @@
       "internal_id": "ci_fix_needed",
       "name": "status-06f-ci:ci-fix-needed",
       "color": "d93f0b",
-      "description": "CI exhausted fix attempts, needs manual intervention",
+      "description": "CI exhausted fix attempts or branch moved during CI fix, needs manual intervention",
       "category": "human_action",
       "failure": true,
       "vscodeclaude": {
@@ -517,7 +517,7 @@
       "internal_id": "code_review_ci",
       "name": "status-17f-ci:code-review-ci-fix-needed",
       "color": "d93f0b",
-      "description": "CI still failing after automated code review fix attempts",
+      "description": "CI still failing after automated code review fix attempts, or branch moved during CI fix",
       "category": "human_action",
       "failure": true,
       "vscodeclaude": {
