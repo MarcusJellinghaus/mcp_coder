@@ -90,3 +90,41 @@ class TestOtherPushFailure:
         assert ci.check_and_fix_ci(tmp_path, "feature", "claude") is False
 
         assert prompt_llm.call_count == 2 * CI_MAX_FIX_ATTEMPTS
+
+
+class TestEmptyAnalysis:
+    """An empty analysis consumes one attempt, whichever attempt it is."""
+
+    def test_every_attempt_empty_ends_as_false(
+        self,
+        prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The whole budget is spent on analysis and nothing is committed."""
+        prompt_llm.return_value = {"text": ""}
+
+        assert ci.check_and_fix_ci(tmp_path, "feature", "claude") is False
+
+        assert prompt_llm.call_count == CI_MAX_FIX_ATTEMPTS
+        vars(ci)["commit_changes"].assert_not_called()
+
+    def test_later_attempt_continues(
+        self,
+        prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Attempt 2 asks for the next attempt instead of exiting as success."""
+        prompt_llm.return_value = {"text": ""}
+        manager = vars(ci)["CIResultsManager"].return_value
+        config = ci.CIFixConfig(
+            project_dir=tmp_path, provider="claude", env_vars={}, mcp_config=None
+        )
+
+        result = ci._run_ci_analysis_and_fix(
+            config,
+            manager.get_latest_ci_status.return_value,
+            manager,
+            fix_attempt=1,
+        )
+
+        assert result == (True, None)

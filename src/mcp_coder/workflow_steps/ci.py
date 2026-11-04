@@ -557,11 +557,8 @@ def _run_ci_analysis_and_fix(
     )
 
     if not problem_description:
-        # Analysis failed - retry on first attempt, graceful exit otherwise
-        if fix_attempt == 0:
-            logger.info("Retrying analysis...")
-            return True, None  # Continue to next attempt
-        return False, True  # Graceful exit (success)
+        logger.warning("CI analysis produced no problem description")
+        return True, None  # Consumes this attempt
 
     # Run fix phase
     fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt, branch_name)
