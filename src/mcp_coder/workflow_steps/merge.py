@@ -2,10 +2,13 @@
 
 Squash-merges a branch's PR once CI has really passed on its HEAD commit,
 with one mechanical rebase + retry when GitHub reports the PR ``dirty`` or
-``behind``. LLM-free; shared by create-pr, fix-ci and fix-conflict.
+``behind``. An alert gate before each merge call waits for CodeQL and refuses
+a PR with an open code-scanning alert. LLM-free; shared by create-pr, fix-ci
+and fix-conflict.
 """
 
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +26,12 @@ from mcp_coder.mcp_workspace_github import (
 )
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps.ci import _poll_for_ci_completion
+from mcp_coder.workflow_steps.constants import (
+    CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
+    CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS,
+    CI_POLL_INTERVAL_SECONDS,
+    CODE_SCANNING_MAX_POLL_ATTEMPTS,
+)
 from mcp_coder.workflow_steps.rebase import (
     RebaseOutcome,
     _attempt_rebase_and_push,
@@ -185,10 +194,129 @@ def _conflict_fields(rebase: RebaseOutcome) -> tuple[CommentField, ...]:
     )
 
 
+def _wait_for_code_scanning(project_dir: Path, pr_number: int, sha: str) -> str | None:
+    """Wait for the CodeQL run on the PR's head ref to finish.
+
+    The auto-merge CI poll filters by branch, which never returns the CodeQL
+    run, so it is looked up by ``refs/pull/N/head``. Only a run on ``sha``
+    counts. A repo without CodeQL looks the same as a run not started yet.
+
+    Args:
+        project_dir: Path to the project directory.
+        pr_number: Number of the PR.
+        sha: Commit about to be merged.
+
+    Returns:
+        Why the alert check failed, or None to go on and read alerts.
+    """
+    manager = CIResultsManager(project_dir)
+    no_run = lookup_failed = 0
+    for attempt in range(CODE_SCANNING_MAX_POLL_ATTEMPTS):
+        if attempt:
+            time.sleep(CI_POLL_INTERVAL_SECONDS)
+        ci_status = manager.get_latest_ci_status(f"refs/pull/{pr_number}/head")
+        # Checked first: a failed lookup also has an empty run.
+        if ci_status.get("lookup_failed"):
+            lookup_failed += 1
+            if lookup_failed >= CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS:
+                error = ci_status.get("lookup_error", "unknown error")
+                return f"code-scanning run lookup failed: {error}"
+            continue
+        lookup_failed = 0
+        run = ci_status["run"]
+        if run.get("commit_sha") != sha:
+            no_run += 1
+            if no_run >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS:
+                logger.warning(
+                    "Auto-merge: no code-scanning run found for %s; "
+                    "reading alerts anyway",
+                    sha,
+                )
+                return None
+        elif run.get("status") == "completed":
+            conclusion = run.get("conclusion")
+            if conclusion == "success":
+                return None
+            return f"code-scanning run concluded {conclusion}"
+    return "code-scanning run did not complete successfully in time"
+
+
+def _alert_check_failed(reason: str) -> MergeOutcome:
+    """Build the ``merge_failed`` outcome for a failed alert check.
+
+    Args:
+        reason: Why the alert check failed.
+
+    Returns:
+        MergeOutcome with label ``merge_failed`` and its comment fields.
+    """
+    logger.warning("Auto-merge alert check failed: %s", reason)
+    return MergeOutcome(
+        "merge_failed", (("Stage", "Auto-merge alert check"), ("Error", reason))
+    )
+
+
+def _check_alert_gate(
+    project_dir: Path, pr_number: int, sha: str
+) -> MergeOutcome | None:
+    """Refuse the merge on an open code-scanning alert or a failed alert check.
+
+    A rate limit or a 401/403 ``GithubException`` raised here propagates to the
+    handler in :func:`run_auto_merge`.
+
+    Args:
+        project_dir: Path to the project directory.
+        pr_number: Number of the PR.
+        sha: Commit about to be merged.
+
+    Returns:
+        The outcome that blocks the merge, or None to merge.
+    """
+    try:
+        reason = _wait_for_code_scanning(project_dir, pr_number, sha)
+        if reason is not None:
+            return _alert_check_failed(reason)
+        # No include_alerts keyword: an unknown one on an old mcp-workspace would
+        # be swallowed by its error handler into clean-looking feedback.
+        feedback = PullRequestManager(project_dir).get_pr_feedback(pr_number)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        status_code = exc.status if isinstance(exc, GithubException) else None
+        if as_rate_limit(exc) is not None or status_code in (401, 403):
+            raise
+        return _alert_check_failed(exception_summary(exc))
+
+    unavailable = feedback["unavailable"].get("alerts")
+    if unavailable is not None:
+        rate_limit = as_rate_limit(unavailable)
+        if rate_limit is None:
+            return _alert_check_failed(exception_summary(unavailable))
+        log_rate_limit_stop(rate_limit)
+        return MergeOutcome("pr_created")
+    if feedback["alerts"]:
+        logger.log(
+            OUTPUT,
+            "Auto-merge: %d open code-scanning alert(s) on PR #%d — not merging",
+            len(feedback["alerts"]),
+            pr_number,
+        )
+        return MergeOutcome("pr_created")
+    skipped = feedback["skipped"].get("alerts")
+    if skipped is not None:
+        logger.warning(
+            "alerts not checked (status %s); the token may lack "
+            "`Code scanning alerts: Read`, or code scanning is not enabled",
+            getattr(skipped, "status", None),
+        )
+    return None
+
+
 def run_auto_merge(  # pylint: disable=too-many-return-statements
     project_dir: Path, branch: str, *, verified_sha: str | None = None
 ) -> MergeOutcome:
     """Squash-merge the branch's PR once CI really passed on its HEAD.
+
+    Every merge attempt first passes the alert gate: an open code-scanning
+    alert ends at ``pr_created``, a failed alert check at ``merge_failed``.
 
     A GitHub rate limit or a 401/403 ``GithubException`` is mapped to an
     outcome; any other exception propagates to the caller.
@@ -229,11 +357,15 @@ def run_auto_merge(  # pylint: disable=too-many-return-statements
                         "Auto-merge skipped: no passed CI run for %s (soft pass)", sha
                     )
                     return MergeOutcome("pr_created")
-            if _pr_head_sha(project_dir, branch) != sha:
+            if sha is None or _pr_head_sha(project_dir, branch) != sha:
                 logger.warning(
                     "Auto-merge skipped: PR head no longer matches verified %s", sha
                 )
                 return MergeOutcome("pr_created")
+
+            blocked = _check_alert_gate(project_dir, pr["number"], sha)
+            if blocked is not None:
+                return blocked
 
             logger.log(
                 OUTPUT, "Auto-merge: squash-merging PR #%d at %s", pr["number"], sha

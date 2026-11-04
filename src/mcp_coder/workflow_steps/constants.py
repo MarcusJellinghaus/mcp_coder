@@ -51,6 +51,9 @@ CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS = 8  # Max 8 attempts = ~105 seconds max wait
 CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS = (
     3  # Max 3 consecutive attempts = ~30s max added wait
 )
+# Auto-merge's wait for the CodeQL run on refs/pull/N/head. The first poll has no
+# sleep before it, so 21 attempts wait 20 intervals.
+CODE_SCANNING_MAX_POLL_ATTEMPTS = 21  # 20 intervals of 15 s = ~5 minutes max wait
 CI_MAX_FIX_ATTEMPTS = 4  # Max 4 fix attempts before giving up
 CI_NEW_RUN_POLL_INTERVAL_SECONDS = 5  # Poll for new CI run every 5 seconds
 CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6  # Max 6 attempts = 30 seconds to detect new run

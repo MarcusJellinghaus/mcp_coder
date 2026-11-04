@@ -56,6 +56,7 @@ class Mocks:
     poll_state: MagicMock
     rebase: MagicMock
     reset_hard: MagicMock
+    alert_gate: MagicMock
     ci_manager: MagicMock = field(default_factory=MagicMock)
 
 
@@ -77,6 +78,7 @@ def _mocks() -> Iterator[Mocks]:
             return_value=RebaseOutcome("ok", "main", "1234567"),
         ) as rebase,
         patch(f"{_MODULE}._reset_hard", return_value=True) as reset_hard,
+        patch(f"{_MODULE}._check_alert_gate", return_value=None) as alert_gate,
     ):
         yield Mocks(
             pr_manager=pr_manager,
@@ -85,6 +87,7 @@ def _mocks() -> Iterator[Mocks]:
             poll_state=poll_state,
             rebase=rebase,
             reset_hard=reset_hard,
+            alert_gate=alert_gate,
             ci_manager=ci_cls.return_value,
         )
 
@@ -222,6 +225,16 @@ class TestRunAutoMergeStep1:
         assert outcome == MergeOutcome("merged")
         mocks.poll_ci.assert_not_called()
         mocks.latest_sha.assert_not_called()
+        mocks.alert_gate.assert_called_once_with(_PROJECT, 7, _SHA)
+
+    def test_alert_gate_outcome_is_returned_without_merge(self, mocks: Mocks) -> None:
+        blocked = MergeOutcome("merge_failed", (("Stage", "Auto-merge alert check"),))
+        mocks.alert_gate.return_value = blocked
+
+        outcome = run_auto_merge(_PROJECT, _BRANCH, verified_sha=_SHA)
+
+        assert outcome == blocked
+        mocks.pr_manager.merge_pull_request.assert_not_called()
 
     def test_head_mismatch_is_pr_created(self, mocks: Mocks) -> None:
         mocks.pr_manager.find_pull_request_by_head.side_effect = [
@@ -329,6 +342,7 @@ class TestRunAutoMergeStep3:
         )
         second = mocks.pr_manager.merge_pull_request.call_args_list[1]
         assert second.kwargs["sha"] == _NEW_SHA
+        mocks.alert_gate.assert_called_with(_PROJECT, 7, _NEW_SHA)
 
     def test_rebase_then_red_ci_is_failing_ci(self, mocks: Mocks) -> None:
         mocks.pr_manager.merge_pull_request.return_value = REFUSED_405
