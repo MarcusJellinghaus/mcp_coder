@@ -9,3 +9,11 @@ Review in progress: I've read the source diff and am now checking the Jenkins te
 Verdict(decision='tasks', tasks=['At src/mcp_coder/workflow_steps/rebase.py:130, make the line-ending renormalize check direction-aware: only stage and commit when the result removes CRs (CRLF working copy normalizing to an LF blob). An LF-committed file with a CRLF working copy and no `text` attribute under `core.autocrlf=false` must hand off as `dirty_tree` instead of committing a CRLF blob. Add a test for this LF-committed/CRLF-working-copy direction.', 'At src/mcp_coder/workflows/rebase.py:656, include the `CheckRunError` detail (`exc`) in the verification-phase reason, matching the baseline path at line 492, so the `LLM rebase` field in the hand-off comment names the failing checker or cause. Add or extend a test asserting the reason contains the error detail.', "At docs/cli-reference.md:294, update the shared exit-code line for create-pr, fix-ci and fix-conflict to document `status-71` and create-pr's outcomes: exit 0 with `status-71` written, exit 1 for a still-conflicting PR with no label written."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-04
+**Findings**:
+Still reviewing: source diff is read, and I'm now checking the Jenkins templates, CLI error paths, tests and docs, plus running the checks.`src/mcp_coder/workflows/fix_conflict/__init__.py:3` — low — The package docstring still says "Mechanical (no-LLM) rebase", but `run_fix_conflict_workflow` now falls back to the LLM rebase via `rebase_with_llm_fallback`, so the docstring is false after this change.
+**Decisions**:
+Verdict(decision='tasks', tasks=['At src/mcp_coder/workflows/fix_conflict/__init__.py:3, update the package docstring so it no longer says "Mechanical (no-LLM) rebase" and instead states that `run_fix_conflict_workflow` falls back to the LLM rebase via `rebase_with_llm_fallback`.'], escalate_reason=None)
+**Changes**:
+applied
