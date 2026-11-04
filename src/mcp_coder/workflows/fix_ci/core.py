@@ -12,7 +12,11 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_latest_commit_sha
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
-from mcp_coder.workflow_steps.commit import check_formatter_config
+from mcp_coder.workflow_steps.commit import (
+    BRANCH_MOVED_NEXT_STEP,
+    PushRejectedError,
+    check_formatter_config,
+)
 from mcp_coder.workflow_steps.merge import (
     finish_auto_merge,
     resolve_merge_issue_number,
@@ -44,6 +48,7 @@ def _fail(
     *,
     update_issue_labels: bool,
     post_issue_comments: bool,
+    next_step: str | None = None,
 ) -> int:
     """Deliberate fix_ci failure: comment (Category/Stage/Error) + status-84 label.
 
@@ -54,7 +59,12 @@ def _fail(
         project_dir,
         title="CI Fix",
         kind="Failed",
-        fields=[("Category", category_display), ("Stage", stage), ("Error", message)],
+        fields=[
+            ("Category", category_display),
+            ("Stage", stage),
+            ("Error", message),
+            ("Next step", next_step),
+        ],
     )
     handle_workflow_failure(
         WorkflowFailure(category="pr_ci_failed", stage=stage, message=message),
@@ -127,6 +137,20 @@ def run_fix_ci_workflow(
                 category,
                 "CI pipeline analysis",
                 str(exc),
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+            )
+        except PushRejectedError as exc:
+            # No refresh: local HEAD holds a commit the remote does not have.
+            return _fail(
+                project_dir,
+                "Branch Moved",
+                "CI pipeline fix",
+                str(exc),
+                next_step=(
+                    f"{BRANCH_MOVED_NEXT_STEP} "
+                    "Then set `status-10:pr-created` so CI is re-detected."
+                ),
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )
