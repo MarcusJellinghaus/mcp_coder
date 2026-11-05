@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `quality_tools_isolation` contract to `.importlinter`, run the one-off check with the throwaway module, delete the module
-- [ ] Quality checks: lint-imports, pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared in `pr_info/.commit_message.txt`, with the one-off check result as observed
+- [x] Implementation: add `quality_tools_isolation` contract to `.importlinter`, run the one-off check with the throwaway module, delete the module
+- [x] Quality checks: lint-imports, pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared in `pr_info/.commit_message.txt`, with the one-off check result as observed
 
 ### Step 2: Subprocess rule, tests and docs
 
