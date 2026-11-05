@@ -1,5 +1,6 @@
 """Tests for ``rebase_with_llm_fallback`` (git-only rebase, then the LLM rebase)."""
 
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -8,7 +9,9 @@ from unittest.mock import MagicMock
 import pytest
 from git import Repo
 
-from mcp_coder.workflow_steps.rebase import RebaseOutcome, RebaseReason
+from mcp_coder.workflow_steps import rebase as rebase_step_module
+from mcp_coder.workflow_steps.rebase import BranchCheck, RebaseOutcome, RebaseReason
+from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows import rebase_automated as module
 from mcp_coder.workflows.rebase import RebaseRunResult
 from mcp_coder.workflows.rebase_automated import (
@@ -16,6 +19,7 @@ from mcp_coder.workflows.rebase_automated import (
     _mcp_coder_dir_problem,
     rebase_with_llm_fallback,
 )
+from tests.conftest import BareRemote
 
 from .conftest import setup_git_config
 
@@ -143,6 +147,29 @@ def test_llm_push_rejected_flag(tmp_path: Path, mocks: SimpleNamespace) -> None:
 
 
 @pytest.mark.parametrize(
+    ("branch_check", "reason"),
+    [("moved", "branch_moved"), ("error", "push_failed")],
+)
+def test_llm_branch_check_stop(
+    tmp_path: Path,
+    mocks: SimpleNamespace,
+    branch_check: BranchCheck,
+    reason: RebaseReason,
+) -> None:
+    mocks.run.side_effect = None
+    mocks.run.return_value = RebaseRunResult(
+        2, "Branch check failed", branch_check=branch_check
+    )
+
+    result = _call(tmp_path)
+
+    assert result.reason == reason
+    assert result.files == ()
+    assert result.llm_detail == "Branch check failed"
+    mocks.push.assert_not_called()
+
+
+@pytest.mark.parametrize(
     "run_result",
     [
         RebaseRunResult(1, "Same file conflicted 3 times"),
@@ -229,3 +256,84 @@ def test_guard_no_rule(tmp_path: Path) -> None:
 
     assert problem is not None
     assert ".mcp-coder/" in problem
+
+
+@pytest.fixture
+def real_git(bare_remote: BareRemote, monkeypatch: pytest.MonkeyPatch) -> BareRemote:
+    """Stub base detection, preflight, checks and LLM setup; the rest is real git."""
+    exclude = bare_remote.local_dir / ".git" / "info" / "exclude"
+    exclude.write_text(".mcp-coder/\n", encoding="utf-8")
+    monkeypatch.setattr(rebase_step_module, "detect_base_branch", lambda _pd: "main")
+    monkeypatch.setattr(rebase_module, "_preflight", lambda _pd: None)
+    monkeypatch.setattr(rebase_module, "prepare_llm_environment", lambda _pd: {})
+    monkeypatch.setattr(rebase_module, "_run_all_checks", lambda _pd, _m: set())
+    return bare_remote
+
+
+def _commit_conflict_with_base(remote: BareRemote) -> str:
+    """Add ``x.txt`` differently in ``local`` and on ``main``; return local HEAD."""
+    (remote.local_dir / "x.txt").write_text("local\n", encoding="utf-8")
+    remote.local.git.add("x.txt")
+    remote.local.git.commit("-m", "local x")
+    remote.move_base("x")
+    return remote.local.head.commit.hexsha
+
+
+def _stub_llm(
+    remote: BareRemote,
+    monkeypatch: pytest.MonkeyPatch,
+    during: Callable[[], None] = lambda: None,
+) -> MagicMock:
+    """Make the LLM session resolve ``x.txt``, running ``during`` inside it."""
+
+    def resolve(*_args: Any, **_kwargs: Any) -> tuple[str, str]:
+        (remote.local_dir / "x.txt").write_text("merged\n", encoding="utf-8")
+        during()
+        return "", "session"
+
+    llm = MagicMock(side_effect=resolve)
+    monkeypatch.setattr(rebase_module, "_prompt_in_session", llm)
+    return llm
+
+
+@pytest.mark.git_integration
+class TestBranchMovedRealGit:
+    """A branch-check stop surfaces as ``branch_moved``, never as ``conflict``."""
+
+    def test_foreign_commit_before_the_conflict(
+        self, real_git: BareRemote, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        pre_sha = _commit_conflict_with_base(real_git)
+        foreign_sha = real_git.push_foreign("foreign1")
+        llm = _stub_llm(real_git, monkeypatch)
+
+        outcome = rebase_with_llm_fallback(real_git.local_dir, "claude", None)
+
+        # One comparison, so that a failure shows all three together.
+        assert (
+            outcome.reason,
+            real_git.remote_sha(),
+            real_git.local.head.commit.hexsha,
+        ) == ("branch_moved", foreign_sha, pre_sha)
+        llm.assert_not_called()
+
+    def test_foreign_commit_fetched_during_the_llm_session(
+        self, real_git: BareRemote, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        pre_sha = _commit_conflict_with_base(real_git)
+        pushed: list[str] = []
+
+        def foreign_push_and_fetch() -> None:
+            pushed.append(real_git.push_foreign("foreign1"))
+            real_git.local.git.fetch("origin")
+
+        llm = _stub_llm(real_git, monkeypatch, foreign_push_and_fetch)
+
+        outcome = rebase_with_llm_fallback(real_git.local_dir, "claude", None)
+
+        llm.assert_called()
+        assert (
+            outcome.reason,
+            real_git.remote_sha(),
+            real_git.local.head.commit.hexsha,
+        ) == ("branch_moved", pushed[0], pre_sha)

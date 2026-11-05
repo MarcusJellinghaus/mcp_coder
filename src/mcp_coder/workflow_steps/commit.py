@@ -31,14 +31,13 @@ FALLBACK_COMMIT_MESSAGE = "chore: automated commit (message generation failed)"
 
 PUSH_REJECTED_ERROR = "Push rejected because the branch moved on the remote"
 
-# Keep in step with #1382: re-running from a local checkout can reach the
-# rebase-then-lease overwrite. Do not cite the issue number in the text itself,
-# because these comments also post to other repositories.
+# Do not cite an issue number in the text itself, because these comments also
+# post to other repositories.
 BRANCH_MOVED_NEXT_STEP = (
     "The CI fix commit was not pushed. A Jenkins run's checkout is discarded, "
     "so the fix is lost and a re-run starts from the new branch tip. If this run "
     "came from a local checkout, discard all unpushed commits before re-running, "
-    "because re-running from that checkout can overwrite the new commit. "
+    "because a re-run from that checkout stops without pushing. "
     "Check the new commit on the branch."
 )
 

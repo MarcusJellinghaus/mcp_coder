@@ -16,7 +16,11 @@ import pytest
 
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.workflow_steps import ci
-from mcp_coder.workflow_steps.commit import PUSH_REJECTED_ERROR, PushRejectedError
+from mcp_coder.workflow_steps.commit import (
+    BRANCH_MOVED_NEXT_STEP,
+    PUSH_REJECTED_ERROR,
+    PushRejectedError,
+)
 from mcp_coder.workflows.review import steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 from tests.workflows.review.conftest import (
@@ -144,6 +148,7 @@ def test_rejected_push_on_dismiss_gate_fails_as_branch_moved(
     assert _error_field(comment) == _REJECTED_MESSAGE
     assert "PushRejectedError:" not in comment
     assert "status-17:code-review-bot" in comment
+    assert BRANCH_MOVED_NEXT_STEP in comment
 
 
 def test_rejected_push_mid_loop_is_terminal(

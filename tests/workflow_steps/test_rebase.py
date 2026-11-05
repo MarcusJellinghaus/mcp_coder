@@ -62,6 +62,17 @@ def mock_remote_sha() -> Iterator[MagicMock]:
         yield mock_sha
 
 
+@pytest.fixture(autouse=True)
+def mock_branch_check() -> Iterator[None]:
+    """Keep the branch-moved check off real git; it passes."""
+    with (
+        patch(f"{_MODULE}.get_latest_commit_sha", return_value=_FULL_SHA),
+        patch(f"{_MODULE}.get_current_branch_name", return_value="feature"),
+        patch(f"{_MODULE}.git_merge_base", return_value="true"),
+    ):
+        yield
+
+
 class TestRebaseOutcome:
     """Tests for the RebaseOutcome dataclass."""
 
@@ -74,6 +85,7 @@ class TestRebaseOutcome:
             "conflict",
             "rebase_failed",
             "push_failed",
+            "branch_moved",
         ],
     )
     def test_ok_false_for_every_failure_reason(self, reason: str) -> None:

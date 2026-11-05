@@ -249,6 +249,15 @@ _._mock_post_creation
 _._mock_find_open_pr
 _.mock_find_open_pr
 
+# workflow_steps/test_rebase.py - Autouse fixture patching the branch-moved check's git calls
+_.mock_branch_check
+
+# workflow_steps/test_rebase_branch_moved.py - Only activated via @pytest.mark.usefixtures string
+_.base_is_main
+
+# workflows/create_pr/test_post_creation.py - Autouse fixture method, never requested by name
+_.branch_moved
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================

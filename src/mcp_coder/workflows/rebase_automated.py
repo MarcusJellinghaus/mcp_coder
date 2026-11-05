@@ -79,8 +79,10 @@ def rebase_with_llm_fallback(
     Returns:
         The git-only ``RebaseOutcome`` unchanged when the LLM did not run.
         Otherwise ``reason`` is ``"ok"`` (LLM rebase and push succeeded),
-        ``"push_failed"`` (push rejected), or the git-only reason with
-        ``llm_detail`` explaining the hand-off.
+        ``"push_failed"`` (push rejected, or the branch check could not run),
+        ``"branch_moved"`` (``origin/<branch>`` has commits this checkout does
+        not have), or the git-only reason with ``llm_detail`` explaining the
+        hand-off.
     """
     outcome = _attempt_rebase_and_push(project_dir)
     if outcome.reason not in _LLM_TRIGGER_REASONS:
@@ -108,9 +110,13 @@ def rebase_with_llm_fallback(
             outcome, llm_detail=f"LLM rebase crashed: {exception_summary(exc)}"
         )
 
-    if result.push_rejected:
+    if result.push_rejected or result.branch_check == "error":
         return replace(
             outcome, reason="push_failed", files=(), llm_detail=result.reason
+        )
+    if result.branch_check == "moved":
+        return replace(
+            outcome, reason="branch_moved", files=(), llm_detail=result.reason
         )
     if result.exit_code != 0:
         return replace(outcome, llm_detail=result.reason)

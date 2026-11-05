@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+)
 from mcp_coder.workflows.create_pr.post_creation import (
     apply_post_creation_label,
     run_post_creation,
@@ -376,6 +380,93 @@ class TestRunPostCreationAutoMerge:
         self._run(auto_merge=True)
 
         merge[0].assert_not_called()
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
+
+
+class TestRunPostCreationBranchMoved:
+    """A branch_moved rebase posts a best-effort comment; labels do not change."""
+
+    @pytest.fixture(autouse=True)
+    def branch_moved(self, mocks: _Mocks) -> Iterator[None]:
+        """Make the PR dirty and the rebase stop on branch_moved."""
+        mocks.poll.return_value = "dirty"
+        mocks.rebase.return_value = RebaseOutcome("branch_moved", "main", "abc1234")
+        with patch(
+            "mcp_coder.workflow_utils.failure_handling._branch_head",
+            return_value=("feat", "abc1234"),
+        ):
+            yield
+
+    def _run(self, *, post: bool = True, issue: int | None = _ISSUE) -> int:
+        return run_post_creation(
+            _PROJECT,
+            _BRANCH,
+            _PROVIDER,
+            issue_number=issue,
+            update_issue_labels=True,
+            post_issue_comments=post,
+        )
+
+    def test_posts_comment(self, mocks: _Mocks) -> None:
+        """Comments on, issue set → one comment; label merge_conflict."""
+        with patch(f"{_MODULE}.post_issue_comment") as mock_post:
+            self._run()
+
+        mock_post.assert_called_once()
+        project_dir, issue, body = mock_post.call_args.args
+        assert (project_dir, issue) == (_PROJECT, _ISSUE)
+        assert body.splitlines()[0] == "## ❌ PR Creation Failed"
+        assert "**Stage:** Post-creation rebase" in body
+        assert f"**Reason:** {BRANCH_MOVED_REASON}" in body
+        assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in body
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
+
+    @pytest.mark.parametrize(
+        ("post", "issue"), [(False, _ISSUE), (True, None)], ids=["no_post", "no_issue"]
+    )
+    def test_no_comment_when_not_postable(
+        self, mocks: _Mocks, post: bool, issue: int | None
+    ) -> None:
+        """Comments off or no linked issue → no comment; same label."""
+        with patch(f"{_MODULE}.post_issue_comment") as mock_post:
+            self._run(post=post, issue=issue)
+
+        mock_post.assert_not_called()
+        assert mocks.apply_label.call_args.args[1] == "merge_conflict"
+
+    @pytest.mark.parametrize("reason", ["push_failed", "conflict"])
+    def test_other_reason_posts_no_comment(self, mocks: _Mocks, reason: str) -> None:
+        """Only branch_moved comments; other reasons stay as they were."""
+        mocks.rebase.return_value = RebaseOutcome(reason, "main")  # type: ignore[arg-type]
+
+        with (
+            patch(f"{_MODULE}.post_issue_comment") as mock_post,
+            patch(f"{_MODULE}._reset_hard", return_value=True),
+        ):
+            self._run()
+
+        mock_post.assert_not_called()
+
+    def test_poll_settles_after_rebase(self, mocks: _Mocks) -> None:
+        """The comment is posted even when the second poll is clean."""
+        mocks.poll.side_effect = ["dirty", "clean"]
+
+        with patch(f"{_MODULE}.post_issue_comment") as mock_post:
+            self._run()
+
+        mock_post.assert_called_once()
+        assert mocks.apply_label.call_args.args[1] == "pr_created"
+
+    def test_failed_post_changes_nothing(self, mocks: _Mocks) -> None:
+        """A comment that cannot be posted leaves the label and exit code alone."""
+        with patch(
+            "mcp_coder.workflow_utils.failure_handling.IssueManager",
+            side_effect=RuntimeError("boom"),
+        ) as mock_manager:
+            result = self._run()
+
+        mock_manager.assert_called_once_with(_PROJECT)
+        assert result == 0
         assert mocks.apply_label.call_args.args[1] == "merge_conflict"
 
 

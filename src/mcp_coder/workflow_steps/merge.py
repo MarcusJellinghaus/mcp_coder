@@ -33,6 +33,7 @@ from mcp_coder.workflow_steps.constants import (
     CODE_SCANNING_MAX_POLL_ATTEMPTS,
 )
 from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
     RebaseOutcome,
     _attempt_rebase_and_push,
     _poll_mergeable_state,
@@ -167,6 +168,8 @@ def _failed(
     ]
     if rebase is not None:
         fields += [("Reason", rebase.reason), ("Base", rebase.base_branch)]
+        if rebase.reason == "branch_moved":
+            fields.append(("Next step", BRANCH_MOVED_NEXT_STEP))
     logger.warning(
         "Auto-merge failed: %s (outcome=%s, status=%s, mergeable_state=%s)",
         result["message"],

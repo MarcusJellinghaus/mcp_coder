@@ -22,9 +22,15 @@ from mcp_coder.workflow_steps.merge import (
 )
 from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
     _attempt_rebase_and_push,
     _poll_mergeable_state,
     _reset_hard,
+)
+from mcp_coder.workflow_utils.failure_handling import (
+    build_failure_comment,
+    post_issue_comment,
 )
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
 
@@ -58,7 +64,8 @@ def run_post_creation(
         settings_file: Optional path to .claude/settings.local.json.
         issue_number: Issue linked to the branch, or None.
         update_issue_labels: If True, apply the final label to the issue.
-        post_issue_comments: If True, post the auto-merge failure comment.
+        post_issue_comments: If True, post the auto-merge failure comment and
+            the comment for a rebase that stopped on ``branch_moved``.
         auto_merge: If True, squash-merge the PR on a real green.
 
     Returns:
@@ -68,7 +75,13 @@ def run_post_creation(
         "pr_created" / "merged").
     """
     head_before = get_latest_commit_sha(project_dir)
-    label, verified_sha = _check_mergeability_and_ci(project_dir, branch, head_before)
+    label, verified_sha = _check_mergeability_and_ci(
+        project_dir,
+        branch,
+        head_before,
+        issue_number=issue_number,
+        post_issue_comments=post_issue_comments,
+    )
     if get_latest_commit_sha(project_dir) != head_before:
         logger.log(OUTPUT, "New commits were pushed; refreshing PR description")
         refresh_pr_description(project_dir, branch, provider, mcp_config, settings_file)
@@ -138,7 +151,12 @@ def apply_post_creation_label(
 
 
 def _check_mergeability_and_ci(
-    project_dir: Path, branch: str, head_before: str | None
+    project_dir: Path,
+    branch: str,
+    head_before: str | None,
+    *,
+    issue_number: int | None,
+    post_issue_comments: bool,
 ) -> tuple[str, str | None]:
     """Check mergeability (rebasing once on ``dirty``), then wait for CI.
 
@@ -147,6 +165,9 @@ def _check_mergeability_and_ci(
         branch: Head branch of the PR.
         head_before: Local HEAD at the start of phase B; restored when the
             rebase succeeds locally but its push fails.
+        issue_number: Issue linked to the branch, or None (comment skipped).
+        post_issue_comments: If True, comment on the issue when the rebase
+            stops on ``branch_moved``.
 
     Returns:
         Tuple of the label ID ("merge_conflict", "failing_ci" or
@@ -162,6 +183,22 @@ def _check_mergeability_and_ci(
             # Undo the unpushed rebase: the CI wait and the description
             # refresh must see the HEAD the PR actually has.
             _reset_hard(project_dir, head_before)
+        if (
+            outcome.reason == "branch_moved"
+            and post_issue_comments
+            and issue_number is not None
+        ):
+            body = build_failure_comment(
+                project_dir,
+                title="PR Creation",
+                kind="Failed",
+                fields=[
+                    ("Stage", "Post-creation rebase"),
+                    ("Reason", BRANCH_MOVED_REASON),
+                    ("Next step", BRANCH_MOVED_NEXT_STEP),
+                ],
+            )
+            post_issue_comment(project_dir, issue_number, body)
         state = _poll_mergeable_state(project_dir, branch)
         if state == "dirty":
             logger.log(

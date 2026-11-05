@@ -21,7 +21,11 @@ import pytest
 from git import Repo
 
 from mcp_coder.mcp_workspace_git import get_full_status
-from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+)
 from mcp_coder.workflows.review import handoff
 from mcp_coder.workflows.review.config import (
     REVIEW_IMPLEMENTATION,
@@ -167,6 +171,8 @@ def _rebase_outcome(reason: str) -> RebaseOutcome:
         return RebaseOutcome("conflict", "main", "def5678", _FILES)
     if reason == "rebase_failed":
         return RebaseOutcome("rebase_failed", "main", "def5678")
+    if reason == "branch_moved":
+        return RebaseOutcome("branch_moved", "main", "def5678")
     return RebaseOutcome("push_failed", "main", "def5678")
 
 
@@ -224,7 +230,8 @@ def test_rebase_handoff_fields_follow_the_table(
             "rebase_failed",
             "Rebase onto the base branch failed and was not classified as a conflict",
         ),
-        ("push_failed", "Rebase succeeded, but the force-with-lease push failed"),
+        ("push_failed", "Rebase was not pushed"),
+        ("branch_moved", BRANCH_MOVED_REASON),
     ],
 )
 def test_rebase_handoff_reason_line(
@@ -236,12 +243,28 @@ def test_rebase_handoff_reason_line(
     assert f"**Reason:** {expected}" in lines
 
 
-@pytest.mark.parametrize("reason", ["dirty_tree", "push_failed"])
+def test_rebase_handoff_branch_moved_uses_rebase_next_step(
+    routed: SimpleNamespace, tmp_path: Path
+) -> None:
+    """``workflow_steps.commit`` has a same-named constant for the CI fix loop."""
+    lines = _rebase_comment(routed, tmp_path, "branch_moved").splitlines()
+
+    assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in lines
+
+
+@pytest.mark.parametrize("reason", ["dirty_tree", "push_failed", "branch_moved"])
 def test_rebase_handoff_does_not_suggest_rebase(
     routed: SimpleNamespace, tmp_path: Path, reason: str
 ) -> None:
-    """A dirty tree or a failed push is not fixed by ``/rebase``."""
+    """A dirty tree, a failed push or a moved branch is not fixed by ``/rebase``."""
     assert "/rebase" not in _rebase_comment(routed, tmp_path, reason)
+
+
+def test_rebase_handoff_push_failed_does_not_suggest_force_push(
+    routed: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A forced push could overwrite the foreign commits ``push_failed`` may hide."""
+    assert "--force-with-lease" not in _rebase_comment(routed, tmp_path, "push_failed")
 
 
 @pytest.mark.parametrize(
@@ -250,6 +273,7 @@ def test_rebase_handoff_does_not_suggest_rebase(
         ("conflict", "**Base:** origin/main @ def5678"),
         ("rebase_failed", "**Base:** origin/main @ def5678"),
         ("push_failed", "**Base:** origin/main @ def5678"),
+        ("branch_moved", "**Base:** origin/main @ def5678"),
         ("base_missing", "**Base:** origin/main"),
         ("dirty_tree", None),
         ("no_base", None),

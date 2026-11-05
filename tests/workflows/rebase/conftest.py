@@ -220,6 +220,14 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(rebase_module, "get_working_tree_status", status)
     monkeypatch.setattr(rebase_module, "git_push", push)
 
+    # Branch-moved check's collaborators — the check passes by default.
+    branch_name = MagicMock(return_value="feature")
+    remote_sha = MagicMock(return_value="remotesha")
+    merge_base = MagicMock(return_value="true")
+    monkeypatch.setattr(rebase_step_module, "get_current_branch_name", branch_name)
+    monkeypatch.setattr(rebase_step_module, "get_remote_branch_commit_sha", remote_sha)
+    monkeypatch.setattr(rebase_step_module, "git_merge_base", merge_base)
+
     return SimpleNamespace(
         prompt=prompt,
         all_checks=all_checks,
@@ -242,6 +250,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         push=push,
         needs=needs,
         fetch=fetch,
+        merge_base=merge_base,
     )
 
 
