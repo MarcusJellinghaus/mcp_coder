@@ -132,7 +132,8 @@ See [`pyproject.toml`](../../pyproject.toml) `[tool.pytest.ini_options]`.
 - `no-url-deps` ([`check_no_url_deps.py`](../../tools/check_no_url_deps.py)): no direct URL
   dependencies in `[project]` dependencies or extras; PyPI rejects them.
 - `forbidden-calls` ([`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py)):
-  text scan of `src/` for literal `["git", …]` argv lists, and for direct
+  text scan of `src/` for literal `["git", …]` argv lists, literal argv lists that run a
+  Python quality tool (`["pytest", …]`, `"-m", "pytest"`, `"run", "pytest"`), and direct
   `mcp_workspace.git_operations` / `github_operations` imports outside their shims. Why:
   [`enforcement.md`](../architecture/enforcement.md#shim-boundary).
 

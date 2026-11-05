@@ -1,9 +1,13 @@
-"""Fail if ``src/`` runs git as a subprocess or imports mcp_workspace internals.
+"""Fail if ``src/`` runs git or quality tools, or imports mcp_workspace internals.
 
 Rules (no allowlist beyond each shim importing its own upstream package):
 
 - ``git``: an argv list starting with ``"git"`` (``["git", ...]``, also split
   across lines). Use ``mcp_coder.mcp_workspace_git`` instead.
+- ``quality-tools``: an argv with a Python quality tool (pytest, pylint, mypy,
+  ruff, vulture, bandit, lint-imports, tach, deptry) as ``["<tool>"``,
+  ``"-m", "<tool>"`` or ``"run", "<tool>"``, also split across lines. Use the
+  quality-tool boundary instead.
 - ``workspace-git-direct-import``: ``mcp_workspace.git_operations`` outside
   ``src/mcp_coder/mcp_workspace_git.py``.
 - ``workspace-github-direct-import``: ``mcp_workspace.github_operations``
@@ -12,6 +16,12 @@ Rules (no allowlist beyond each shim importing its own upstream package):
 This is a text scan, not an AST check. It guards against accidents, not
 deliberate bypass: an argv that never spells ``"git"`` literally
 (``[GIT_BIN, ...]``, ``shlex.split("git status")``) is not caught.
+
+``quality-tools`` also misses ``[exe, "pytest"]``, ``("pytest", "-q")``, flags
+between ``run`` and the tool, ``["uvx", "ruff"]`` and shell strings. It can hit
+non-argv text such as ``x = ["mypy", "pylint"]``, ``cfg["mypy"]`` or
+``Literal["pytest", "mypy"]``. Nothing in ``src/`` does today; narrow the
+pattern if later work needs such text.
 
 Out of scope: tests, shell text in ``command_templates.py``, ``gh`` calls,
 and scripts under ``tools/``.
@@ -35,6 +45,8 @@ class Rule:
     message: str
 
 
+_QUALITY_TOOLS = "pytest|pylint|mypy|ruff|vulture|bandit|lint-imports|tach|deptry"
+
 RULES: tuple[Rule, ...] = (
     Rule(
         "git",
@@ -42,6 +54,13 @@ RULES: tuple[Rule, ...] = (
         ("src",),
         (),
         "use `mcp_coder.mcp_workspace_git`",
+    ),
+    Rule(
+        "quality-tools",
+        (re.compile(rf'(?:\[\s*|"-m",\s*|"run",\s*)"(?:{_QUALITY_TOOLS})"'),),
+        ("src",),
+        (),
+        "use the quality-tool boundary, not a subprocess",
     ),
     Rule(
         "workspace-git-direct-import",

@@ -1,5 +1,5 @@
 @echo off
-REM Check src for git subprocess argv and direct mcp_workspace imports
+REM Check src for git and quality-tool subprocess argv and direct mcp_workspace imports
 REM
 REM Usage from cmd.exe: tools\forbidden_calls_check.bat
 

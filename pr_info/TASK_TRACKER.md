@@ -33,9 +33,9 @@ Details: [step_1.md](./steps/step_1.md)
 
 Details: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: add the failing test, then the `quality-tools` rule, update docstring, script comments and docs, run the `src/` probe and delete `.scratch/`
-- [ ] Quality checks: pylint, pytest, mypy, ruff — fix all issues
-- [ ] Commit message prepared in `pr_info/.commit_message.txt`
+- [x] Implementation: add the failing test, then the `quality-tools` rule, update docstring, script comments and docs, run the `src/` probe and delete `.scratch/`
+- [x] Quality checks: pylint, pytest, mypy, ruff — fix all issues
+- [x] Commit message prepared in `pr_info/.commit_message.txt`
 
 ## Pull Request
 

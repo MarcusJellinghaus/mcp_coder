@@ -20,6 +20,8 @@ One module owns each external library. An upgrade or a replacement then touches 
 
 Git and the `mcp_workspace` package are reached only through the shims `mcp_coder.mcp_workspace_git` and `mcp_coder.mcp_workspace_github`. Running `git` as a subprocess, or importing `mcp_workspace.git_operations` / `mcp_workspace.github_operations` directly, would bypass them. import-linter cannot resolve those external subpackages, so `RULES` in [`tools/check_forbidden_calls.py`](../../tools/check_forbidden_calls.py) guards both the argv and the import rules.
 
+Python quality tools (pytest, pylint, mypy, ruff, vulture, bandit, import-linter, tach, deptry) are reached only through the quality-tool boundary, today the `mcp_coder.mcp_tools_py` shim. The `quality_tools_isolation` contract in [`.importlinter`](../../.importlinter) forbids importing them. import-linter cannot see subprocess calls, so the `quality-tools` rule in `RULES` guards literal argv lists.
+
 ## No import cycles
 
 Cycles make import order fragile and the layering meaningless. Two guards catch them, at different grain: [pylint `R0401`](https://pylint.readthedocs.io/en/stable/user_guide/messages/refactor/cyclic-import.html) ([`pyproject.toml`](../../pyproject.toml)) finds any cyclic import between modules and also runs locally, and tach `forbid_circular_dependencies` ([`tach.toml`](../../tach.toml)) catches cycles between the declared top-level modules. The `mlflow_logger_no_cycles` contract in [`.importlinter`](../../.importlinter) is not a general guard but a specific boundary: the MLflow logger must not import the modules that call it.

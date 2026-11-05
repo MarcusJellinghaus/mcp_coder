@@ -26,6 +26,29 @@ check_forbidden_calls = _load()
 find_violations = check_forbidden_calls.find_violations
 scan = check_forbidden_calls.scan
 
+_QUALITY_TOOLS = (
+    "pytest",
+    "pylint",
+    "mypy",
+    "ruff",
+    "vulture",
+    "bandit",
+    "lint-imports",
+    "tach",
+    "deptry",
+)
+
+# (argv template, line reported): a multi-line match starts at "-m" or "run",
+# not at the bracket.
+_QUALITY_TOOL_ARGVS = (
+    ('cmd = ["{tool}", "-q"]\n', 1),
+    ('cmd = [\n    "{tool}",\n    "-q",\n]\n', 1),
+    ('cmd = [sys.executable, "-m", "{tool}"]\n', 1),
+    ('cmd = [\n    sys.executable,\n    "-m",\n    "{tool}",\n]\n', 3),
+    ('cmd = ["uv", "run", "{tool}"]\n', 1),
+    ('cmd = [\n    "uv",\n    "run",\n    "{tool}",\n]\n', 3),
+)
+
 
 def test_git_argv_single_line() -> None:
     hits = find_violations("src/mcp_coder/x.py", 'execute_command(["git", "status"])\n')
@@ -38,6 +61,14 @@ def test_git_argv_multi_line_reports_bracket_line() -> None:
     hits = find_violations("src/mcp_coder/x.py", text)
     assert len(hits) == 1
     assert hits[0].startswith("src/mcp_coder/x.py:3: [git]")
+
+
+@pytest.mark.parametrize("tool", _QUALITY_TOOLS)
+@pytest.mark.parametrize(("template", "line"), _QUALITY_TOOL_ARGVS)
+def test_quality_tool_argv_is_hit(tool: str, template: str, line: int) -> None:
+    hits = find_violations("src/mcp_coder/x.py", template.format(tool=tool))
+    assert len(hits) == 1
+    assert hits[0].startswith(f"src/mcp_coder/x.py:{line}: [quality-tools]")
 
 
 def test_git_operations_import_excluded_in_shim() -> None:
