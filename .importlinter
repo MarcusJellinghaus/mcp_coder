@@ -306,6 +306,32 @@ ignore_imports =
     mcp_coder.mcp_tools_py -> mcp_tools_py
 
 # -----------------------------------------------------------------------------
+# Contract: Quality Tools Isolation
+# -----------------------------------------------------------------------------
+# Python quality tools run behind the quality-tool boundary and are never
+# imported by mcp_coder. _pytest is its own top-level package, so the pytest
+# entry doesn't cover it.
+# Running them as a subprocess is caught by `tools/check_forbidden_calls.py`
+# (rule `quality-tools`).
+# -----------------------------------------------------------------------------
+[importlinter:contract:quality_tools_isolation]
+name = Quality Tools Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    pytest
+    _pytest
+    pylint
+    mypy
+    ruff
+    vulture
+    bandit
+    importlinter
+    tach
+    deptry
+
+# -----------------------------------------------------------------------------
 # Contract: Requests Library Isolation
 # -----------------------------------------------------------------------------
 # The 'requests' library should only be used in github_operations and jenkins_operations.
