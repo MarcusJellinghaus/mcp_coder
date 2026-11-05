@@ -21,7 +21,11 @@ import pytest
 from git import Repo
 
 from mcp_coder.mcp_workspace_git import get_full_status
-from mcp_coder.workflow_steps.rebase import BRANCH_MOVED_REASON, RebaseOutcome
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP,
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+)
 from mcp_coder.workflows.review import handoff
 from mcp_coder.workflows.review.config import (
     REVIEW_IMPLEMENTATION,
@@ -237,6 +241,15 @@ def test_rebase_handoff_reason_line(
     lines = _rebase_comment(routed, tmp_path, reason).splitlines()
 
     assert f"**Reason:** {expected}" in lines
+
+
+def test_rebase_handoff_branch_moved_uses_rebase_next_step(
+    routed: SimpleNamespace, tmp_path: Path
+) -> None:
+    """``workflow_steps.commit`` has a same-named constant for the CI fix loop."""
+    lines = _rebase_comment(routed, tmp_path, "branch_moved").splitlines()
+
+    assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in lines
 
 
 @pytest.mark.parametrize("reason", ["dirty_tree", "push_failed", "branch_moved"])
