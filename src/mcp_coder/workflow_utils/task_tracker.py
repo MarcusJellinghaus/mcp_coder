@@ -446,12 +446,15 @@ def get_step_progress(
             # Extract step name from header
             current_step_name = line.strip().lstrip("#").strip()
             current_step_tasks = []
-        # Check if this line is a task checkbox
-        elif line.strip() and CHECKBOX_PATTERN.match(line.strip()):
-            # Add task to current step
-            if current_step_name and task_index < len(all_tasks):
-                current_step_tasks.append(all_tasks[task_index])
-                task_index += 1
+        # Check if this line is a task checkbox, and add it to the current step
+        elif (
+            line.strip()
+            and CHECKBOX_PATTERN.match(line.strip())
+            and current_step_name
+            and task_index < len(all_tasks)
+        ):
+            current_step_tasks.append(all_tasks[task_index])
+            task_index += 1
 
     # Save last step
     if current_step_name and current_step_tasks:
