@@ -21,10 +21,12 @@ jobs:
           python-version: "3.11"
 
       - name: Install build tools
-        run: pip install build
+        run: pip install --require-hashes -r .github/requirements/publish.txt
 
+      # --no-isolation: build with the hash-pinned backend above, not one
+      # downloaded unpinned into an isolated environment.
       - name: Build package
-        run: python -m build
+        run: python -m build --no-isolation
 
       - name: Upload artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
