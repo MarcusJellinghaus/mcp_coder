@@ -261,13 +261,12 @@ def print_tool_trace(
                         msg_count += 1
                         safe_print(f"  [{i}] TEXT: {t[:300]}")
 
-                elif bt == "thinking":
-                    # Skip thinking blocks unless showing content
-                    if show_content:
-                        t = block.get("thinking", "")[:200]
-                        if filter_text and filter_text.lower() not in t.lower():
-                            continue
-                        safe_print(f"  [{i}] THINKING: {t}")
+                # Skip thinking blocks unless showing content
+                elif bt == "thinking" and show_content:
+                    t = block.get("thinking", "")[:200]
+                    if filter_text and filter_text.lower() not in t.lower():
+                        continue
+                    safe_print(f"  [{i}] THINKING: {t}")
 
             continue
 
