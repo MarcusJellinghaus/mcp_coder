@@ -129,6 +129,8 @@ mcp-coder gh-tool set-status <label>
 
 ## Jenkins
 
+- Connection or `401`/`403` errors: `mcp-coder verify` (JENKINS sections).
+- Status check of recent runs: follow `tools/jenkins_status_check.md`.
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
 - Without `--job`, both default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
