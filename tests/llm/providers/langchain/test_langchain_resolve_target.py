@@ -31,7 +31,7 @@ from mcp_coder.llm.providers.langchain._config_diagnostics import (
 )
 
 _PACKAGE = "mcp_coder.llm.providers.langchain"
-_CREATE = f"{_PACKAGE}._create_chat_model"
+_CREATE = f"{_PACKAGE}._setup._create_chat_model"
 _DIAGNOSTICS = f"{_PACKAGE}._config_diagnostics"
 
 # Everything that can redirect a client, cleared before each test so a

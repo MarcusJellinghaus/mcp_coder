@@ -15,11 +15,12 @@ locally constructed client rather than computing it from config, because the
 SDKs resolve their own environment variables and a config-derived answer is
 simply wrong whenever one of those is exported.
 
-Import direction matters. The package ``__init__`` imports :func:`validate` at
-module level, so nothing here may import that ``__init__`` at module level —
-module-level imports stay limited to stdlib and sibling private modules, or
-``import mcp_coder.llm.providers.langchain`` breaks with a
-partially-initialised-module ImportError.
+Import direction matters. The package ``__init__`` imports :func:`dialed_url`
+and ``_setup`` imports :func:`validate` at module level, so nothing here may
+import either of them at module level — ``_setup`` only lazily, inside
+:func:`resolve_target`. Module-level imports stay limited to stdlib and the
+leaf sibling modules, or ``import mcp_coder.llm.providers.langchain`` breaks
+with a partially-initialised-module ImportError.
 """
 
 from __future__ import annotations
@@ -472,10 +473,10 @@ def resolve_target(config: Mapping[str, str | None]) -> ResolvedTarget:
     Returns:
         The resolved target, never raising for a config problem.
     """
-    # Deferred on purpose: the package __init__ imports validate() from this
-    # module, so a module-level import back would be a real cycle and break
+    # Deferred on purpose: _setup imports validate() from this module at module
+    # level, so a module-level import back would be a real cycle and break
     # `import mcp_coder.llm.providers.langchain`.
-    from . import _create_chat_model  # pylint: disable=cyclic-import
+    from ._setup import _create_chat_model  # pylint: disable=cyclic-import
 
     if mode_of(config) is None:
         return ResolvedTarget(

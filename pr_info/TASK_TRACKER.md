@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `resolve_target` imports `_create_chat_model` from `._setup` — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: retarget `resolve_target` chat-model patches to `_setup._create_chat_model`; change lazy import; fix `validate` docstring/comment
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: retarget `resolve_target` chat-model patches to `_setup._create_chat_model`; change lazy import; fix `validate` docstring/comment
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Split `verification.py` into `_provider_checks.py` — [step_5.md](./steps/step_5.md)
 

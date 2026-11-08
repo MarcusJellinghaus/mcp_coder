@@ -28,7 +28,7 @@ from mcp_coder.llm.providers.langchain.verification import (
 )
 
 _PACKAGE = "mcp_coder.llm.providers.langchain"
-_CREATE = f"{_PACKAGE}._create_chat_model"
+_CREATE = f"{_PACKAGE}._setup._create_chat_model"
 _VERIFICATION = f"{_PACKAGE}.verification"
 _MODELS = f"{_PACKAGE}._models"
 
