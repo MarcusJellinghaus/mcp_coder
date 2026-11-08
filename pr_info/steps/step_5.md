@@ -3,7 +3,8 @@
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and this file (`pr_info/steps/step_5.md`).
-> Write `test_langchain_provider_checks.py` and retarget existing test patches
+> Write `test_langchain_provider_checks.py` and
+> `test_langchain_verification_mcp_split.py` and retarget existing test patches
 > first, then create `_provider_checks.py` and slim down `verification.py`.
 > The step-1 test `test_langchain_verify_row_order.py` must pass **unchanged**.
 > No re-exports of moved names from `verification`. Run pylint, pytest, mypy,
@@ -13,6 +14,7 @@
 
 - New: `src/mcp_coder/llm/providers/langchain/_provider_checks.py`
 - New: `tests/llm/providers/langchain/test_langchain_provider_checks.py`
+- New: `tests/llm/providers/langchain/test_langchain_verification_mcp_split.py`
 - Modified: `verification.py`, `src/mcp_coder/cli/commands/verify_sections.py`
 - Tests retargeted (at least): `test_langchain_verification.py`,
   `test_langchain_verification_ollama.py`, `test_langchain_effective_config.py`,
@@ -71,8 +73,10 @@ def verify_langchain(check_models: bool = False, mcp_config_path: str | None = N
    - New `test_langchain_provider_checks.py` (keeps `test_langchain_verification.py`
      under the size limit):
      - `check_provider` takes the config as an argument (no `_load_langchain_config` patch needed) and returns no `mcp_adapters` / `langgraph` keys;
-     - its `overall_ok` is True for a configured backend with packages installed even when the MCP packages are missing (patch `_provider_checks._check_package_installed` with a side effect `lambda p: p not in ("langchain_mcp_adapters", "langgraph")`);
-     - `verify_langchain` with the same patch returns `overall_ok` False and both MCP rows not ok;
+     - its `overall_ok` is True for a configured backend with packages installed even when the MCP packages are missing (patch `_provider_checks._check_package_installed` with a side effect `lambda p: p not in ("langchain_mcp_adapters", "langgraph")`).
+   - New `test_langchain_verification_mcp_split.py` (tests for `verification`; keeps
+     them out of the size-limited `test_langchain_verification.py`):
+     - `verify_langchain` with the same patch (plus `verification._load_langchain_config`) returns `overall_ok` False and both MCP rows not ok;
      - `_check_mcp_adapter_packages` uses the `_provider_checks` attribute: one patch on `_provider_checks._check_package_installed` is seen by it.
 2. Create `_provider_checks.py`; move the helpers; build `check_provider` from the
    body of today's `verify_langchain` **minus** the config load and the MCP block,

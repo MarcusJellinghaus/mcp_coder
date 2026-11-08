@@ -11,7 +11,8 @@
 
 - New: `src/mcp_coder/llm/providers/langchain/_config_source.py`
 - Modified: `_setup.py`, `__init__.py`, `verification.py` (same package)
-- Tests: `tests/llm/providers/langchain/test_langchain_provider.py`
+- Tests: `tests/llm/providers/langchain/test_langchain_provider.py` (class removed),
+  new `tests/llm/providers/langchain/test_langchain_config_source.py` (class moved in)
 
 ## WHAT
 
@@ -28,11 +29,17 @@ Body, docstring and warning text are moved unchanged (including the
 
 ## HOW
 
-1. **Tests first:** in `test_langchain_provider.py` change every
+1. **Tests first:** move the whole `TestLoadLangchainConfig` class from
+   `test_langchain_provider.py` into a new
+   `tests/llm/providers/langchain/test_langchain_config_source.py` (with the
+   imports it needs). In the moved class change every
    `"mcp_coder.llm.providers.langchain._setup.get_config_values"` to
-   `"mcp_coder.llm.providers.langchain._config_source.get_config_values"`.
+   `"mcp_coder.llm.providers.langchain._config_source.get_config_values"` and
+   import `_load_langchain_config` from
+   `mcp_coder.llm.providers.langchain._config_source`.
    Search all tests for `_setup.get_config_values` and `_setup._load_langchain_config`;
-   retarget any other hit the same way.
+   retarget any other hit the same way. Remove imports left unused in
+   `test_langchain_provider.py`.
 2. Create `_config_source.py`; imports: `logging`, `typing.Any`,
    `from mcp_coder.utils.user_config import get_config_values`.
 3. `_setup.py`: delete `_load_langchain_config` and the

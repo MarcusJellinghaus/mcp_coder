@@ -55,6 +55,8 @@ KISS choices:
 - `src/mcp_coder/llm/providers/langchain/_product.py`
 - `tests/llm/providers/langchain/test_langchain_verify_row_order.py`
 - `tests/llm/providers/langchain/test_langchain_provider_checks.py`
+- `tests/llm/providers/langchain/test_langchain_verification_mcp_split.py`
+- `tests/llm/providers/langchain/test_langchain_config_source.py`
 
 **Modified (production)**
 - `src/mcp_coder/llm/providers/langchain/__init__.py`
