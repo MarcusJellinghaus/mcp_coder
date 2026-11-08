@@ -194,7 +194,9 @@ class TestLoadToolkit:
         loaded = load_toolkit(tmp_path)
         run_request(loaded, tmp_path, "test@quick")
         run_request(loaded, tmp_path, "test@standard")
-        requests: list[ActionRequest] = getattr(loaded.toolkit, "requests")
+        assert isinstance(loaded.toolkit, FakeToolkit)
+        # pylint does not narrow on isinstance; mypy does
+        requests = loaded.toolkit.requests  # pylint: disable=no-member
         assert dict(requests[0].params) == {"markers": "b", "verbose": True}
         assert dict(requests[1].params) == {"markers": "a", "verbose": True}
 
