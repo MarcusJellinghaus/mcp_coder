@@ -15,7 +15,6 @@ from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows import rebase_automated as module
 from mcp_coder.workflows.rebase import RebaseRunResult
 from mcp_coder.workflows.rebase_automated import (
-    AUTOMATED_EXCLUDED_MARKERS,
     _mcp_coder_dir_problem,
     rebase_with_llm_fallback,
 )
@@ -92,7 +91,7 @@ def test_trigger_reasons_run_llm(
     assert args[1] == "claude"
     assert args[2] == "develop"
     assert args[3] == ".mcp.json"
-    assert kwargs["markers"] == AUTOMATED_EXCLUDED_MARKERS
+    assert kwargs["automated"] is True
     # Default settings: a temp file that existed during the call, gone afterwards.
     assert mocks.settings[0] is not None
     assert not Path(mocks.settings[0]).exists()

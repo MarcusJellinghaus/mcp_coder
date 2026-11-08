@@ -17,6 +17,7 @@ from mcp_coder.workflows.rebase import (
     _build_conflict_prompt,
     _build_regression_fix_prompt,
     _format_failure_keys,
+    _marker_filter_text,
     _prompt_in_session,
 )
 from mcp_coder.workflows.rebase_checks import FailureKey
@@ -197,48 +198,72 @@ class TestBuildRegressionFixPrompt:
 
     def test_placeholder_replaced_with_text(self) -> None:
         """[regression_output] is fully replaced by the regression text."""
-        prompt = _build_regression_fix_prompt("pytest: tests/test_x.py::test_new")
-        assert "pytest: tests/test_x.py::test_new" in prompt
+        prompt = _build_regression_fix_prompt("test: tests/test_x.py::test_new")
+        assert "test: tests/test_x.py::test_new" in prompt
         assert "[regression_output]" not in prompt
 
-    def test_markers_named_in_filter_text(self) -> None:
-        """With markers, the filter text names them and the placeholder is gone."""
+    def test_filter_text_replaces_placeholder(self) -> None:
+        """The filter text takes the placeholder's place."""
         prompt = _build_regression_fix_prompt(
-            "pytest: tests/test_x.py::test_new",
-            ["not claude_cli_integration", "not llm_integration"],
+            "test: tests/test_x.py::test_new", "FILTER"
         )
         assert "[pytest_marker_filter]" not in prompt
-        assert 'markers=["not claude_cli_integration", "not llm_integration"]' in prompt
+        assert "FILTER" in prompt
 
-    def test_no_markers_no_filter_text(self) -> None:
-        """Without markers, neither the placeholder nor any filter text remains."""
-        prompt = _build_regression_fix_prompt("pytest: tests/test_x.py::test_new")
+    def test_no_filter_text_removes_placeholder(self) -> None:
+        """Without filter text, neither the placeholder nor any filter remains."""
+        prompt = _build_regression_fix_prompt("test: tests/test_x.py::test_new")
         assert "[pytest_marker_filter]" not in prompt
         assert "markers=" not in prompt
+
+
+class TestMarkerFilterText:
+    """The unattended filter instruction comes from the toolkit's fragment."""
+
+    def test_not_automated_is_empty(self, tmp_path: Path) -> None:
+        """Interactive runs add no filter text and never load the toolkit."""
+        with patch("mcp_coder.workflows.rebase.load_toolkit") as mock_load:
+            assert _marker_filter_text(tmp_path, False) == ""
+        mock_load.assert_not_called()
+
+    def test_automated_returns_unattended_fragment(self, tmp_path: Path) -> None:
+        """Automated runs use the ``check_instructions.unattended`` fragment."""
+        loaded = MagicMock()
+        with (
+            patch(
+                "mcp_coder.workflows.rebase.load_toolkit", return_value=loaded
+            ) as mock_load,
+            patch(
+                "mcp_coder.workflows.rebase.get_fragment", return_value="FRAGMENT"
+            ) as mock_fragment,
+        ):
+            assert _marker_filter_text(tmp_path, True) == "FRAGMENT"
+        mock_load.assert_called_once_with(tmp_path)
+        mock_fragment.assert_called_once_with(loaded, "check_instructions.unattended")
 
 
 class TestFormatFailureKeys:
     """Deterministic sorted rendering (doubles as the stall-guard string)."""
 
     def test_sorted_one_per_line(self) -> None:
-        """Keys render sorted, one per line, kind-prefixed."""
+        """Keys render sorted, one per line."""
         keys: set[FailureKey] = {
-            ("pytest", "tests/test_a.py::test_new"),
-            ("pylint", "src/mod.py", "W0611", "Unused import os"),
-            ("mypy", "src/mod.py", "arg-type", "Bad argument"),
+            "test: tests/test_a.py::test_new",
+            "check: src/mod.py|W0611|Unused import os",
+            "check: src/mod.py|arg-type|Bad argument",
         }
         assert _format_failure_keys(keys) == (
-            "mypy: src/mod.py arg-type Bad argument\n"
-            "pylint: src/mod.py W0611 Unused import os\n"
-            "pytest: tests/test_a.py::test_new"
+            "check: src/mod.py|W0611|Unused import os\n"
+            "check: src/mod.py|arg-type|Bad argument\n"
+            "test: tests/test_a.py::test_new"
         )
 
     def test_stable_across_set_ordering(self) -> None:
         """Insertion order never changes the rendered string."""
         items: list[FailureKey] = [
-            ("pytest", "tests/test_b.py::test_two"),
-            ("mypy", "src/mod.py", "arg-type", "Bad argument"),
-            ("pytest", "tests/test_a.py::test_one"),
+            "test: tests/test_b.py::test_two",
+            "check: src/mod.py|arg-type|Bad argument",
+            "test: tests/test_a.py::test_one",
         ]
         reordered = [items[2], items[0], items[1]]
         assert _format_failure_keys(set(items)) == _format_failure_keys(set(reordered))

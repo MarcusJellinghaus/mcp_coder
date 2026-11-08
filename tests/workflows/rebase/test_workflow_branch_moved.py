@@ -118,7 +118,7 @@ class TestRealGit:
         pushed: list[str] = []
 
         def foreign_push_on_second_call(
-            _project_dir: Path, _markers: list[str] | None
+            _project_dir: Path, _automated: bool
         ) -> set[object]:
             if all_checks.call_count == 2:
                 pushed.append(bare_remote.push_foreign("foreign1"))

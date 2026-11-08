@@ -127,7 +127,7 @@ _CLEAN_STATUS: dict[str, Any] = {
 }
 _FAILED_STATUS = {**_CLEAN_STATUS, "success": False, "clean": False}
 
-_REGRESSION: set[FailureKey] = {("pytest", "tests/test_new.py::test_case")}
+_REGRESSION: set[FailureKey] = {"test: tests/test_new.py::test_case"}
 
 
 @pytest.fixture
@@ -171,7 +171,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(
         rebase_module,
         "_build_regression_fix_prompt",
-        lambda text, _markers=None: "FIX:" + text,
+        lambda text, _filter_text="": "FIX:" + text,
     )
 
     # Checks + formatter.

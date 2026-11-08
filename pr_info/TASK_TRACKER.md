@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: Rebase checks through bindings, architecture cleanup
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: `_run_all_checks` over `rebase` / `rebase_automated` bindings, `automated` flag in `rebase.py` / `rebase_automated.py`, `tach.toml`, architecture doc, update tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_run_all_checks` over `rebase` / `rebase_automated` bindings, `automated` flag in `rebase.py` / `rebase_automated.py`, `tach.toml`, architecture doc, update tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

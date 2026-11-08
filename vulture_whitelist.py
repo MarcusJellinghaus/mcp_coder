@@ -165,6 +165,9 @@ _.isolate_mlflow_artifacts
 # conftest.py - Autouse fixture making formatter resolution succeed in test dirs
 _._resolvable_formatter
 
+# test_verify_project_section.py - Autouse fixture stubbing the toolkit registry
+_._stub_toolkit
+
 # cli/commands/conftest.py - Autouse fixture to mock _print_project_section
 _._mock_print_project_section
 

@@ -102,7 +102,6 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" }, # Shared workflow helpers
     { path = "mcp_coder.checks" },         # High-level check modules
     { path = "mcp_coder.llm" },           # LLM for code generation
-    { path = "mcp_coder.mcp_tools_py" },  # MCP tools (formatter shim, mypy)
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
     { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
