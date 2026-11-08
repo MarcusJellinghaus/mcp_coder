@@ -101,8 +101,12 @@ forbidden_modules =
      write one line to `pr_info/.blocked.txt` and stop.
 4. Sanity check the contract bites: temporarily add
    `from mcp_coder.utils import user_config` to `_messages.py`, confirm the
-   allowlist contract breaks, then revert. Same for `from . import _setup` in
-   `_messages.py` against the ancestor contract — revert both before committing.
+   allowlist contract breaks, then revert. Then temporarily add
+   `from . import _resolve_session_id` (a name only the package `__init__`
+   defines, so grimp records an import of `mcp_coder.llm.providers.langchain`)
+   to `_messages.py` and confirm the ancestor contract breaks. Do not probe with
+   `from . import <submodule>` (e.g. `_setup`): grimp resolves that to the
+   submodule, so the ancestor contract stays KEPT. Revert both before committing.
 
 ## ALGORITHM
 
