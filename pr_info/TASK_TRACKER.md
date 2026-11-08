@@ -65,9 +65,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 8: Architecture documentation for the LangChain model layer — [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation: add `### LangChain model layer` subsection to `docs/architecture/architecture.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `### LangChain model layer` subsection to `docs/architecture/architecture.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
