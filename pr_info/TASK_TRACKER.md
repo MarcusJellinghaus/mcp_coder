@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Import-linter contracts for the model layer — [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: add `langchain_model_layer` and `langchain_model_layer_ancestors` contracts to `.importlinter`; raise `import-linter>=2.15` in `pyproject.toml`; sanity-check both contracts bite
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `langchain_model_layer` and `langchain_model_layer_ancestors` contracts to `.importlinter`; raise `import-linter>=2.15` in `pyproject.toml`; sanity-check both contracts bite
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Architecture documentation for the LangChain model layer — [step_8.md](./steps/step_8.md)
 
