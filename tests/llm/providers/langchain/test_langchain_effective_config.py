@@ -16,12 +16,11 @@ from mcp_coder.llm.providers.langchain._config_diagnostics import (
     ResolvedTarget,
     describe_effective_config,
 )
-from mcp_coder.llm.providers.langchain.verification import (
-    _resolve_api_key,
-    verify_langchain,
-)
+from mcp_coder.llm.providers.langchain._provider_checks import _resolve_api_key
+from mcp_coder.llm.providers.langchain.verification import verify_langchain
 
 _VERIFICATION = "mcp_coder.llm.providers.langchain.verification"
+_PROVIDER_CHECKS = "mcp_coder.llm.providers.langchain._provider_checks"
 _MODELS = "mcp_coder.llm.providers.langchain._models"
 
 # Every variable that can supply a credential or redirect a client, cleared
@@ -80,8 +79,8 @@ def _run_verify(
     """
     with (
         patch(f"{_VERIFICATION}._load_langchain_config", return_value=config),
-        patch(f"{_VERIFICATION}._check_package_installed", return_value=True),
-        patch(f"{_VERIFICATION}.resolve_target", return_value=target) as resolve,
+        patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True),
+        patch(f"{_PROVIDER_CHECKS}.resolve_target", return_value=target) as resolve,
     ):
         result = verify_langchain()
     return result, resolve

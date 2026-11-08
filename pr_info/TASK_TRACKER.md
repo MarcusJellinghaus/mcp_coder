@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Split `verification.py` into `_provider_checks.py` — [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: add `test_langchain_provider_checks.py` and `test_langchain_verification_mcp_split.py`, retarget patches; create `_provider_checks.py` with `check_provider`; slim `verification.py`; update `verify_sections.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_langchain_provider_checks.py` and `test_langchain_verification_mcp_split.py`, retarget patches; create `_provider_checks.py` with `check_provider`; slim `verification.py`; update `verify_sections.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Product texts move to `_product.py` — [step_6.md](./steps/step_6.md)
 

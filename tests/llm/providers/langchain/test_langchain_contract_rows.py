@@ -26,13 +26,12 @@ from mcp_coder.cli.commands.verify_formatting import (
     _format_section,
 )
 from mcp_coder.llm.providers.langchain._config_diagnostics import ResolvedTarget
-from mcp_coder.llm.providers.langchain.verification import (
-    _mask_api_key,
-    verify_langchain,
-)
+from mcp_coder.llm.providers.langchain._provider_checks import _mask_api_key
+from mcp_coder.llm.providers.langchain.verification import verify_langchain
 
 _PACKAGE = "mcp_coder.llm.providers.langchain"
 _VERIFICATION = f"{_PACKAGE}.verification"
+_PROVIDER_CHECKS = f"{_PACKAGE}._provider_checks"
 _MODELS = f"{_PACKAGE}._models"
 
 # Every variable that can supply a credential or redirect a client, cleared
@@ -89,8 +88,8 @@ def _run_verify(
     """Run verify_langchain against *config* with every probe stubbed out."""
     with (
         patch(f"{_VERIFICATION}._load_langchain_config", return_value=config),
-        patch(f"{_VERIFICATION}._check_package_installed", return_value=True),
-        patch(f"{_VERIFICATION}.resolve_target", return_value=target),
+        patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True),
+        patch(f"{_PROVIDER_CHECKS}.resolve_target", return_value=target),
         patch(
             f"{_MODELS}._check_ollama_daemon",
             return_value={"ok": True, "value": "reachable"},

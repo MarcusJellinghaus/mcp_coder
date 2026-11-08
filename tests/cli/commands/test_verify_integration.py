@@ -17,6 +17,7 @@ from mcp_coder.mcp_workspace_git import verify_git as real_verify_git
 from mcp_coder.utils.subprocess_runner import execute_command
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
+_PROVIDER_CHECKS = "mcp_coder.llm.providers.langchain._provider_checks"
 _LC_CONFIG = "mcp_coder.llm.providers.langchain"
 _VERIFY = "mcp_coder.cli.commands.verify"
 
@@ -409,7 +410,7 @@ class TestVerifyEndToEnd:
         assert "configured but" not in output
         assert "not a recognized" not in output
 
-    @patch(f"{_LC_VERIFY}._check_package_installed", return_value=False)
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=False)
     @patch(
         f"{_LC_CONFIG}._load_langchain_config",
         return_value={"backend": "anthropic"},
@@ -459,7 +460,7 @@ class TestVerifyEndToEnd:
             in output
         )
 
-    @patch(f"{_LC_VERIFY}._check_package_installed", return_value=True)
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True)
     @patch(
         f"{_LC_CONFIG}._load_langchain_config",
         return_value={"backend": "anthropic"},
