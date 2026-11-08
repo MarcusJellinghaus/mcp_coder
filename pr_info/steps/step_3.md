@@ -69,7 +69,16 @@ logger.info("All formatters completed successfully"); return True
 
 - `tests/conftest.py` `_resolvable_formatter`: patch
   `mcp_coder.workflow_steps.commit.verify_toolkit` with `lambda _l, _p, _a: []` instead of
-  `commit.resolve_steps`; update the docstring.
+  `commit.resolve_steps`, and also patch
+  `mcp_coder.utils.toolkit_runner._toolkit_class` with `lambda _name: PythonToolkit`
+  (`from mcp_tools_py.toolkit import PythonToolkit`), so fast unit tests that reach
+  `check_formatter_config` / `run_formatters` (implement, rebase, review, fix_ci,
+  check_branch_status, commit) never depend on installed `mcp_coder.toolkits`
+  entry-point metadata. Update the docstring.
+- `tests/utils/test_toolkit_runner.py` (step 2) overrides or bypasses this patch: its
+  own monkeypatch of `_toolkit_class` takes precedence, and the registry tests of
+  `_toolkit_class` itself call the real function captured at module import
+  (`_REAL_TOOLKIT_CLASS = toolkit_runner._toolkit_class`) with `entry_points` patched.
 - Tests that patched `commit.run_format_code` now patch `commit.run_binding`, returning
   e.g. `[("format@apply", ActionResult(status="ok", summary=""))]` (or an `error` result
   where they simulated a failure). Expectations stay the same.

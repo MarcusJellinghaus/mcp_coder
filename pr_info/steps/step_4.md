@@ -55,12 +55,17 @@ Call order matters only for output; evaluate both rows (no short-circuit skippin
   formatter declared. Add an autouse fixture in that file patching
   `mcp_coder.cli.commands.verify_sections.verify_toolkit` to return
   `[VerifyItem("formatter", "ok")]`, so existing expectations stay unchanged; the new
-  tests override it.
+  tests override it. The fixture also patches
+  `mcp_coder.utils.toolkit_runner._toolkit_class` to return `PythonToolkit` (the
+  conftest fixture from step 3 already does; keep the patch explicit here), so no test
+  in this file, including the default `Toolkit` row test, depends on `mcp-tools-py`
+  being registered as an installed entry point.
 
 ## Tests (write first)
 
 New `TestToolkitRows`:
-- Default (no toolkit table) → `Toolkit` row `[OK]` with `mcp-tools-py`.
+- Default (no toolkit table) → `Toolkit` row `[OK]` with `mcp-tools-py` (registry
+  stubbed by the fixture; no entry-point metadata needed).
 - Items `[VerifyItem("ruff", "ok"), VerifyItem("formatter", "error", "x")]` → a `ruff`
   row `[OK]`, no `formatter` row from the toolkit, the wrapper's `Formatter` row still
   present; toolkit part does not fail the section.
