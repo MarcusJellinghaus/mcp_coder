@@ -246,3 +246,17 @@ def test_table_not_a_dict(tmp_path: Path) -> None:
     _write(tmp_path, "pyproject.toml", '[tool.mcp-coder]\ntoolkit = "x"\n')
     with pytest.raises(ValueError, match="pyproject.toml"):
         load_toolkit_config(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param('[tool]\n"mcp-coder" = "x"\n', id="mcp-coder-not-table"),
+        pytest.param('tool = "x"\n', id="tool-not-table"),
+    ],
+)
+def test_parent_table_not_a_dict(tmp_path: Path, body: str) -> None:
+    """[tool] or [tool.mcp-coder] as a scalar is a ValueError, not a crash."""
+    _write(tmp_path, "pyproject.toml", body)
+    with pytest.raises(ValueError, match="pyproject.toml"):
+        load_toolkit_config(tmp_path)

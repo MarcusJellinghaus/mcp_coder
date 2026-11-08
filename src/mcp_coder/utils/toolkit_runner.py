@@ -169,8 +169,15 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
     """
     tables: dict[str, Any] = {}
     for file_name in _CONFIG_FILES:
-        data = load_toml(project_dir / file_name, strict=True)
-        table = data.get("tool", {}).get("mcp-coder", {}).get("toolkit")
+        data: Any = load_toml(project_dir / file_name, strict=True)
+        for key in ("tool", "mcp-coder"):
+            data = data.get(key, {})
+            if not isinstance(data, dict):
+                raise ValueError(
+                    f"Invalid {key!r} in {file_name}: expected a table, "
+                    f"got {type(data).__name__}: {data!r}"
+                )
+        table = data.get("toolkit")
         if table is not None:
             tables[file_name] = table
 
