@@ -8,3 +8,11 @@ Reviewing the contract now; next I'll check how `PythonToolkit` reports `format@
 Verdict(decision='tasks', tasks=['In src/mcp_coder/utils/toolkit_runner.py around line 173, check that `tool` and `tool.mcp-coder` are each a dict (isinstance) before calling `.get` on them. If either is not a table, raise ValueError naming the pyproject.toml file, so callers that catch ValueError (check_formatter_config, run_formatters, _toolkit_rows) report a config error instead of crashing with AttributeError. Add a unit test where `tool.mcp-coder` is set to a non-table value (e.g. a string) and assert that ValueError is raised.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-08
+**Findings**:
+Reviewing the toolkit format path and the remaining workflow diffs.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
