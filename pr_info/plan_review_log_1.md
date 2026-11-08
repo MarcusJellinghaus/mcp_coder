@@ -1,0 +1,11 @@
+# review-plan review log 1
+
+## Round 1 — 2026-11-08
+**Findings**:
+Reviewing plan step files against the issue; now checking the real `PythonToolkit` and the callers the plan rewires.Cross-checking existing verify/commit tests that the plan claims stay unchanged.`pr_info/steps/step_3.md:70` — medium — The autouse `_resolvable_formatter` fixture only stubs `verify_toolkit`. From step 3 on, every unit test that reaches `check_formatter_config` or `run_formatters` (implement, rebase, review, fix_ci, check_branch_status, commit) goes through the real `load_toolkit`: an entry-point lookup under `mcp_coder.toolkits`, then building `PythonToolkit` and calling `describe()`. The whole fast suite then depends on installed entry-point metadata, which the issue's Constraints say tests must not assume. Also stub the registry in the fixture, by patching `toolkit_runner._toolkit_class` to return `PythonToolkit` or a fake, and let the step-2 tests override it.
+
+`pr_info/steps/step_4.md:63` — low — The "Default (no toolkit table) → `Toolkit` row `[OK]` with `mcp-tools-py`" test, and the autouse fixture at line 55 that patches only `verify_toolkit`, need `mcp-tools-py` to be registered as an entry point. Patch `_toolkit_class` or `load_toolkit` here as well, so the verify tests don't rely on installed metadata.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In pr_info/steps/step_3.md (around line 70), extend the autouse `_resolvable_formatter` fixture so it also stubs the toolkit registry: patch `toolkit_runner._toolkit_class` to return `PythonToolkit` (or a fake toolkit), in addition to `verify_toolkit`. That way fast unit tests that reach `check_formatter_config` / `run_formatters` (implement, rebase, review, fix_ci, check_branch_status, commit) don't depend on installed `mcp_coder.toolkits` entry-point metadata. State that the step-2 registry tests override or bypass this patch.", "In pr_info/steps/step_4.md (around lines 55-63), have the verify-test autouse fixture also patch `_toolkit_class` (or `load_toolkit`). The 'Default (no toolkit table) → Toolkit row [OK] with mcp-tools-py' test must not depend on `mcp-tools-py` being registered as an installed entry point."], escalate_reason=None)
+**Changes**:
+applied
