@@ -50,7 +50,7 @@ class TestBranchNameSource:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
+    @patch("mcp_coder.workflows.implement.task_processing._run_check")
     def test_mypy_fix_path_reads_branch_from_project_dir(
         self,
         mock_mypy_check: MagicMock,
@@ -68,6 +68,7 @@ class TestBranchNameSource:
         result = check_and_fix_mypy(self._PROJECT_DIR, 1, "claude")
 
         assert result is True
+        mock_mypy_check.assert_called_with(self._PROJECT_DIR, "implement_final")
         mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
         assert mock_prompt_llm.call_args.kwargs["project_dir"] == str(self._PROJECT_DIR)
         assert mock_prompt_llm.call_args.kwargs["branch_name"] == "feature-branch"

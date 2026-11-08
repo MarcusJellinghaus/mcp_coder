@@ -16,6 +16,7 @@ from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
+from mcp_coder.utils.toolkit_runner import get_binding
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
     BRANCH_MOVED_NEXT_STEP,
@@ -38,7 +39,6 @@ from mcp_coder.workflow_utils.task_tracker import get_step_progress
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
-    RUN_MYPY_AFTER_EACH_TASK,
 )
 from .failure_reporting import (
     Progress,
@@ -246,11 +246,18 @@ def run_implement_workflow(
                 message=f"Stopped after {round_cap} rounds without completing all tasks",
             )
 
-        # Step 5: Run final mypy check if not running after each task
+        # Step 5: Run the final check over the implement_final binding
+        final_binding: tuple[str, ...] = ()
+        if progress.completed > 0 and implement_config.check_type_hints:
+            try:
+                final_binding = get_binding(project_dir, "implement_final")
+            except ValueError as e:
+                # LLM sessions can edit the config mid-run; treat as a failed check
+                logger.warning(f"Final mypy check failed: {e}")
         if (
-            not RUN_MYPY_AFTER_EACH_TASK
-            and progress.completed > 0
+            progress.completed > 0
             and implement_config.check_type_hints
+            and final_binding
         ):
             logger.info("Running final mypy check after all tasks...")
             env_vars = prepare_llm_environment(project_dir)
@@ -268,6 +275,7 @@ def run_implement_workflow(
                         env_vars,
                         mcp_config,
                         settings_file,
+                        entry="implement_final",
                     )
                 except (LLMTimeoutError, McpServersUnavailableError) as exc:
                     # Fallback keeps mypy happy; the reason is non-None for both types.

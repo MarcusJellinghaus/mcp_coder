@@ -438,6 +438,7 @@ class TestRunImplementWorkflow:
         assert result == 0
         # mypy should still be called since check_type_hints=True
         mock_check_mypy.assert_called_once()
+        assert mock_check_mypy.call_args.kwargs["entry"] == "implement_final"
         # run_formatters owns the format_code gate, so it is always called
         mock_run_formatters.assert_called_once_with(Path("/test/project"))
         call_names = [name for name, _, _ in manager.mock_calls]
