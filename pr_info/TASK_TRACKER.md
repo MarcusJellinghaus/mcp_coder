@@ -21,6 +21,55 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Key-order test for `verify_langchain` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add `test_langchain_verify_row_order.py` pinning today's row order (no production change)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move `_load_langchain_config` to `_config_source.py` — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move `TestLoadLangchainConfig` to `test_langchain_config_source.py` and retarget patches; create `_config_source.py`; update `_setup.py`, `__init__.py`, `verification.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move `_resolve_session_id` into `__init__` — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: retarget `require_langchain_history` patches; move `_resolve_session_id` into `__init__.py`; strip unused imports and update docstring in `_setup.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `resolve_target` imports `_create_chat_model` from `._setup` — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: retarget `resolve_target` chat-model patches to `_setup._create_chat_model`; change lazy import; fix `validate` docstring/comment
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Split `verification.py` into `_provider_checks.py` — [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: add `test_langchain_provider_checks.py` and `test_langchain_verification_mcp_split.py`, retarget patches; create `_provider_checks.py` with `check_provider`; slim `verification.py`; update `verify_sections.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Product texts move to `_product.py` — [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation: create `_product.py` with four constants; replace literals in backends, `_models`, `_preflight`, `_config_diagnostics`, `_errors_404`, `_provider_checks`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Import-linter contracts for the model layer — [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation: add `langchain_model_layer` and `langchain_model_layer_ancestors` contracts to `.importlinter`; raise `import-linter>=2.15` in `pyproject.toml`; sanity-check both contracts bite
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: Architecture documentation for the LangChain model layer — [step_8.md](./steps/step_8.md)
+
+- [ ] Implementation: add `### LangChain model layer` subsection to `docs/architecture/architecture.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against `main`
+- [ ] PR summary prepared
