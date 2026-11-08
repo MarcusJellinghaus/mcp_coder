@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Formatting through the `commit` binding
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: rewire `check_formatter_config` / `run_formatters` in `workflow_steps/commit.py`, update `tach.toml`, conftest fixture and affected tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewire `check_formatter_config` / `run_formatters` in `workflow_steps/commit.py`, update `tach.toml`, conftest fixture and affected tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Toolkit rows in `mcp-coder verify`
 See [step_4.md](./steps/step_4.md)

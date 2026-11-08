@@ -25,8 +25,8 @@ def test_format_code_false_skips_formatter_in_tasks_round(
     (tmp_path / "pyproject.toml").write_text(
         "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
     )
-    wrapper = MagicMock(return_value={})
-    monkeypatch.setattr(commit, "run_format_code", wrapper)
+    wrapper = MagicMock(return_value=[])
+    monkeypatch.setattr(commit, "run_binding", wrapper)
     env.prompt_llm.side_effect = [
         _reviewer(),
         _resp(_TASKS),

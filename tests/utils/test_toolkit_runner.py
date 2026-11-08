@@ -26,6 +26,9 @@ from mcp_coder.utils.toolkit_runner import (
     verify_toolkit,
 )
 
+# Captured at import, before the autouse conftest patch replaces it
+_REAL_TOOLKIT_CLASS = toolkit_runner._toolkit_class
+
 CLOSED_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {},
@@ -134,6 +137,7 @@ class TestLoadToolkit:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """No matching entry point → ValueError naming the toolkit."""
+        monkeypatch.setattr(toolkit_runner, "_toolkit_class", _REAL_TOOLKIT_CLASS)
         monkeypatch.setattr(toolkit_runner, "entry_points", lambda **_: [])
         _write_config(tmp_path)
         with pytest.raises(ValueError, match="'fake'"):

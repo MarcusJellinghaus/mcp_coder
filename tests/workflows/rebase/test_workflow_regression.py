@@ -79,8 +79,8 @@ def test_regression_fix_formats_through_run_formatters(
     (tmp_path / "pyproject.toml").write_text(
         "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
     )
-    wrapper = MagicMock(return_value={})
-    monkeypatch.setattr(commit_module, "run_format_code", wrapper)
+    wrapper = MagicMock(return_value=[])
+    monkeypatch.setattr(commit_module, "run_binding", wrapper)
     patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
 
     assert _run(tmp_path).exit_code == 0

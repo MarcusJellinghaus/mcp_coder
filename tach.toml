@@ -123,7 +123,6 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.llm" },
     { path = "mcp_coder.prompt_manager" },
-    { path = "mcp_coder.mcp_tools_py" },
     { path = "mcp_coder.mcp_workspace_git" },
     { path = "mcp_coder.mcp_workspace_github" },
     { path = "mcp_coder.utils" },

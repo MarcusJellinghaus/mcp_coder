@@ -205,17 +205,26 @@ def reset_logging() -> Generator[None, None, None]:
 def _resolvable_formatter() -> Generator[None, None, None]:
     """Let formatter pre-flights pass in project dirs without pyproject.toml.
 
-    Patches the single lookup site behind check_formatter_config. Real formatting
-    is unaffected (the wrapper uses mcp-tools-py's own resolve_steps). Tests of the
-    helper re-patch it.
+    Patches the toolkit verify behind check_formatter_config to report nothing,
+    and the toolkit registry lookup to return PythonToolkit, so tests never
+    depend on installed mcp_coder.toolkits entry-point metadata. Tests of the
+    helper and of the registry re-patch them.
 
     Uses patch() rather than monkeypatch: requesting monkeypatch here would
     delay its teardown past cleanup_test_artifacts, which then runs with the
     test's own monkeypatches (e.g. of Path.iterdir) still applied.
     """
-    with patch(
-        "mcp_coder.workflow_steps.commit.resolve_steps",
-        lambda _p: ["isort", "black"],
+    from mcp_tools_py.toolkit import PythonToolkit
+
+    with (
+        patch(
+            "mcp_coder.workflow_steps.commit.verify_toolkit",
+            lambda _l, _p, _a: [],
+        ),
+        patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: PythonToolkit,
+        ),
     ):
         yield
 
