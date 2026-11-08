@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Move `_resolve_session_id` into `__init__` — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: retarget `require_langchain_history` patches; move `_resolve_session_id` into `__init__.py`; strip unused imports and update docstring in `_setup.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: retarget `require_langchain_history` patches; move `_resolve_session_id` into `__init__.py`; strip unused imports and update docstring in `_setup.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `resolve_target` imports `_create_chat_model` from `._setup` — [step_4.md](./steps/step_4.md)
 

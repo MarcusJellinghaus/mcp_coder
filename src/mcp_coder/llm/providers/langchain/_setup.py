@@ -1,19 +1,15 @@
 """Setup helpers for the LangChain provider.
 
-Turns user config into a ready ``BaseChatModel``, a session id and system
-messages, and maps backend exceptions to ``LLMAuthError`` /
-``LLMConnectionError``. Every call site lives in the package ``__init__``,
-which re-exports these names.
+Turns user config into a ready ``BaseChatModel`` and system messages, and maps
+backend exceptions to ``LLMAuthError`` / ``LLMConnectionError``. Every call
+site lives outside this module (the package ``__init__``, which re-exports
+these names, and ``_config_diagnostics``).
 """
 
 from __future__ import annotations
 
-import logging
-import uuid
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
-
-from mcp_coder.llm.storage.session_storage import require_langchain_history
 
 from ._config_diagnostics import validate
 from ._exceptions import (
@@ -28,9 +24,6 @@ from ._exceptions import (
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
-
-
-logger = logging.getLogger(__name__)
 
 
 def _build_system_messages(
@@ -187,18 +180,3 @@ def _create_chat_model(
         f"Unsupported langchain backend: {backend!r}. "
         "Supported backends: 'openai', 'gemini', 'anthropic', 'ollama'."
     )
-
-
-def _resolve_session_id(session_id: str | None) -> str:
-    """Return the session id to use, validating an explicitly requested one.
-
-    Args:
-        session_id: Id the caller asked to resume, or None for a new session.
-
-    Returns:
-        The requested id, or a freshly minted UUID when none was requested.
-    """  # Also raises ValueError via require_langchain_history for an unknown id.
-    if not session_id:
-        return str(uuid.uuid4())
-    require_langchain_history(session_id)
-    return session_id

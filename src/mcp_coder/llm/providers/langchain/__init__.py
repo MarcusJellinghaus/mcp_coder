@@ -12,12 +12,14 @@ import json
 import queue
 import threading
 import time
+import uuid
 from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 
 from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
+    require_langchain_history,
     store_langchain_history,
 )
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
@@ -36,12 +38,26 @@ from ._preflight import _ollama_preflight
 from ._setup import _build_system_messages as _build_system_messages
 from ._setup import _create_chat_model as _create_chat_model
 from ._setup import _handle_provider_error as _handle_provider_error
-from ._setup import _resolve_session_id as _resolve_session_id
 from ._usage import _extract_usage
 from .approval_bridge import ApprovalBridge
 
 # Agent streaming timeout constants (seconds)
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
+
+
+def _resolve_session_id(session_id: str | None) -> str:
+    """Return the session id to use, validating an explicitly requested one.
+
+    Args:
+        session_id: Id the caller asked to resume, or None for a new session.
+
+    Returns:
+        The requested id, or a freshly minted UUID when none was requested.
+    """  # Also raises ValueError via require_langchain_history for an unknown id.
+    if not session_id:
+        return str(uuid.uuid4())
+    require_langchain_history(session_id)
+    return session_id
 
 
 def ask_langchain(
