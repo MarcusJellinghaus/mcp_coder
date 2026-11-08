@@ -105,11 +105,12 @@ Change the log line `"Running baseline checks (pytest, pylint, mypy)..."` to
 - `load_toolkit` raising `ValueError` → `CheckRunError`.
 - Same finding key from `check` and `test` → two distinct keys.
 - Real toolkit result: a tmp project with `pyproject.toml` containing
-  `[tool.mcp-coder.toolkit.bindings] rebase = ["test@standard"]` and one failing test;
+  `[tool.mcp-coder.toolkit.bindings] rebase = ["test@standard"]` and one failing test in
+  `tests/test_fail.py` (`PythonToolkit` collects from `testpaths`, default `tests`);
   patch `rebase_checks.load_toolkit` to return a `LoadedToolkit` built from
   `PythonToolkit()` constructed directly (no entry-point assertion) and the real
   `load_toolkit_config(tmp_path)`; assert `_run_all_checks(tmp_path)` returns
-  `{"test: test_fail.py::test_fail"}` (adjust to the actual node id).
+  `{"test: tests/test_fail.py::test_fail"}`.
 
 `test_llm_steps.py`:
 - `_build_regression_fix_prompt(text, "FILTER")` → contains `FILTER`, no placeholder;

@@ -98,14 +98,20 @@ and returns `""`.
 
 ## Tests (`tests/utils/test_toolkit_runner.py`, write first)
 
-Fake toolkit: subclass of the shim's `Toolkit` with configurable `actions`, a closed
-`params_schema`, and a `run` that records requests and returns a canned result.
+Fake toolkit: subclass of the shim's `Toolkit` with configurable `actions`, a
+configurable closed `params_schema` (`ToolkitInfo` rejects any schema that is not
+`"type": "object"` with `"additionalProperties": false`), and a `run` that records
+requests and returns a canned result.
 
 - `load_toolkit`: constructor receives `config.section`; unregistered name → `ValueError`
   naming it (patch `entry_points` to return nothing); constructor raising, `describe()`
   raising → `ValueError`; params for an undeclared action → `ValueError`; params that fail
-  the schema → `ValueError`; params accepted by an open schema reach `ActionRequest.params`,
-  with the depth table overriding the action table.
+  the schema → `ValueError`; params declared by the schema reach `ActionRequest.params`
+  (fake schema `{"type": "object", "properties": {"markers": {"type": "string"},
+  "verbose": {"type": "boolean"}}, "additionalProperties": False}`; config
+  `params.test = {markers = "a", verbose = true}`, `params.test.quick = {markers = "b"}` →
+  `test@quick` receives `{"markers": "b", "verbose": True}`, the depth table overriding
+  the action table).
 - `_resolve_depth` (parametrized): declared; `standard` → `quick` when only `quick`;
   `full` → `standard`; `quick` undeclared → `None`; `unattended`/`apply`/`mutation`
   undeclared → `None`.
@@ -116,5 +122,6 @@ Fake toolkit: subclass of the shim's `Toolkit` with configurable `actions`, a cl
 - `get_fragment`: present, absent → `""`, raising → `""`.
 - Real toolkit: `PythonToolkit()` constructed directly (no entry-point lookup) and wrapped
   in a `LoadedToolkit`; `run_request(..., "test@unattended")` on a tmp project with one
-  passing and one failing test returns `findings` whose single `Finding.key` is the
-  failing node id. Keep it to one small project so it runs in seconds.
+  passing and one failing test in `tests/test_fail.py` (`PythonToolkit` collects from
+  `testpaths`, default `tests`) returns `findings` whose single `Finding.key` is
+  `tests/test_fail.py::test_fail`. Keep it to one small project so it runs in seconds.

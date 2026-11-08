@@ -57,12 +57,21 @@ The existing outer `except Exception` in `check_and_fix_mypy` already turns that
 Per task (`process_single_task`, Step 7 block):
 ```
 if not check_type_hints: logger.info("Skipping mypy check (check_type_hints disabled)")
-elif not get_binding(project_dir, "implement_task"): logger.info("Skipping mypy check (will run after all tasks complete)")
-elif not check_and_fix_mypy(..., entry="implement_task"): logger.warning(<unchanged message>)
+else:
+    try: binding = get_binding(project_dir, "implement_task")
+    except ValueError as e: logger.warning(<unchanged message> + f": {e}"); binding = None   # failed check, continue
+    if binding == (): logger.info("Skipping mypy check (will run after all tasks complete)")
+    elif binding and not check_and_fix_mypy(..., entry="implement_task"): logger.warning(<unchanged message>)
 ```
 
-Final (`core.py`, Step 5 block): condition becomes
-`progress.completed > 0 and implement_config.check_type_hints and get_binding(project_dir, "implement_final")`;
+Final (`core.py`, Step 5 block): before the block, when
+`progress.completed > 0 and implement_config.check_type_hints`, resolve the binding:
+```
+try: final_binding = get_binding(project_dir, "implement_final")
+except ValueError as e: logger.warning(f"Final mypy check failed: {e}"); final_binding = ()   # failed check, continue
+```
+The block's condition becomes
+`progress.completed > 0 and implement_config.check_type_hints and final_binding`;
 call `check_and_fix_mypy(..., entry="implement_final")`. Everything inside the block
 (LLM error categorisation, formatting, commit, `read_and_clear_blocked`) is unchanged.
 
@@ -78,8 +87,11 @@ call `check_and_fix_mypy(..., entry="implement_final")`. Everything inside the b
   `from mcp_coder.mcp_tools_py import run_mypy_check` local import and every
   `RUN_MYPY_AFTER_EACH_TASK` import/reference (check `vulture_whitelist.py` too).
 - `check_type_hints` remains the gate in front of both implement bindings only.
-- The config was already validated by the entry pre-flight (`check_formatter_config`
-  always loads it), so `get_binding` needs no extra error handling here.
+- The entry pre-flight (`check_formatter_config`) validates the config, but LLM sessions
+  can edit `pyproject.toml` / `mcp-coder.toml` mid-run, so strict loading can still fail.
+  Both `get_binding` call sites (`process_single_task` in `task_processing.py`, the final
+  check block in `core.py`) catch `ValueError`, log it and treat it as a failed check:
+  the workflow continues, as it does today when a check fails.
 
 ## Tests (update first)
 
@@ -95,7 +107,11 @@ call `check_and_fix_mypy(..., entry="implement_final")`. Everything inside the b
 - New: `check_and_fix_mypy` with `_run_check` raising `RuntimeError` → `False` (logged).
 - `test_task_processing.py`: replace `patch(...RUN_MYPY_AFTER_EACH_TASK, True)` with
   `patch("mcp_coder.workflows.implement.task_processing.get_binding", return_value=("check@quick",))`;
-  add a test that an empty `implement_task` binding skips `check_and_fix_mypy`.
+  add a test that an empty `implement_task` binding skips `check_and_fix_mypy`; add a
+  test where `get_binding` raises `ValueError` → warning logged with the message,
+  `check_and_fix_mypy` not called, the task still completes.
 - `test_core_workflow.py`: replace `patch(...core.RUN_MYPY_AFTER_EACH_TASK, True)`
   (meaning "no final check") with `patch("mcp_coder.workflows.implement.core.get_binding", return_value=())`.
-  Final-check tests that expect the check to run use the default binding.
+  Final-check tests that expect the check to run use the default binding. New: `core.get_binding`
+  raising `ValueError` → warning logged, `check_and_fix_mypy` not called, the workflow
+  continues to its normal end (no crash).
