@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Contract shim and strict `[tool.mcp-coder.toolkit]` config loading
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `utils/toolkit.py` shim, strict `load_toml`, `toolkit_runner` config part, `.importlinter`, `pyproject.toml`, docs rows (tests first in `tests/utils/test_toolkit_config.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `utils/toolkit.py` shim, strict `load_toml`, `toolkit_runner` config part, `.importlinter`, `pyproject.toml`, docs rows (tests first in `tests/utils/test_toolkit_config.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Toolkit registry and runner
 See [step_2.md](./steps/step_2.md)

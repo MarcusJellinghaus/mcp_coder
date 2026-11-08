@@ -8,9 +8,43 @@ can report syntax errors the same way.
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 # Curly quotes pasted from chat windows or documents (U+201C/U+201D/U+2018/U+2019)
 _SMART_QUOTES = "“”‘’"
+
+
+def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
+    """Load and parse a TOML file.
+
+    Args:
+        path: Path to the TOML file.
+        strict: Raise on a malformed or unreadable file instead of
+            returning an empty dict. A missing file is never an error.
+
+    Returns:
+        Parsed TOML data, or an empty dict when the file is absent (or
+        malformed and strict is False).
+
+    Raises:
+        ValueError: If strict is True and the file exists but cannot be
+            read or parsed. The message names the file.
+    """
+    if not path.exists():
+        return {}
+
+    try:
+        with open(path, "rb") as f:
+            data: dict[str, Any] = tomllib.load(f)
+            return data
+    except tomllib.TOMLDecodeError as e:
+        if strict:
+            raise ValueError(format_toml_error(path, e)) from e
+        return {}
+    except OSError as e:
+        if strict:
+            raise ValueError(f"Error reading {path}\n{e}") from e
+        return {}
 
 
 def format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
