@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Toolkit registry and runner
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `load_toolkit`, `run_request`, `run_binding`, `verify_toolkit`, `get_fragment` in `toolkit_runner` (tests first in `tests/utils/test_toolkit_runner.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `load_toolkit`, `run_request`, `run_binding`, `verify_toolkit`, `get_fragment` in `toolkit_runner` (tests first in `tests/utils/test_toolkit_runner.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Formatting through the `commit` binding
 See [step_3.md](./steps/step_3.md)

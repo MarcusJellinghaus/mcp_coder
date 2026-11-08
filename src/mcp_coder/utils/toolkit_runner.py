@@ -3,16 +3,37 @@
 Reads ``[tool.mcp-coder.toolkit]`` from ``pyproject.toml``, else from a root
 ``mcp-coder.toml``. Every config problem raises ``ValueError`` naming the file
 and the offending key or value; callers map it to their own error.
+
+The runner part looks the toolkit up in the ``mcp_coder.toolkits`` entry-point
+group, validates the configured params against its schema, and runs
+``action@depth`` requests. Exceptions from ``run()`` become ``error`` results;
+load and ``verify()`` problems raise ``ValueError``.
 """
 
+import logging
 import re
 from dataclasses import dataclass
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
 from .toml_utils import load_toml
+from .toolkit import (
+    ActionRequest,
+    ActionResult,
+    Toolkit,
+    ToolkitInfo,
+    VerifyItem,
+    validate_params,
+)
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TOOLKIT = "mcp-tools-py"
+ENTRY_POINT_GROUP = "mcp_coder.toolkits"
+
+# Depths that fall back to the nearest lower declared one, lowest first
+_STANDARD_DEPTHS = ("quick", "standard", "full")
 
 DEFAULT_BINDINGS: dict[str, tuple[str, ...]] = {
     "implement_task": (),
@@ -214,3 +235,216 @@ def get_binding(project_dir: Path, entry: str) -> tuple[str, ...]:
         The configured (or default) requests for the entry.
     """
     return load_toolkit_config(project_dir).bindings[entry]
+
+
+@dataclass(frozen=True)
+class LoadedToolkit:
+    """A constructed toolkit with its description and config."""
+
+    name: str  # entry-point key
+    toolkit: Toolkit
+    info: ToolkitInfo
+    config: ToolkitConfig
+
+
+def _toolkit_class(name: str) -> type[Toolkit]:
+    """Look a toolkit class up in the mcp_coder.toolkits entry-point group.
+
+    Args:
+        name: Entry-point name.
+
+    Returns:
+        The loaded toolkit class.
+
+    Raises:
+        ValueError: If no entry point has the name, or loading it fails.
+    """
+    registered = list(entry_points(group=ENTRY_POINT_GROUP))
+    for entry_point in registered:
+        if entry_point.name == name:
+            try:
+                cls: type[Toolkit] = entry_point.load()
+            except Exception as exc:
+                raise ValueError(f"Toolkit '{name}' failed to load: {exc}") from exc
+            return cls
+    names = ", ".join(sorted(ep.name for ep in registered)) or "none"
+    raise ValueError(
+        f"Toolkit '{name}' is not registered in the {ENTRY_POINT_GROUP} "
+        f"entry-point group; registered: {names}"
+    )
+
+
+def _request_params(loaded: LoadedToolkit, action: str, depth: str) -> dict[str, Any]:
+    """Merge the configured params for one action and depth.
+
+    Args:
+        loaded: The loaded toolkit.
+        action: Action name, declared by the toolkit.
+        depth: Depth name.
+
+    Returns:
+        The action table without its depth sub-tables, overridden by the
+        depth's sub-table.
+    """
+    table = loaded.config.params.get(action, {})
+    depths = loaded.info.actions[action]
+    base = {k: v for k, v in table.items() if k not in depths}
+    overrides: dict[str, Any] = table.get(depth, {})
+    return base | overrides
+
+
+def load_toolkit(project_dir: Path) -> LoadedToolkit:
+    """Load the configured toolkit and validate its params.
+
+    Args:
+        project_dir: Project root containing the config.
+
+    Returns:
+        The constructed toolkit with its description and config.
+
+    Raises:
+        ValueError: If the config is invalid, the toolkit isn't registered or
+            fails to construct or describe itself, or the params are invalid.
+    """
+    config = load_toolkit_config(project_dir)
+    name = config.toolkit
+    cls = _toolkit_class(name)
+    try:
+        toolkit = cls(config.section)
+        info = toolkit.describe()
+    except Exception as exc:
+        raise ValueError(f"Toolkit '{name}' failed to load: {exc}") from exc
+
+    loaded = LoadedToolkit(name, toolkit, info, config)
+    for action, table in config.params.items():
+        if action not in info.actions:
+            raise ValueError(
+                f"{_TABLE} params.{action} in {config.source}: toolkit '{name}' "
+                f"declares no action {action!r}; declared: {', '.join(info.actions)}"
+            )
+        for depth in info.actions[action]:
+            if not isinstance(table.get(depth, {}), dict):
+                raise ValueError(
+                    f"Invalid {_TABLE} params.{action}.{depth} in {config.source}: "
+                    "expected a table"
+                )
+            try:
+                validate_params(
+                    info.params_schema, _request_params(loaded, action, depth)
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"{_TABLE} params for {action}@{depth} in {config.source}: {exc}"
+                ) from exc
+    return loaded
+
+
+def _resolve_depth(declared: list[str], depth: str) -> str | None:
+    """Pick the depth to run for a requested one.
+
+    Args:
+        declared: Depths the toolkit declares for the action.
+        depth: Requested depth.
+
+    Returns:
+        The depth itself if declared; for an undeclared standard depth, the
+        nearest lower declared standard depth; otherwise None.
+    """
+    if depth in declared:
+        return depth
+    if depth not in _STANDARD_DEPTHS:
+        return None
+    lower = _STANDARD_DEPTHS[: _STANDARD_DEPTHS.index(depth)]
+    for candidate in reversed(lower):
+        if candidate in declared:
+            return candidate
+    return None
+
+
+def run_request(loaded: LoadedToolkit, project_dir: Path, request: str) -> ActionResult:
+    """Run one ``action@depth`` request.
+
+    Args:
+        loaded: The loaded toolkit.
+        project_dir: Project root to run in.
+        request: The ``action@depth`` request.
+
+    Returns:
+        The toolkit's result; status "error" if the action or depth can't be
+        run or ``run()`` raises.
+    """
+    action, depth = request.split("@")
+    declared = loaded.info.actions.get(action)
+    resolved = _resolve_depth(declared, depth) if declared else None
+    if resolved is None:
+        return ActionResult(
+            "error", f"{request}: not declared by toolkit '{loaded.name}'"
+        )
+    if resolved != depth:
+        logger.info("%s: depth %s not declared, running %s", action, depth, resolved)
+    try:
+        return loaded.toolkit.run(
+            ActionRequest(
+                action, resolved, project_dir, _request_params(loaded, action, resolved)
+            )
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        return ActionResult("error", f"{request} raised: {exc}")
+
+
+def run_binding(
+    loaded: LoadedToolkit, project_dir: Path, entry: str
+) -> list[tuple[str, ActionResult]]:
+    """Run every request bound to a workflow entry, in order.
+
+    Args:
+        loaded: The loaded toolkit.
+        project_dir: Project root to run in.
+        entry: Binding entry name, one of DEFAULT_BINDINGS.
+
+    Returns:
+        ``(request, result)`` pairs in binding order.
+    """
+    return [
+        (request, run_request(loaded, project_dir, request))
+        for request in loaded.config.bindings[entry]
+    ]
+
+
+def verify_toolkit(
+    loaded: LoadedToolkit, project_dir: Path, action: str | None
+) -> list[VerifyItem]:
+    """Run the toolkit's own verification.
+
+    Args:
+        loaded: The loaded toolkit.
+        project_dir: Project root to check.
+        action: Action to check, or None for everything.
+
+    Returns:
+        The toolkit's verify items.
+
+    Raises:
+        ValueError: If ``verify()`` raises.
+    """
+    try:
+        return list(loaded.toolkit.verify(project_dir, action))
+    except Exception as exc:
+        raise ValueError(f"Toolkit '{loaded.name}' verify failed: {exc}") from exc
+
+
+def get_fragment(loaded: LoadedToolkit, name: str) -> str:
+    """Return one prompt fragment contributed by the toolkit.
+
+    Args:
+        loaded: The loaded toolkit.
+        name: Fragment name.
+
+    Returns:
+        The fragment, or "" if absent or ``prompt_fragments()`` raises.
+    """
+    try:
+        return loaded.toolkit.prompt_fragments().get(name, "")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Toolkit '%s' prompt_fragments failed: %s", loaded.name, exc)
+        return ""
