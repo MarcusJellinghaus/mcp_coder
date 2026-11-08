@@ -8,3 +8,11 @@ Plan files and issue read; now spot-checking the code facts the plan relies on (
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_5.md (around lines 75-76), move the `verify_langchain` `overall_ok` test and the `_check_mcp_adapter_packages` attribute-lookup test out of `test_langchain_provider_checks.py`. Put them in a new test file for the verification module. Do not use the size-limited `test_langchain_verification.py`. Name the new file in the plan.', 'In pr_info/steps/step_2.md (around line 31), move `TestLoadLangchainConfig` from `test_langchain_provider.py` to `test_langchain_config_source.py`, because `_load_langchain_config` moves to `_config_source.py`. Update its patch targets to match the new location.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-08
+**Findings**:
+Spot-checking `verify_langchain` against the step-1 expected key order, then emitting the report.`pr_info/steps/step_7.md:104` — medium — The ancestor-contract sanity probe `from . import _setup` will not break the contract. grimp resolves `from . import <submodule>` to `mcp_coder.llm.providers.langchain._setup`, which is a model-layer source module and not the forbidden package `__init__`. The implementer would wrongly conclude the contract does not bite. Probe with a name that only the package `__init__` defines instead, e.g. `from . import _create_chat_model` or `from . import _resolve_session_id`.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_7.md (around line 104), replace the ancestor-contract sanity probe `from . import _setup`. Use an import of a name that only the package `__init__` defines, e.g. `from . import _create_chat_model` or `from . import _resolve_session_id`. That import should break the contract. Update the expected-outcome text to match.'], escalate_reason=None)
+**Changes**:
+applied
