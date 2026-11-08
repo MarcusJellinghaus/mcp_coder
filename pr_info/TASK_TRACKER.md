@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Key-order test for `verify_langchain` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `test_langchain_verify_row_order.py` pinning today's row order (no production change)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_langchain_verify_row_order.py` pinning today's row order (no production change)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `_load_langchain_config` to `_config_source.py` — [step_2.md](./steps/step_2.md)
 
