@@ -19,3 +19,11 @@ pr_info/steps/step_6.md:107 — low — The real-toolkit test puts `test_fail.py
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_5.md (around line 82), wrap both `get_binding` call sites in `core.py` (in `process_single_task` and in the final check block) with `except ValueError`. Log the error and treat it as a failed check rather than crashing. A config edited mid-run can fail strict loading, and the current behaviour is to log and continue. Add a unit test where `get_binding` raises `ValueError` and check that the workflow logs it and continues.', 'In pr_info/steps/step_2.md (around line 107), rewrite the \'params accepted by an open schema\' test. `ToolkitInfo.__post_init__` rejects any `params_schema` that isn\'t `"type": "object"` with `"additionalProperties": false`. Give the fake toolkit a closed schema that declares the test\'s params as properties, and update the test name and description to match.', 'In pr_info/steps/step_6.md (around line 107) and pr_info/steps/step_2.md (around line 118), put the real-toolkit test file `test_fail.py` under `tests/` in the tmp project (or set `testpaths` explicitly) so `PythonToolkit` collects it. In step 6, expect the key `test: tests/test_fail.py::test_fail`.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-11-08
+**Findings**:
+Checking the plan against the real `PythonToolkit` and the current `commit.py` / `rebase.py`; the report follows.`pr_info/steps/step_3.md:78` — medium — Step 3's autouse conftest patch makes `toolkit_runner._toolkit_class` return `PythonToolkit`. Step 2's test "unregistered name → `ValueError` (patch `entry_points` to return nothing)" (`pr_info/steps/step_2.md:106`) calls `load_toolkit`, not `_toolkit_class`, so the patch bypasses `entry_points` and the test fails from step 3 on. Line 78–81 only covers tests that call `_toolkit_class` directly. Fix: have the `load_toolkit`-level registry tests also monkeypatch `_toolkit_class` back to `_REAL_TOOLKIT_CLASS`.
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
