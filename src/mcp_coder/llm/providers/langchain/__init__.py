@@ -23,18 +23,19 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 
 from ._config_diagnostics import dialed_url
+
+# Re-exported from `._config_source` and `._setup`: the call sites below stay in
+# this module, so the existing
+# `mcp_coder.llm.providers.langchain._load_langchain_config` / `._create_chat_model`
+# patches keep resolving through this module's globals.
+from ._config_source import _load_langchain_config as _load_langchain_config
 from ._errors_404 import _format_404_hint
 from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
 from ._messages import assemble_messages, serialize_messages
 from ._preflight import _ollama_preflight
-
-# Re-exported: the call sites below stay in this module, so the existing
-# `mcp_coder.llm.providers.langchain._load_langchain_config` / `._create_chat_model`
-# patches keep resolving through this module's globals.
 from ._setup import _build_system_messages as _build_system_messages
 from ._setup import _create_chat_model as _create_chat_model
 from ._setup import _handle_provider_error as _handle_provider_error
-from ._setup import _load_langchain_config as _load_langchain_config
 from ._setup import _resolve_session_id as _resolve_session_id
 from ._usage import _extract_usage
 from .approval_bridge import ApprovalBridge

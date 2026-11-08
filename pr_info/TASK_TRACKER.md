@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Move `_load_langchain_config` to `_config_source.py` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestLoadLangchainConfig` to `test_langchain_config_source.py` and retarget patches; create `_config_source.py`; update `_setup.py`, `__init__.py`, `verification.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestLoadLangchainConfig` to `test_langchain_config_source.py` and retarget patches; create `_config_source.py`; update `_setup.py`, `__init__.py`, `verification.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move `_resolve_session_id` into `__init__` — [step_3.md](./steps/step_3.md)
 

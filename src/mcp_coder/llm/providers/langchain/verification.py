@@ -18,7 +18,6 @@ from urllib.parse import urlparse
 from mcp_coder.utils.config_hints import suggest
 from mcp_coder.utils.log_utils import token_fingerprint
 
-from . import _load_langchain_config
 from ._config_diagnostics import (
     _API_KEY_ENV,
     _KEYLESS_ENV,
@@ -32,6 +31,7 @@ from ._config_diagnostics import (
     resolve_target,
     validate,
 )
+from ._config_source import _load_langchain_config
 from ._exceptions import LLMAuthError, LLMConnectionError
 from ._mcp_tools import _load_mcp_server_config
 
