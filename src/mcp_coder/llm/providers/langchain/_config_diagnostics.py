@@ -33,6 +33,7 @@ from typing import Any, Literal, TypedDict
 
 from ._http import close_http_clients
 from ._models import _resolve_ollama_host
+from ._product import CONFIG_SECTION
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +195,7 @@ def _required_finding(mode: str, field: str) -> Finding:
             "key": field,
             "ok": False,
             "value": (
-                f"no api_key in [llm.langchain] and {sources} — set one"
+                f"no api_key in {CONFIG_SECTION} and {sources} — set one"
                 f"{_API_KEY_SUFFIX.get(mode, '')}"
             ),
         }
@@ -204,7 +205,7 @@ def _required_finding(mode: str, field: str) -> Finding:
             "ok": False,
             "value": (
                 "api_version is set (Azure mode) but no base_url resolved from "
-                f"config or {_AZURE_ENDPOINT_ENV} — set [llm.langchain] "
+                f"config or {_AZURE_ENDPOINT_ENV} — set {CONFIG_SECTION} "
                 "base_url to your Azure resource URL, or remove api_version "
                 "for a non-Azure server"
             ),
@@ -212,7 +213,7 @@ def _required_finding(mode: str, field: str) -> Finding:
     return {
         "key": field,
         "ok": False,
-        "value": f"no {field} in [llm.langchain] — set it for backend mode '{mode}'",
+        "value": f"no {field} in {CONFIG_SECTION} — set it for backend mode '{mode}'",
     }
 
 
@@ -453,7 +454,7 @@ def _source_for(config: Mapping[str, str | None], url: str) -> str:
     """
     configured = config.get("base_url")
     if configured and _targets_match(configured, url):
-        return "config.toml [llm.langchain] base_url"
+        return f"config.toml {CONFIG_SECTION} base_url"
     env_var = redirect_env_in_effect(config, url)
     return f"{env_var} env var" if env_var else "SDK default"
 

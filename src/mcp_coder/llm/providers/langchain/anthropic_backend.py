@@ -9,14 +9,15 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from ._product import INSTALL_HINT
+
 # pylint: disable=import-error
 try:
     from langchain_anthropic import ChatAnthropic
     from pydantic import SecretStr
 except ImportError as exc:
     raise ImportError(
-        "LangChain Anthropic backend requires extra dependencies.\n"
-        "Install with: pip install 'mcp-coder[langchain]'"
+        f"LangChain Anthropic backend requires extra dependencies.\n{INSTALL_HINT}"
     ) from exc
 
 

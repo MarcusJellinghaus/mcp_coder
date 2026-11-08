@@ -10,14 +10,14 @@ import os
 from typing import Any
 
 from ._models import _resolve_ollama_host
+from ._product import INSTALL_HINT
 
 # pylint: disable=import-error
 try:
     from langchain_ollama import ChatOllama
 except ImportError as exc:
     raise ImportError(
-        "LangChain Ollama backend requires extra dependencies.\n"
-        "Install with: pip install 'mcp-coder[langchain]'"
+        f"LangChain Ollama backend requires extra dependencies.\n{INSTALL_HINT}"
     ) from exc
 
 

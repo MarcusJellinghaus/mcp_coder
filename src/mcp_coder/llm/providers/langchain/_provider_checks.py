@@ -29,6 +29,7 @@ from ._config_diagnostics import (
     validate,
 )
 from ._exceptions import LLMAuthError, LLMConnectionError
+from ._product import CONFIG_SECTION, PRODUCT_NAME
 
 _BACKEND_PACKAGES: dict[str, str] = {
     "openai": "langchain_openai",
@@ -195,7 +196,8 @@ def _check_base_url_shape(
             "ok": None,
             "value": (
                 f"{url} — contains '/completions'; use the base URL only "
-                f"e.g. https://host/v1 (mcp-coder appends /chat/completions) {src}"
+                f"e.g. https://host/v1 ({PRODUCT_NAME} appends /chat/completions) "
+                f"{src}"
             ),
         }
     parsed = urlparse(url)
@@ -398,7 +400,9 @@ def check_provider(
     if key_overridden:
         result["api_key_override"] = {
             "ok": None,
-            "value": f"{key_source} overrides [llm.langchain] api_key in config.toml",
+            "value": (
+                f"{key_source} overrides {CONFIG_SECTION} api_key in config.toml"
+            ),
         }
 
     # Ollama-specific daemon reachability probe
@@ -483,7 +487,7 @@ def _list_models_for_backend(
                 "value": [],
                 "error": (
                     f"{msg} — base_url likely wrong; use the base URL "
-                    "e.g. …/v1 (mcp-coder appends /chat/completions)"
+                    f"e.g. …/v1 ({PRODUCT_NAME} appends /chat/completions)"
                 ),
                 "error_type": "base_url",
             }

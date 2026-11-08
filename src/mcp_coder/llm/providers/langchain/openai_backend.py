@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 
 from ._http import close_http_clients, create_async_http_client, create_http_client
+from ._product import INSTALL_HINT
 
 # pylint: disable=import-error
 try:
@@ -16,8 +17,7 @@ try:
     from pydantic import SecretStr
 except ImportError as exc:
     raise ImportError(
-        "LangChain OpenAI backend requires extra dependencies.\n"
-        "Install with: pip install 'mcp-coder[langchain]'"
+        f"LangChain OpenAI backend requires extra dependencies.\n{INSTALL_HINT}"
     ) from exc
 
 

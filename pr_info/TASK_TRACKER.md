@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Product texts move to `_product.py` — [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: create `_product.py` with four constants; replace literals in backends, `_models`, `_preflight`, `_config_diagnostics`, `_errors_404`, `_provider_checks`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `_product.py` with four constants; replace literals in backends, `_models`, `_preflight`, `_config_diagnostics`, `_errors_404`, `_provider_checks`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Import-linter contracts for the model layer — [step_7.md](./steps/step_7.md)
 

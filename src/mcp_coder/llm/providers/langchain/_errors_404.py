@@ -11,6 +11,8 @@ from __future__ import annotations
 import contextlib
 import os
 
+from ._product import PRODUCT_NAME
+
 
 def _get_model_suggestions(config: dict[str, str | None]) -> str:
     """Try to list available models for the configured backend.
@@ -85,7 +87,7 @@ def _format_404_hint(config: dict[str, str | None]) -> str:
     ):
         return (
             f"Model {model!r} not found. If using a custom server, check your "
-            "base URL (e.g. …/v1); mcp-coder appends /chat/completions."
+            f"base URL (e.g. …/v1); {PRODUCT_NAME} appends /chat/completions."
         )
     hint = f"Model {model!r} not found."
     with contextlib.suppress(Exception):

@@ -22,6 +22,7 @@ from ._exceptions import (
     raise_connection_error,
 )
 from ._http import create_http_client
+from ._product import INSTALL_HINT
 
 
 def _resolve_ollama_host(base_url: str | None) -> str | None:
@@ -193,8 +194,7 @@ def list_gemini_models(api_key: str | None) -> list[str]:
         import google.genai as genai  # pylint: disable=import-error
     except ImportError as exc:
         raise ImportError(
-            "google-genai is required to list Gemini models.\n"
-            "Install with: pip install 'mcp-coder[langchain]'"
+            f"google-genai is required to list Gemini models.\n{INSTALL_HINT}"
         ) from exc
     try:
         client = genai.Client(api_key=api_key)
@@ -228,8 +228,7 @@ def list_openai_models(api_key: str | None, base_url: str | None = None) -> list
         import openai  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
         raise ImportError(
-            "openai is required to list OpenAI models.\n"
-            "Install with: pip install 'mcp-coder[langchain]'"
+            f"openai is required to list OpenAI models.\n{INSTALL_HINT}"
         ) from exc
     try:
         client = openai.OpenAI(
@@ -265,8 +264,7 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
         import anthropic  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
         raise ImportError(
-            "anthropic is required to list Anthropic models.\n"
-            "Install with: pip install 'mcp-coder[langchain]'"
+            f"anthropic is required to list Anthropic models.\n{INSTALL_HINT}"
         ) from exc
     try:
         client = anthropic.Anthropic(
@@ -306,8 +304,7 @@ def list_ollama_models(
         import ollama  # pylint: disable=import-outside-toplevel,import-error
     except ImportError as exc:
         raise ImportError(
-            "ollama is required to list Ollama models.\n"
-            "Install with: pip install 'mcp-coder[langchain]'"
+            f"ollama is required to list Ollama models.\n{INSTALL_HINT}"
         ) from exc
     host = _resolve_ollama_host(base_url)
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
