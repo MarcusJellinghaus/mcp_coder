@@ -62,9 +62,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 9: Docs `docs/configuration/command-toolkit.md` — [step_9.md](./steps/step_9.md)
-- [ ] Implementation: write `command-toolkit.md`, link from `docs/README.md`
-- [ ] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `command-toolkit.md`, link from `docs/README.md`
+- [x] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against base branch

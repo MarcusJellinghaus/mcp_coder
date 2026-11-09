@@ -17,7 +17,10 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.data_files import find_data_file
 from mcp_coder.utils.toolkit_runner import llm_permissions
-from mcp_coder.workflows.rebase import _build_regression_fix_prompt, _check_tool_texts
+from mcp_coder.workflows.rebase_prompt import (
+    _build_regression_fix_prompt,
+    _check_tool_texts,
+)
 
 _CONFLICT_HEADER = "Rebase Conflict Resolution"
 _REGRESSION_HEADER = "Rebase Regression Fix"

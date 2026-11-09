@@ -15,13 +15,15 @@ import pytest
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflows.rebase import (
     _build_conflict_prompt,
-    _build_regression_fix_prompt,
-    _check_tool_texts,
     _format_failure_keys,
-    _marker_filter_text,
     _prompt_in_session,
 )
 from mcp_coder.workflows.rebase_checks import FailureKey
+from mcp_coder.workflows.rebase_prompt import (
+    _build_regression_fix_prompt,
+    _check_tool_texts,
+    _marker_filter_text,
+)
 
 _ABSENT_NOTE = "(absent — file does not exist on this side)"
 
@@ -285,7 +287,7 @@ class TestMarkerFilterText:
 
     def test_not_automated_is_empty(self, tmp_path: Path) -> None:
         """Interactive runs add no filter text and never load the toolkit."""
-        with patch("mcp_coder.workflows.rebase.load_toolkit") as mock_load:
+        with patch("mcp_coder.workflows.rebase_prompt.load_toolkit") as mock_load:
             assert _marker_filter_text(tmp_path, False, []) == ""
         mock_load.assert_not_called()
 
@@ -293,12 +295,16 @@ class TestMarkerFilterText:
         """Automated runs use the ``check_instructions.unattended`` fragment."""
         loaded = MagicMock()
         with (
-            patch("mcp_coder.workflows.rebase.llm_permissions", return_value=["mcp"]),
             patch(
-                "mcp_coder.workflows.rebase.load_toolkit", return_value=loaded
+                "mcp_coder.workflows.rebase_prompt.llm_permissions",
+                return_value=["mcp"],
+            ),
+            patch(
+                "mcp_coder.workflows.rebase_prompt.load_toolkit", return_value=loaded
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.rebase.get_fragment", return_value="FRAGMENT"
+                "mcp_coder.workflows.rebase_prompt.get_fragment",
+                return_value="FRAGMENT",
             ) as mock_fragment,
         ):
             assert _marker_filter_text(tmp_path, True, ["mcp"]) == "FRAGMENT"
@@ -309,9 +315,14 @@ class TestMarkerFilterText:
         """Granted Bash commands keep the filter instruction."""
         grants = ["Bash(npm test)"]
         with (
-            patch("mcp_coder.workflows.rebase.llm_permissions", return_value=grants),
-            patch("mcp_coder.workflows.rebase.load_toolkit"),
-            patch("mcp_coder.workflows.rebase.get_fragment", return_value="FRAGMENT"),
+            patch(
+                "mcp_coder.workflows.rebase_prompt.llm_permissions", return_value=grants
+            ),
+            patch("mcp_coder.workflows.rebase_prompt.load_toolkit"),
+            patch(
+                "mcp_coder.workflows.rebase_prompt.get_fragment",
+                return_value="FRAGMENT",
+            ),
         ):
             assert _marker_filter_text(tmp_path, True, grants) == "FRAGMENT"
 
@@ -319,10 +330,10 @@ class TestMarkerFilterText:
         """Copilot: the toolkit declares Bash grants but the session has none."""
         with (
             patch(
-                "mcp_coder.workflows.rebase.llm_permissions",
+                "mcp_coder.workflows.rebase_prompt.llm_permissions",
                 return_value=["Bash(npm test)"],
             ) as mock_perms,
-            patch("mcp_coder.workflows.rebase.get_fragment") as mock_fragment,
+            patch("mcp_coder.workflows.rebase_prompt.get_fragment") as mock_fragment,
         ):
             assert _marker_filter_text(tmp_path, True, []) == ""
         mock_perms.assert_called_once_with(tmp_path, "claude", "rebase_automated")

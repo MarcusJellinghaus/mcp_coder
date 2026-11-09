@@ -19,6 +19,7 @@ Complete documentation for MCP Coder.
 - **[Installation Guide](getting-started/installation.md)** - Install paths (PyPI, editable dev, pinned GitHub ref, CI / worker provisioning)
 - **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
+- **[Command Toolkit](configuration/command-toolkit.md)** - Run your own format / check / test commands on any stack (npm, …)
 - **[Claude Code Configuration](configuration/claude-code.md)** - Installing Claude Code and the Windows launcher
 - **[Copilot CLI Setup](repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration

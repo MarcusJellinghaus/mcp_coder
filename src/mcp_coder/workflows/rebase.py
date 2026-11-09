@@ -11,7 +11,6 @@ self-reports an outcome.
 """
 
 import logging
-import re
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -47,12 +46,7 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.utils.toolkit_runner import (
-    bash_grants_of,
-    get_fragment,
-    llm_permissions,
-    load_toolkit,
-)
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import (
@@ -68,6 +62,11 @@ from mcp_coder.workflows.rebase_checks import (
     CheckRunError,
     FailureKey,
     _run_all_checks,
+)
+from mcp_coder.workflows.rebase_prompt import (
+    _build_regression_fix_prompt,
+    _check_tool_texts,
+    _marker_filter_text,
 )
 
 logger = logging.getLogger(__name__)
@@ -259,10 +258,6 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
 # --- LLM steps ---
 
 _CONFLICT_PROMPT_HEADER = "Rebase Conflict Resolution"
-_REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
-_REGRESSION_PLACEHOLDERS = re.compile(
-    r"\[(check_tools|pytest_marker_filter|regression_output|fix_text|shell_ban)\]"
-)
 
 _ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
 
@@ -363,74 +358,6 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
         blocks.append("\n\n".join(parts))
     template = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_PROMPT_HEADER)
     return template.replace("[conflict_context]", "\n\n".join(blocks))
-
-
-def _marker_filter_text(
-    project_dir: Path, automated: bool, permissions: Sequence[str]
-) -> str:
-    """Return the toolkit's unattended test-filter instruction for the fix prompt.
-
-    ``permissions`` are the fix session's permissions for the
-    ``rebase_automated`` binding. When the toolkit declares ``Bash(`` grants
-    for it but ``permissions`` has none, the provider dropped them and the
-    LLM cannot run the filtered commands, so no instruction is given.
-
-    Returns:
-        ``""`` when not automated or when the Bash grants were dropped;
-        otherwise the toolkit's ``check_instructions.unattended`` fragment
-        (``""`` if it has none).
-    """
-    if not automated:
-        return ""
-    if not bash_grants_of(permissions) and bash_grants_of(
-        llm_permissions(project_dir, "claude", "rebase_automated")
-    ):
-        return ""
-    return get_fragment(load_toolkit(project_dir), "check_instructions.unattended")
-
-
-def _check_tool_texts(permissions: Sequence[str]) -> tuple[str, str]:
-    """Render the check-tool sentence and the shell ban from the permissions.
-
-    Returns:
-        ``(check sentence, shell ban)``; the ban is ``""`` when Bash grants
-        are present, else ``"no shell commands of any kind; "``.
-    """
-    bash = bash_grants_of(permissions)
-    mcp = [p for p in permissions if p not in bash]
-    parts: list[str] = []
-    if mcp:
-        tools = ", ".join(f"`{p}`" for p in mcp)
-        parts.append(
-            f"Before editing anything, re-run the granted MCP check tools ({tools}) "
-            "to get the full failure detail."
-        )
-    if bash:
-        commands = ", ".join(f"`{g[len('Bash(') : -1]}`" for g in bash)
-        parts.append(
-            "Before editing anything, re-run the granted check commands, exactly "
-            f"as written: {commands}."
-        )
-    if not parts:
-        parts.append("You cannot re-run the checks; use the output below.")
-    ban = "" if bash else "no shell commands of any kind; "
-    return " ".join(parts), ban
-
-
-def _build_regression_fix_prompt(replacements: dict[str, str]) -> str:
-    """Build the regression-fix prompt by filling its placeholders.
-
-    ``replacements`` maps placeholder names without brackets (e.g.
-    ``"regression_output"``) to their text; a missing name renders as ``""``.
-    One pass, so inlined check output is never substituted again.
-
-    Returns:
-        The assembled regression-fix prompt string.
-    """
-    template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
-    return _REGRESSION_PLACEHOLDERS.sub(
-        lambda match: replacements.get(match.group(1), ""), template
-    )
 
 
 def _format_failure_keys(keys: set[FailureKey]) -> str:
