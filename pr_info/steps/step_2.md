@@ -17,6 +17,8 @@ Depends on Step 1 (`parse_config`).
 - Create `src/mcp_coder/toolkits/command/toolkit.py`.
 - `src/mcp_coder/toolkits/command/__init__.py`: export `CommandToolkit`.
 - Create `tests/toolkits/command/test_toolkit_run.py`.
+- `tests/conftest.py`: add the `fake_npm` fixture (see Tests) so Step 6's
+  rebase test can reuse it without a cross-package test import.
 
 Imports: `mcp_coder.utils.toolkit` (`ActionRequest`, `ActionResult`, `Finding`,
 `Toolkit`, `ToolkitInfo`), `mcp_coder.utils.subprocess_runner`
@@ -96,8 +98,17 @@ untruncated output of the steps.
 ## Tests (`tests/toolkits/command/test_toolkit_run.py`)
 
 Construct `CommandToolkit(config)` directly. Steps run small Python scripts
-written to `tmp_path` (argv `[sys.executable, "scripts/x.py", ...]` or a script
-path with `/` to test project-relative resolution).
+written to `tmp_path/scripts/`, started through a launcher named `fakenpm` in
+`tmp_path/bin/` (the `fake_npm` fixture writes `fakenpm.cmd` calling `"<sys.executable>"
+"%~dp0..\scripts\%1.py"` on Windows, or an executable `fakenpm` with a
+`#!<sys.executable>` shebang dispatching to `scripts/<arg>.py` on POSIX) and
+prepends `bin/` to `PATH` via `monkeypatch.setenv`. argv is then shell-safe,
+e.g. `["fakenpm", "lint"]`, and `shutil.which("fakenpm")` resolves on both
+(verified on Windows / Python 3.11: PATH lookup applies PATHEXT; a path with a
+directory part and no extension does not).
+- Project-relative `argv[0]`: patch `mcp_coder.toolkits.command.toolkit.shutil.which`
+  and assert `_resolve_exe("tools/lint", project_dir)` passes
+  `str(project_dir / "tools/lint")`; a bare name is passed unchanged.
 - `describe`: actions/depths in config order; grants; empty under `"none"` and
   under a global error; depth with only malformed steps still declared.
 - exit 0 → `ok`; exit 1 → `findings` with one finding keyed by `name` (and by

@@ -43,7 +43,8 @@ sessions that re-run checks get exact `Bash(<argv joined by spaces>)` grants.
 4. **Granted sessions** (each call site computes its own grants, nothing is
    threaded through configs): implement task, mypy fix call, finalisation,
    `_run_ci_fix`, rebase fix turns. All other sessions unchanged.
-5. **Rebase.** `_run_all_checks` returns `(keys, fix_texts)`. The Rebase
+5. **Rebase.** `_run_all_checks` returns `(keys, fix_texts)`, refreshed on
+   every re-check in the fix loop. The Rebase
    Regression Fix prompt gets toolkit-filled placeholders for the check-tool
    sentence and the shell ban, plus `[fix_text]`; it is rendered from
    `llm_permissions(project_dir, provider, entry)` — no toolkit-name switch, not
@@ -87,18 +88,20 @@ Modified:
 - `src/mcp_coder/prompts/prompts.md` (Rebase Regression Fix)
 - `src/mcp_coder/cli/commands/verify_sections.py`
 - `docs/README.md` (link to the new page)
+- `tests/conftest.py` (`fake_npm` fixture: PATH launcher for npm-style test steps)
 - tests next to each modified module (existing test files)
 
 ## Steps
 
 1. Command toolkit config model (`config.py`).
-2. `CommandToolkit` describe / verify / prompt_fragments + registration.
-3. `CommandToolkit.run` with the `exit-code` and `junit` parsers.
+2. `CommandToolkit.describe` and `run` with the `exit-code` and `junit` parsers.
+3. `CommandToolkit.verify` / `prompt_fragments` + registration and import contracts.
 4. Claude provider `bash_grants` parameter + probe integration test.
 5. `llm_permissions` + granted implement / finalisation / CI-fix sessions.
-6. Rebase: `fix_text`, prompt placeholders, fix-turn grants, binding-level Done-when test.
-7. `mcp-coder verify` gating (Scope 8a).
-8. Docs page `docs/configuration/command-toolkit.md`.
+6. Rebase checks: `_run_all_checks` returns `(keys, fix_texts)`; binding-level Done-when test.
+7. Rebase prompt: toolkit-filled placeholders, `[fix_text]`, fix-turn grants.
+8. `mcp-coder verify` gating (Scope 8a).
+9. Docs page `docs/configuration/command-toolkit.md`.
 
 ## Conventions for every step
 

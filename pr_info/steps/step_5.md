@@ -9,7 +9,7 @@ and sessions) and 12. Depends on Step 4 (`prompt_llm(bash_grants=...)`).
 > `pr_info/steps/step_5.md`: add `llm_permissions` / `bash_grants_of` to
 > `mcp_coder.utils.toolkit_runner` and pass Bash grants to the implement task
 > call, the mypy fix call, finalisation and `_run_ci_fix` (TDD — tests first).
-> Rebase is Step 6. Run the code-quality checks from CLAUDE.md and make exactly
+> Rebase is Steps 6–7. Run the code-quality checks from CLAUDE.md and make exactly
 > one commit.
 
 ## WHERE

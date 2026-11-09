@@ -1,57 +1,66 @@
-# Step 8 — Docs: `docs/configuration/command-toolkit.md`
+# Step 8 — `mcp-coder verify` gating (Scope 8a)
 
-Read `pr_info/steps/summary.md` first. Spec: issue #1196, Scope 13.
+Read `pr_info/steps/summary.md` first. Spec: issue #1196, Scope 8a and the
+"Done when" item for `mcp-coder verify`. Depends on Steps 1–3.
 
 ## LLM prompt
 
 > Implement Step 8 of `pr_info/steps/summary.md` as described in
-> `pr_info/steps/step_8.md`: write `docs/configuration/command-toolkit.md` and
-> link it from `docs/README.md`. Check every key and default against
-> `src/mcp_coder/toolkits/command/config.py`. Run the code-quality checks from
+> `pr_info/steps/step_8.md`: in `verify_sections.py`, call the toolkit's
+> `verify("format")` only when formatting is on and the commit binding is
+> non-empty, and show the mcp-tools-py Formatter row only for the
+> `mcp-tools-py` toolkit (TDD — tests first). Run the code-quality checks from
 > CLAUDE.md and make exactly one commit.
 
 ## WHERE
 
-- Create `docs/configuration/command-toolkit.md`.
-- `docs/README.md` — one row/bullet next to the Configuration Guide link.
+- `src/mcp_coder/cli/commands/verify_sections.py` — `_toolkit_rows`,
+  `_print_project_section`.
+- Tests: the existing test module for `verify_sections` (find with
+  `search_files` for `_toolkit_rows` under `tests/`).
 
-## WHAT (page outline)
+## WHAT
 
-1. **What it is** — runs configured commands for `format` / `check` / `test`
-   on any stack, no shell; selected with `toolkit = "command"`.
-2. **Config reference** — the defaults table (`llm_permissions`, `parser`,
-   `exit_codes`, `timeout`) and the step fields (`argv`, `name`, `parser`,
-   `exit_codes`, `timeout`, `report`), with the rules from Scope 3 (action keys
-   only `format`/`check`/`test`, free depth names, step `exit_codes` replaces
-   the default, `report` only with `junit`, `argv[0]` with a path separator is
-   relative to the project).
-3. **Example (npm)** — example 2 of #1192, corrected:
-   - in `mcp-coder.toml` (`[tool.mcp-coder.toolkit]` tables, same names);
-   - no `sarif` (the `lint` step uses the default parser);
-   - `junit` steps carry `report = "reports/junit.xml"` (or similar);
-   - a variant turning formatting off with `[tool.mcp-coder.toolkit.bindings] commit = []`;
-   - `test.unattended` mentioned for automated rebase.
-4. **LLM access** —
-   - grants are exact `Bash(<argv joined by spaces>)`; extra arguments, flags or
-     changed spacing are denied; `llm_permissions = "none"` gives no grants;
-   - only Claude sessions that re-run checks get grants (implement, finalisation,
-     CI fix, rebase fix turns); Copilot / Langchain get none (warning logged);
-   - Claude Code auto-approves read-only commands once Bash is on;
-   - Bash grants in the project's `.claude/settings.local.json` merge in;
-   - the LLM's Bash tool has its own timeout (about 2 min default, 10 min max),
-     so longer steps can't be re-run by the LLM.
-5. **Errors** — config problems: `mcp-coder verify` and the format pre-flight
-   report global and `format` problems; `check` / `test` step errors surface at
-   run time (the depth returns `error`).
-6. **Windows** — `.cmd` found via `shutil.which` (`npm` → `npm.cmd`); `.sh`
-   can't run without a shell; cmd.exe re-parses arguments of `.cmd` files;
-   backslash paths (`C:\…`) are never shell-safe, so such steps get no grant;
-   forward-slash paths are fine.
+```python
+def _toolkit_rows(project_dir: Path, symbols: dict[str, str], *, indent: int = 4) -> bool  # unchanged signature
+def _uses_mcp_tools_py(project_dir: Path) -> bool  # new
+```
+
+## ALGORITHM
+
+`_toolkit_rows` (return type stays `bool`):
+```
+loaded = load_toolkit(project_dir)            # error -> Toolkit [ERR] row, return False, as today
+print Toolkit row (loaded.name)
+if not (get_format_code(project_dir).enabled and loaded.config.bindings["commit"]):
+    return True                               # no verify("format"), no item rows
+items = verify_toolkit(loaded, project_dir, "format"); print item rows and return as today
+```
+`_uses_mcp_tools_py`: `load_toolkit_config(project_dir).toolkit == DEFAULT_TOOLKIT`;
+`ValueError` → `False` (the Toolkit row already reports the config error).
+
+`_print_project_section`: in both branches, call `_formatter_row(...)` only
+when `_uses_mcp_tools_py(project_dir)`; otherwise it contributes `True`.
+- `get_format_code` raising `ValueError` inside `_toolkit_rows`: treat as
+  enabled (in the pyproject branch `_format_code_row` already prints the
+  `[ERR]`; without `pyproject.toml` it defaults to enabled anyway).
+- `DEFAULT_TOOLKIT` from `toolkit_runner` names `"mcp-tools-py"`; compare with it.
 
 ## DATA
 
-Markdown only. Note at the top: "Will be folded into `toolkits.md` (#1200)."
+Unchanged output format; rows are omitted, never renamed.
 
 ## Tests
 
-None (docs only). Run `check_file_size` and the standard checks.
+- `command` project with only `mcp-coder.toml` (`_toolkit_class` patched to
+  `CommandToolkit`): `_print_project_section` returns `True`; no "Formatter"
+  row, no `[ERR]` from mcp-tools-py; Toolkit row shows `command`.
+- Same project with `bindings.commit = []`: `_toolkit_rows` returns `True`,
+  `verify_toolkit` not called (mock).
+- `format_code = false` in `pyproject.toml`: `_toolkit_rows` returns `True`,
+  `verify_toolkit` not called.
+- `_uses_mcp_tools_py`: `True` with no config, `False` for `toolkit = "command"`,
+  `False` on an invalid config.
+- `mcp-tools-py` project: Formatter row and toolkit items still shown (existing tests keep passing).
+- Broken `command` config (unknown key) with formatting on: the global error
+  item is printed as `[ERR]`; `_toolkit_rows` and the section return `False`.

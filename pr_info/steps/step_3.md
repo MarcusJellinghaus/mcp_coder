@@ -29,7 +29,9 @@ Depends on Steps 1–2.
     `constants`), `forbidden_modules = mcp_coder.toolkits`. Comment: new core
     packages must be added here; the source must not cover `mcp_coder.toolkits`.
   - `toolkits_isolation_root`: `as_packages = False`, `source_modules = mcp_coder`,
-    `forbidden_modules = mcp_coder.toolkits` (covers `mcp_coder/__init__.py`).
+    `forbidden_modules = mcp_coder.toolkits, mcp_coder.toolkits.command`
+    (covers `mcp_coder/__init__.py`; `as_packages = False` also applies to the
+    forbidden side, so the package alone would not cover its submodules).
   Check each listed module exists (`list_directory src/mcp_coder`); drop names
   that are not packages/modules.
 - `vulture_whitelist.py` — add `CommandToolkit` only if vulture reports it.
