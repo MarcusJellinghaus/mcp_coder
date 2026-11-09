@@ -6,13 +6,15 @@ from unittest.mock import MagicMock, patch
 
 from mcp_coder.llm.providers.langchain.verification import verify_langchain
 
+_PROVIDER_CHECKS = "mcp_coder.llm.providers.langchain._provider_checks"
+
 
 class TestVerifyLangchainOllama:
     """Tests for verify_langchain() on the ollama backend."""
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_no_api_key_is_optional(
         self,
@@ -43,7 +45,7 @@ class TestVerifyLangchainOllama:
         assert result["overall_ok"] is True
 
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_with_api_key_works_as_before(
         self,
@@ -69,7 +71,7 @@ class TestVerifyLangchainOllama:
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_daemon_reachable(
         self,
@@ -99,7 +101,7 @@ class TestVerifyLangchainOllama:
         assert result["overall_ok"] is True
 
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_daemon_unreachable_fails_overall(
         self,
@@ -126,7 +128,7 @@ class TestVerifyLangchainOllama:
         assert result["overall_ok"] is False
 
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_daemon_auth_required_fails_overall(
         self,
@@ -156,7 +158,7 @@ class TestVerifyLangchainOllama:
         assert "auth required" in result["ollama_daemon"]["value"].lower()
         assert result["overall_ok"] is False
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_non_ollama_backend_has_no_ollama_daemon_entry(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -175,7 +177,7 @@ class TestVerifyLangchainOllama:
         assert "ollama_daemon" not in result
 
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_api_key_from_env_uses_normal_path(
         self,
@@ -202,7 +204,7 @@ class TestVerifyLangchainOllama:
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_capability_entry_present_when_model_configured(
         self,
@@ -229,7 +231,7 @@ class TestVerifyLangchainOllama:
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_capability_missing_fails_overall_ok(
         self,
@@ -259,7 +261,7 @@ class TestVerifyLangchainOllama:
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_capability_present_does_not_fail_overall_ok(
         self,
@@ -285,7 +287,7 @@ class TestVerifyLangchainOllama:
         assert result["overall_ok"] is True
 
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_ollama_no_model_omits_capability_entry(
         self,

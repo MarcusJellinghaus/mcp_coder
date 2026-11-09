@@ -493,7 +493,7 @@ def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
             ``"warning"`` marker for the emitted row.
     """
     from ...llm.providers.langchain import _load_langchain_config
-    from ...llm.providers.langchain.verification import (
+    from ...llm.providers.langchain._provider_checks import (
         _BACKEND_PACKAGES,
         _check_package_installed,
     )

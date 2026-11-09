@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 
+from ._product import OLLAMA_INSTALL_HINT
+
 
 def _ollama_preflight(config: dict[str, str | None]) -> None:
     """Raise if the Ollama backend cannot run agent mode.
@@ -30,8 +32,7 @@ def _ollama_preflight(config: dict[str, str | None]) -> None:
         del ollama
     except ImportError as exc:
         raise ImportError(
-            "ollama is required for the Ollama backend.\n"
-            "Install with: pip install 'mcp-coder[langchain-ollama]'"
+            f"ollama is required for the Ollama backend.\n{OLLAMA_INSTALL_HINT}"
         ) from exc
 
     from ._models import check_ollama_tool_capability

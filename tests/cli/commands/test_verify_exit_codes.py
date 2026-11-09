@@ -14,6 +14,7 @@ from mcp_coder.cli.main import main
 from mcp_coder.llm.providers.langchain._config_diagnostics import ResolvedTarget
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
+_PROVIDER_CHECKS = "mcp_coder.llm.providers.langchain._provider_checks"
 _LC_CONFIG = "mcp_coder.llm.providers.langchain"
 _VERIFY = "mcp_coder.cli.commands.verify"
 
@@ -498,9 +499,9 @@ class TestContractViolationExitCode:
             ),
             patch(f"{_LC_CONFIG}._load_langchain_config", return_value=config),
             patch(f"{_LC_VERIFY}._load_langchain_config", return_value=config),
-            patch(f"{_LC_VERIFY}._check_package_installed", return_value=True),
+            patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True),
             patch(
-                f"{_LC_VERIFY}.resolve_target",
+                f"{_PROVIDER_CHECKS}.resolve_target",
                 return_value=ResolvedTarget("(not configured)", "unverified", False),
             ),
             patch(f"{_VERIFY}.verify_claude", return_value=_make_claude_result()),

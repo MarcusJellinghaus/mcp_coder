@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.llm.providers.langchain.verification import (
-    _check_mcp_adapter_packages,
+from mcp_coder.llm.providers.langchain._provider_checks import (
     _check_model_listed,
     _check_package_installed,
     _mask_api_key,
+)
+from mcp_coder.llm.providers.langchain.verification import (
+    _check_mcp_adapter_packages,
     verify_langchain,
 )
+
+_PROVIDER_CHECKS = "mcp_coder.llm.providers.langchain._provider_checks"
 
 
 class TestMaskApiKey:
@@ -63,7 +67,7 @@ class TestVerifyLangchain:
         assert result["backend"]["ok"] is False
         assert result["overall_ok"] is False
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_openai_backend_configured(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -98,7 +102,7 @@ class TestVerifyLangchain:
         assert result["api_key"]["value"] == "sk-a...5678, len=19"
         assert result["api_key"]["source"] == "config.toml"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_no_api_key_fails_the_contract(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -124,7 +128,7 @@ class TestVerifyLangchain:
         assert result["overall_ok"] is False
         assert "OPENAI_API_KEY" in result["api_key"]["value"]
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_langchain_core_not_installed(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -144,8 +148,8 @@ class TestVerifyLangchain:
         assert result["langchain_core"]["ok"] is False
         assert result["langchain_core"]["value"] == "not installed"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._list_models_for_backend")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_check_models_flag(
         self,
@@ -168,7 +172,7 @@ class TestVerifyLangchain:
         assert "available_models" in result
         assert result["available_models"]["ok"] is True
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_check_models_not_present_by_default(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -186,7 +190,7 @@ class TestVerifyLangchain:
             result = verify_langchain()
         assert "available_models" not in result
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_backend_package_not_installed(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -206,7 +210,7 @@ class TestVerifyLangchain:
         assert result["backend_package"]["ok"] is False
         assert result["overall_ok"] is False
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_api_key_from_env_var(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -230,7 +234,7 @@ class TestVerifyLangchain:
 class TestCheckMcpAdapterPackages:
     """Tests for _check_mcp_adapter_packages helper."""
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     def test_both_installed(self, mock_pkg: MagicMock) -> None:
         mock_pkg.return_value = True
         result = _check_mcp_adapter_packages()
@@ -239,7 +243,7 @@ class TestCheckMcpAdapterPackages:
         assert result["langgraph"]["ok"] is True
         assert "installed" in result["langgraph"]["value"]
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     def test_mcp_adapters_missing(self, mock_pkg: MagicMock) -> None:
         # langchain_mcp_adapters missing, langgraph installed
         mock_pkg.side_effect = [False, True]
@@ -248,7 +252,7 @@ class TestCheckMcpAdapterPackages:
         assert "not installed" in result["mcp_adapters"]["value"]
         assert result["langgraph"]["ok"] is True
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     def test_langgraph_missing(self, mock_pkg: MagicMock) -> None:
         # langchain_mcp_adapters installed, langgraph missing
         mock_pkg.side_effect = [True, False]
@@ -261,7 +265,7 @@ class TestCheckMcpAdapterPackages:
 class TestVerifyLangchainMcpSection:
     """Tests for MCP-related sections in verify_langchain()."""
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_includes_mcp_adapter_check(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -283,7 +287,7 @@ class TestVerifyLangchainMcpSection:
         assert result["mcp_adapters"]["ok"] is True
         assert result["langgraph"]["ok"] is True
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_mcp_adapters_missing_fails_overall(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -308,7 +312,7 @@ class TestVerifyLangchainMcpSection:
 class TestInstallHints:
     """Tests for install_hint fields in verification results."""
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_langchain_core_missing_has_install_hint(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -329,7 +333,7 @@ class TestInstallHints:
         assert result["langchain_core"]["ok"] is False
         assert result["langchain_core"]["install_hint"] == "pip install langchain-core"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_backend_package_missing_has_install_hint(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -352,7 +356,7 @@ class TestInstallHints:
             result["backend_package"]["install_hint"] == "pip install langchain-openai"
         )
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     def test_mcp_adapters_missing_has_install_hint(self, mock_pkg: MagicMock) -> None:
         """When langchain-mcp-adapters is missing, result includes install_hint."""
         # mcp_adapters missing, langgraph ok
@@ -364,7 +368,7 @@ class TestInstallHints:
             == "pip install langchain-mcp-adapters"
         )
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     def test_langgraph_missing_has_install_hint(self, mock_pkg: MagicMock) -> None:
         """When langgraph is missing, result includes install_hint."""
         # mcp_adapters ok, langgraph missing
@@ -373,7 +377,7 @@ class TestInstallHints:
         assert result["langgraph"]["ok"] is False
         assert result["langgraph"]["install_hint"] == "pip install langgraph"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_installed_packages_have_no_install_hint(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -395,7 +399,7 @@ class TestInstallHints:
         assert "install_hint" not in result["mcp_adapters"]
         assert "install_hint" not in result["langgraph"]
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_no_backend_configured_no_install_hint(
         self, mock_config: MagicMock, mock_pkg: MagicMock
@@ -424,7 +428,7 @@ class TestListModelsForBackendErrors:
         self, mock_list: MagicMock
     ) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -436,7 +440,7 @@ class TestListModelsForBackendErrors:
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_auth_error_returns_error_type_auth(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -449,7 +453,7 @@ class TestListModelsForBackendErrors:
     def test_unknown_error_returns_error_type_unknown(
         self, mock_list: MagicMock
     ) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -461,7 +465,7 @@ class TestListModelsForBackendErrors:
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_connection_error_message_preserved(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -477,7 +481,7 @@ class TestListModelsForBackendErrors:
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_auth_error_message_preserved(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -492,7 +496,7 @@ class TestListModelsForBackendErrors:
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_success_has_no_error_type(self, mock_list: MagicMock) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -505,7 +509,7 @@ class TestListModelsForBackendErrors:
     def test_404_with_base_url_returns_error_type_base_url(
         self, mock_list: MagicMock
     ) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -518,7 +522,7 @@ class TestListModelsForBackendErrors:
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_404_without_base_url_stays_unknown(self, mock_list: MagicMock) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -532,7 +536,7 @@ class TestListModelsForBackendErrors:
     def test_non_404_error_with_base_url_stays_unknown(
         self, mock_list: MagicMock
     ) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -634,8 +638,8 @@ class TestModelCheckInVerify:
         "api_version": None,
     }
 
-    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._list_models_for_backend")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_model_check_ok_when_listed(
         self,
@@ -651,8 +655,8 @@ class TestModelCheckInVerify:
         assert result["model_check"]["ok"] is True
         assert result["model_check"]["value"] == "gpt-4o found on server"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._list_models_for_backend")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_wrong_model_warns_but_keeps_overall_ok(
         self,
@@ -669,8 +673,8 @@ class TestModelCheckInVerify:
         assert "not offered by the server" in result["model_check"]["value"]
         assert result["overall_ok"] is True
 
-    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._list_models_for_backend")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_failed_listing_keeps_overall_ok(
         self,
@@ -692,7 +696,7 @@ class TestModelCheckInVerify:
         assert "does not expose /models" in result["model_check"]["value"]
         assert result["overall_ok"] is True
 
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch(f"{_PROVIDER_CHECKS}._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
     def test_absent_without_check_models(
         self, mock_config: MagicMock, mock_pkg: MagicMock

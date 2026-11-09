@@ -294,7 +294,7 @@ class TestCheckModelsNamesTheBaseUrl:
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_connection_error_names_base_url(self, mock_list: MagicMock) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -306,7 +306,7 @@ class TestCheckModelsNamesTheBaseUrl:
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_message_unchanged_without_a_base_url(self, mock_list: MagicMock) -> None:
         """Nothing is invented when no URL was handed to the SDK."""
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -317,7 +317,7 @@ class TestCheckModelsNamesTheBaseUrl:
 
     @patch("mcp_coder.llm.providers.langchain._models.list_ollama_models")
     def test_ollama_connection_error_names_base_url(self, mock_list: MagicMock) -> None:
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 
@@ -328,7 +328,7 @@ class TestCheckModelsNamesTheBaseUrl:
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_auth_error_message_is_untouched(self, mock_list: MagicMock) -> None:
         """Only the connection branch changed."""
-        from mcp_coder.llm.providers.langchain.verification import (
+        from mcp_coder.llm.providers.langchain._provider_checks import (
             _list_models_for_backend,
         )
 

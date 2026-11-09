@@ -22,14 +22,13 @@ from mcp_coder.llm.providers.langchain._config_diagnostics import (
     NON_URL_TARGETS,
     ResolvedTarget,
 )
-from mcp_coder.llm.providers.langchain.verification import (
-    _check_base_url_shape,
-    verify_langchain,
-)
+from mcp_coder.llm.providers.langchain._provider_checks import _check_base_url_shape
+from mcp_coder.llm.providers.langchain.verification import verify_langchain
 
 _PACKAGE = "mcp_coder.llm.providers.langchain"
-_CREATE = f"{_PACKAGE}._create_chat_model"
+_CREATE = f"{_PACKAGE}._setup._create_chat_model"
 _VERIFICATION = f"{_PACKAGE}.verification"
+_PROVIDER_CHECKS = f"{_PACKAGE}._provider_checks"
 _MODELS = f"{_PACKAGE}._models"
 
 # Everything that can redirect a client or supply a credential, cleared before
@@ -257,7 +256,7 @@ def _run_verify(
     )
     with (
         patch(f"{_VERIFICATION}._load_langchain_config", return_value=config),
-        patch(f"{_VERIFICATION}._check_package_installed", return_value=True),
+        patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True),
         patch(_CREATE, **create_kwargs),
     ):
         return verify_langchain()
@@ -363,8 +362,8 @@ class TestVerifyLangchainBaseUrlShape:
             patch(
                 f"{_VERIFICATION}._load_langchain_config", return_value=_openai_config()
             ),
-            patch(f"{_VERIFICATION}._check_package_installed", return_value=True),
-            patch(f"{_VERIFICATION}.resolve_target", probe),
+            patch(f"{_PROVIDER_CHECKS}._check_package_installed", return_value=True),
+            patch(f"{_PROVIDER_CHECKS}.resolve_target", probe),
         ):
             result = verify_langchain()
         assert probe.call_count == 1

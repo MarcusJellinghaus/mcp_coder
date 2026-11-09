@@ -96,6 +96,14 @@ Inside the orchestration band the order is also fixed: `workflows` on top, then 
 | shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`, `mcp_tools_py`. |
 | `config`, `constants` | Foundation. No internal dependencies. |
 
+### LangChain model layer
+
+- **Modules:** 15 modules in `src/mcp_coder/llm/providers/langchain/` form the model layer: the four `*_backend` modules, `_models`, `_setup`, `_http`, `_exceptions`, `_errors_404`, `_usage`, `_preflight`, `_config_diagnostics`, `_messages`, `_provider_checks`, `_product`. The rest of the package (`__init__`, `agent`, `_mcp_tools`, `mcp_manager`, `approval_bridge`, `permission_bridge`, `verification`, `_config_source`) is mcp_coder glue: config loading, session storage, MCP.
+- **Boundary:** from mcp_coder the layer imports only `llm.types`, `utils.config_hints` and `utils.log_utils`. It receives its config as an argument (`_create_chat_model(config)`, `check_provider(config)`). Enforced by the two `langchain_model_layer*` contracts in [`.importlinter`](../../.importlinter).
+- **Product texts:** every product-specific user-facing text lives in `_product.py`.
+- **Downstream copy:** agent-workbench copies the layer unchanged, replaces `_product.py`, and rewrites the `token_fingerprint` import to `mcp_coder_utils.redaction`.
+- **Rule:** keep the layer self-contained, so extracting it into a shared package later is a move.
+
 For module and function detail, read the module docstrings and the code. Each module's first docstring line states its responsibility.
 
 ---
