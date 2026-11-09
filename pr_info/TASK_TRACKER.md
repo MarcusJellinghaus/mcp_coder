@@ -21,6 +21,37 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Slot filler in `mcp_coder.utils.prompt_slots` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests + `prompt_slots.py` (`resolve_prompt_slots`, `fill_prompt`), `get_prompt_with_substitutions` uses `fill_prompt`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Workflow prompts — neutral wording + slots, filled by their callers — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: tests + `prompts.md` rewording/slots, callers (`_run_ci_fix`, `run_finalisation`, `process_single_task`, create_plan) fill slots, `claude-code.md` doc
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: System and project prompts, filled on the inject path — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: tests + `system-prompt.md` / `project-prompt.md` slots, `_fill_injected_prompts` in `prompt_llm` / `prompt_llm_stream`, `python.md` doc
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Implement fix loop uses the toolkit's `fix.check` — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: tests + `check_and_fix_mypy` uses `fix.check` fragment, Mypy Fix Prompt removed, `05-implementation.md` doc
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Rebase — `[test_filter]` rename and allowlist from `llm_permissions` — [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: tests + `[test_filter]` rename, `rebase_settings` / `rebase_settings_file` from `llm_permissions`, all-prompts scan test
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary prepared
