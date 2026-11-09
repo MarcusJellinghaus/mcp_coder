@@ -20,7 +20,7 @@ One module owns each external library. An upgrade or a replacement then touches 
 
 Git and the `mcp_workspace` package are reached only through the shims `mcp_coder.mcp_workspace_git` and `mcp_coder.mcp_workspace_github`. Running `git` as a subprocess, or importing `mcp_workspace.git_operations` / `mcp_workspace.github_operations` directly, would bypass them. import-linter cannot resolve those external subpackages, so `RULES` in [`tools/check_forbidden_calls.py`](../../tools/check_forbidden_calls.py) guards both the argv and the import rules.
 
-Python quality tools (pytest, pylint, mypy, ruff, vulture, bandit, import-linter, tach, deptry) are reached only through the quality-tool boundary, today the `mcp_coder.mcp_tools_py` shim. The `quality_tools_isolation` contract in [`.importlinter`](../../.importlinter) forbids importing them. import-linter cannot see subprocess calls, so the `quality-tools` rule in `RULES` guards literal argv lists.
+Python quality tools (pytest, pylint, mypy, ruff, vulture, bandit, import-linter, tach, deptry) are reached only through the toolkit (`utils/toolkit_runner`); the `mcp_coder.mcp_tools_py` shim only re-exports `resolve_steps`. The `quality_tools_isolation` contract in [`.importlinter`](../../.importlinter) forbids importing them. import-linter cannot see subprocess calls, so the `quality-tools` rule in `RULES` guards literal argv lists.
 
 ## No import cycles
 

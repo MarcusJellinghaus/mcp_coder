@@ -66,7 +66,7 @@ depends_on = [
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration management
     { path = "mcp_coder.constants" },     # Shared constants
-    { path = "mcp_coder.mcp_tools_py" }, # MCP code checking tools
+    { path = "mcp_coder.mcp_tools_py" }, # resolve_steps re-export (sole mcp_tools_py importer)
     { path = "mcp_coder.mcp_workspace" }, # File listing and gitignore shim
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
     { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
@@ -272,12 +272,10 @@ depends_on = [
 [[modules]]
 path = "mcp_coder.mcp_tools_py"
 layer = "shim_workspace"
-# MCP code checking tool implementation.
-# Infrastructure service for running code quality checks.
-# Standalone module with no internal dependencies (uses only stdlib).
+# Sole importer of the mcp_tools_py package; re-exports resolve_steps.
 depends_on = [
-    { path = "mcp_coder.config" },    # Checker configuration
-    { path = "mcp_coder.constants" }, # Check-related constants
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
 ]
 
 [[modules]]
