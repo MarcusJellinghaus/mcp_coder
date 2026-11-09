@@ -4,6 +4,7 @@ import contextlib
 import logging
 import os
 import shutil
+import sys
 import tempfile
 from collections.abc import Generator
 from importlib.resources.abc import Traversable
@@ -172,6 +173,39 @@ def bare_remote(tmp_path: Path) -> Generator[BareRemote, None, None]:
     remote = BareRemote(tmp_path)
     yield remote
     remote.close()
+
+
+@pytest.fixture
+def fake_npm(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Put an npm-style launcher ``fakenpm`` on PATH.
+
+    ``fakenpm <name> [args...]`` runs ``scripts/<name>.py`` with the current
+    interpreter, so steps can use shell-safe argv such as ``["fakenpm", "lint"]``.
+
+    Returns:
+        The ``scripts`` directory the test writes ``<name>.py`` files into.
+    """
+    bin_dir = tmp_path / "bin"
+    scripts_dir = tmp_path / "scripts"
+    bin_dir.mkdir()
+    scripts_dir.mkdir()
+    if sys.platform == "win32":
+        (bin_dir / "fakenpm.cmd").write_text(
+            f'@"{sys.executable}" "%~dp0..\\scripts\\%1.py" %*\r\n', encoding="utf-8"
+        )
+    else:
+        launcher = bin_dir / "fakenpm"
+        launcher.write_text(
+            f"#!{sys.executable}\n"
+            "import pathlib, runpy, sys\n"
+            "script = pathlib.Path(__file__).resolve().parent.parent / 'scripts'\n"
+            "sys.argv = sys.argv[1:]\n"
+            "runpy.run_path(str(script / (sys.argv[0] + '.py')), run_name='__main__')\n",
+            encoding="utf-8",
+        )
+        launcher.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+    return scripts_dir
 
 
 @pytest.fixture(autouse=True)

@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: `CommandToolkit.describe` and `run` with the parsers — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: `toolkit.py` with `describe`, `run`, exit-code / junit parsers, `fake_npm` fixture in `tests/conftest.py`, tests in `test_toolkit_run.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `toolkit.py` with `describe`, `run`, exit-code / junit parsers, `fake_npm` fixture in `tests/conftest.py`, tests in `test_toolkit_run.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `verify`, `prompt_fragments` and registration — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: `verify`, `prompt_fragments`, `command` entry point in `pyproject.toml`, `toolkits_isolation` import-linter contracts, tests in `test_toolkit_describe.py` / `test_registration.py`
