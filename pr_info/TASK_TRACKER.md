@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Rebase checks return `fix_text`; binding-level Done-when test — [step_6.md](./steps/step_6.md)
-- [ ] Implementation: `_run_all_checks` returns `(keys, fix_texts)`, callers in `rebase.py` updated, `test_command_toolkit_binding.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_run_all_checks` returns `(keys, fix_texts)`, callers in `rebase.py` updated, `test_command_toolkit_binding.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Rebase toolkit-filled regression prompt and fix-turn grants — [step_7.md](./steps/step_7.md)
 - [ ] Implementation: "Rebase Regression Fix" prompt placeholders, `_check_tool_texts`, `_build_regression_fix_prompt`, `_marker_filter_text`, fix-turn `bash_grants`, `rebase_permissions.py` docstring, tests

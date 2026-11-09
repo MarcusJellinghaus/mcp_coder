@@ -511,7 +511,7 @@ def run_rebase_workflow(
 
     logger.log(OUTPUT, "Running baseline checks...")
     try:
-        baseline = _run_all_checks(project_dir, automated)
+        baseline, _ = _run_all_checks(project_dir, automated)
     except CheckRunError as exc:
         # No git mutation has happened yet — plain infrastructure error.
         return _end(2, f"Baseline checks failed to run: {exc}")
@@ -621,7 +621,8 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        regressions = _run_all_checks(project_dir, automated) - baseline
+        keys, _ = _run_all_checks(project_dir, automated)
+        regressions = keys - baseline
         attempt = 0
         last_text: str | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
@@ -655,7 +656,8 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            regressions = _run_all_checks(project_dir, automated) - baseline
+            keys, _ = _run_all_checks(project_dir, automated)
+            regressions = keys - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)
             return _end(1, f"{len(regressions)} unfixed regression(s){note}")

@@ -19,6 +19,7 @@ from mcp_coder.workflows.rebase_checks import CheckRunError, FailureKey
 from tests.workflows.rebase.conftest import (
     _REGRESSION,
     _blob_info,
+    _checked,
     _run,
     _start_conflict_loop,
 )
@@ -30,7 +31,7 @@ def test_regression_fixed_on_first_attempt(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """A regression fixed on attempt 1 commits the fix and pushes (exit 0)."""
-    patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION), _checked()]
 
     assert _run(tmp_path).exit_code == 0
     patched.prompt.assert_called_once()
@@ -50,7 +51,7 @@ def test_automated_reaches_every_check_run_and_fix_prompt(
     filter_text = MagicMock(return_value="FILTER")
     monkeypatch.setattr(rebase_module, "_build_regression_fix_prompt", fix_prompt)
     monkeypatch.setattr(rebase_module, "_marker_filter_text", filter_text)
-    patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION), _checked()]
 
     result = rebase_module.run_rebase_workflow(
         tmp_path, provider="claude", automated=True
@@ -81,7 +82,7 @@ def test_regression_fix_formats_through_run_formatters(
     )
     wrapper = MagicMock(return_value=[])
     monkeypatch.setattr(commit_module, "run_binding", wrapper)
-    patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION), _checked()]
 
     assert _run(tmp_path).exit_code == 0
     assert not hasattr(rebase_module, "run_format_code")
@@ -92,7 +93,11 @@ def test_identical_regression_text_stalls_and_resets(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """Identical failure text on the re-check trips the stall guard (exit 1)."""
-    patched.all_checks.side_effect = [set(), set(_REGRESSION), set(_REGRESSION)]
+    patched.all_checks.side_effect = [
+        _checked(),
+        _checked(*_REGRESSION),
+        _checked(*_REGRESSION),
+    ]
 
     assert _run(tmp_path).exit_code == 1
     patched.prompt.assert_called_once()  # stall guard blocks attempt 2
@@ -106,10 +111,10 @@ def test_regressions_after_two_attempts_reset_and_return_1(
     """Still-failing regressions after 2 attempts reset to ``pre_sha`` (exit 1)."""
     other: set[FailureKey] = {"check: src/m.py|arg-type|bad"}
     patched.all_checks.side_effect = [
-        set(),
-        set(_REGRESSION),
-        other,
-        set(_REGRESSION),
+        _checked(),
+        _checked(*_REGRESSION),
+        _checked(*other),
+        _checked(*_REGRESSION),
     ]
 
     assert _run(tmp_path).exit_code == 1
@@ -122,7 +127,10 @@ def test_verification_check_run_error_resets_and_returns_1(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """A verification infrastructure failure resets to ``pre_sha`` (exit 1)."""
-    patched.all_checks.side_effect = [set(), CheckRunError("pylint: failed to run")]
+    patched.all_checks.side_effect = [
+        _checked(),
+        CheckRunError("pylint: failed to run"),
+    ]
 
     result = _run(tmp_path)
 
@@ -136,7 +144,7 @@ def test_llm_timeout_during_fix_resets_and_returns_1(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """An LLM timeout after the rebase completed resets to ``pre_sha`` (exit 1)."""
-    patched.all_checks.side_effect = [set(), set(_REGRESSION)]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION)]
     patched.prompt.side_effect = LLMTimeoutError("no output for 600s")
 
     assert _run(tmp_path).exit_code == 1
@@ -204,7 +212,11 @@ def _binary_conflict(ns: SimpleNamespace, _mp: pytest.MonkeyPatch) -> None:
 
 
 def _unfixed_regressions(ns: SimpleNamespace, _mp: pytest.MonkeyPatch) -> None:
-    ns.all_checks.side_effect = [set(), set(_REGRESSION), set(_REGRESSION)]
+    ns.all_checks.side_effect = [
+        _checked(),
+        _checked(*_REGRESSION),
+        _checked(*_REGRESSION),
+    ]
 
 
 def _not_corroborated(ns: SimpleNamespace, _mp: pytest.MonkeyPatch) -> None:

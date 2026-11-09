@@ -19,10 +19,13 @@ _LOAD = "mcp_coder.workflows.rebase_checks.load_toolkit"
 _RUN = "mcp_coder.workflows.rebase_checks.run_binding"
 
 
-def _findings(*keys: str) -> ActionResult:
+def _findings(*keys: str, fix_text: str = "") -> ActionResult:
     """Build a ``findings`` result carrying one finding per key."""
     return ActionResult(
-        "findings", "found", [Finding(key=key, message=key) for key in keys]
+        "findings",
+        "found",
+        [Finding(key=key, message=key) for key in keys],
+        fix_text=fix_text,
     )
 
 
@@ -34,12 +37,24 @@ def _run_with(
     Returns:
         ``(keys, run_binding_mock)``.
     """
+    keys, _, mock_run = _run_full(tmp_path, results, automated)
+    return keys, mock_run
+
+
+def _run_full(
+    tmp_path: Path, results: list[tuple[str, ActionResult]], automated: bool = False
+) -> tuple[set[str], dict[str, str], MagicMock]:
+    """Like ``_run_with``, also returning the fix texts.
+
+    Returns:
+        ``(keys, fix_texts, run_binding_mock)``.
+    """
     with (
         patch(_LOAD, return_value=MagicMock()),
         patch(_RUN, return_value=results) as mock_run,
     ):
-        keys = _run_all_checks(tmp_path, automated)
-    return keys, mock_run
+        keys, fix_texts = _run_all_checks(tmp_path, automated)
+    return keys, fix_texts, mock_run
 
 
 class TestRunAllChecks:
@@ -113,6 +128,35 @@ class TestRunAllChecks:
         assert keys == {"check: same", "test: same"}
 
 
+class TestFixTexts:
+    """_run_all_checks returns the fix text per action with findings."""
+
+    def test_fix_texts_joined_per_action(self, tmp_path: Path) -> None:
+        """Two requests of one action join with a blank line; ok/skipped omitted."""
+        _, fix_texts, _ = _run_full(
+            tmp_path,
+            [
+                ("check@standard", _findings("a", fix_text="lint\nE1 a.py")),
+                ("check@quick", _findings("b", fix_text="types\nb.py:2")),
+                ("test@standard", ActionResult("ok", "clean")),
+                ("format@standard", ActionResult("skipped", "nothing")),
+            ],
+        )
+        assert fix_texts == {"check": "lint\nE1 a.py\n\ntypes\nb.py:2"}
+
+    def test_empty_fix_text_falls_back_to_summary(self, tmp_path: Path) -> None:
+        """A findings result without ``fix_text`` contributes its summary."""
+        _, fix_texts, _ = _run_full(tmp_path, [("test@standard", _findings("t"))])
+        assert fix_texts == {"test": "found"}
+
+    def test_clean_run_has_no_fix_texts(self, tmp_path: Path) -> None:
+        """All-``ok`` results produce no fix texts."""
+        _, fix_texts, _ = _run_full(
+            tmp_path, [("check@standard", ActionResult("ok", "ok"))]
+        )
+        assert fix_texts == {}
+
+
 class TestRegressionSemantics:
     """Documents the comparison contract: regression = verification - baseline."""
 
@@ -145,4 +189,6 @@ def test_real_toolkit_failing_test(tmp_path: Path) -> None:
         "mcp-tools-py", toolkit, toolkit.describe(), load_toolkit_config(tmp_path)
     )
     with patch(_LOAD, return_value=loaded):
-        assert _run_all_checks(tmp_path) == {"test: tests/test_fail.py::test_fail"}
+        keys, fix_texts = _run_all_checks(tmp_path)
+    assert keys == {"test: tests/test_fail.py::test_fail"}
+    assert "test_fail" in fix_texts["test"]

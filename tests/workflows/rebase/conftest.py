@@ -130,6 +130,11 @@ _FAILED_STATUS = {**_CLEAN_STATUS, "success": False, "clean": False}
 _REGRESSION: set[FailureKey] = {"test: tests/test_new.py::test_case"}
 
 
+def _checked(*keys: FailureKey) -> tuple[set[FailureKey], dict[str, str]]:
+    """Build a ``_run_all_checks`` return value with ``keys`` and no fix texts."""
+    return set(keys), {}
+
+
 @pytest.fixture
 def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Patch every collaborator to a benign happy-path default.
@@ -175,7 +180,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
     # Checks + formatter.
-    all_checks = MagicMock(return_value=set())
+    all_checks = MagicMock(return_value=_checked())
     formatters = MagicMock(return_value=True)
     monkeypatch.setattr(rebase_module, "_run_all_checks", all_checks)
     monkeypatch.setattr(rebase_module, "run_formatters", formatters)

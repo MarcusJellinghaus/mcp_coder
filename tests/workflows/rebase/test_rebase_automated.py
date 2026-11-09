@@ -265,7 +265,7 @@ def real_git(bare_remote: BareRemote, monkeypatch: pytest.MonkeyPatch) -> BareRe
     monkeypatch.setattr(rebase_step_module, "detect_base_branch", lambda _pd: "main")
     monkeypatch.setattr(rebase_module, "_preflight", lambda _pd: None)
     monkeypatch.setattr(rebase_module, "prepare_llm_environment", lambda _pd: {})
-    monkeypatch.setattr(rebase_module, "_run_all_checks", lambda _pd, _m: set())
+    monkeypatch.setattr(rebase_module, "_run_all_checks", lambda _pd, _m: (set(), {}))
     return bare_remote
 
 

@@ -24,8 +24,16 @@ FailureKey = str
 Finding keys are line-insensitive; the action prefix avoids collisions.
 """
 
+FixTexts = dict[str, str]
+"""Action -> the ``fix_text`` (or ``summary``) of its ``findings`` results.
 
-def _run_all_checks(project_dir: Path, automated: bool = False) -> set[FailureKey]:
+Texts of several requests for the same action are joined by a blank line.
+"""
+
+
+def _run_all_checks(
+    project_dir: Path, automated: bool = False
+) -> tuple[set[FailureKey], FixTexts]:
     """Run the rebase binding and union its findings into failure keys.
 
     Findings (failed tests, lint messages, type errors) become keys; a request
@@ -37,7 +45,9 @@ def _run_all_checks(project_dir: Path, automated: bool = False) -> set[FailureKe
         automated: Run the ``rebase_automated`` binding instead of ``rebase``.
 
     Returns:
-        The union of failure keys across all bound requests.
+        ``(keys, fix_texts)``: the union of failure keys across all bound
+        requests, and per action with findings the joined ``fix_text``
+        (falling back to ``summary``).
 
     Raises:
         CheckRunError: If the toolkit fails to load or a request fails to run.
@@ -48,6 +58,7 @@ def _run_all_checks(project_dir: Path, automated: bool = False) -> set[FailureKe
     except Exception as exc:  # pylint: disable=broad-exception-caught
         raise CheckRunError(f"toolkit: {exc}") from exc
     keys: set[FailureKey] = set()
+    texts: dict[str, list[str]] = {}
     for request, result in results:
         if result.status == "error":
             raise CheckRunError(f"{request}: {result.summary}")
@@ -55,4 +66,6 @@ def _run_all_checks(project_dir: Path, automated: bool = False) -> set[FailureKe
             logger.info("%s skipped: %s", request, result.summary)
         action = request.split("@")[0]
         keys |= {f"{action}: {finding.key}" for finding in result.findings}
-    return keys
+        if result.status == "findings":
+            texts.setdefault(action, []).append(result.fix_text or result.summary)
+    return keys, {action: "\n\n".join(parts) for action, parts in texts.items()}
