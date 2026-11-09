@@ -6,10 +6,8 @@ See `pr_info/steps/summary.md` ("Rebase allowlist").
 
 > Implement Step 5 of `pr_info/steps/summary.md` as described in `pr_info/steps/step_5.md`.
 > Write/update the tests first. An explicit `--settings` override must still replace the
-> generated settings entirely. Run pylint, mypy and pytest; all must pass. Finally search
-> `src/mcp_coder/prompts/*.md` for `pylint|mypy|pytest|mcp-tools-py` and (case-insensitive)
-> `python project`; if anything remains that this plan does not cover, write one line to
-> `pr_info/.blocked.txt` naming it and stop.
+> generated settings entirely. Run pylint, mypy and pytest; all must pass. The step is done
+> when the all-prompts scan test (see Tests) passes.
 
 ## WHERE
 
@@ -105,3 +103,7 @@ Settings dict shape unchanged:
   `rebase_settings(project_dir, "rebase")` (patched) instead of `REBASE_LLM_PERMISSIONS`.
 - `test_llm_steps.py`, `test_prompt.py`, `test_workflow_regression.py`: rename
   `pytest_marker_filter` → `test_filter`.
+- All-prompts scan (Done-when guard, in `tests/prompts/`): parametrized over every
+  `src/mcp_coder/prompts/*.md` file; fails if a file contains `pylint`, `mypy`, `pytest`
+  or `mcp__mcp-tools-py__`, or matches `python project` case-insensitively. Written in this
+  step because it can pass only after the `[test_filter]` rename.

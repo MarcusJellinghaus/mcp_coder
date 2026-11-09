@@ -94,4 +94,7 @@ configured toolkit (for Python projects, the `mcp-tools-py` MCP tools).
 - Prompt-text test (in `tests/prompts/test_prompt_loader.py` or a new test there): the
   Implementation, Finalisation, CI Fix and plan prompts contain their slot on a line of its
   own, and none of these sections contains `pylint`, `mypy`, `pytest` or (case-insensitive)
-  `python project`.
+  `python project`. The same test asserts the reworded sections: Task Tracker Update Prompt
+  contains `- Quality checks — fix all issues` and no `pylint`/`pytest`/`mypy`; Review
+  Implementation Reviewer contains `language conventions` and not `Python conventions`.
+  (Step 5's all-prompts scan also covers these sections.)
