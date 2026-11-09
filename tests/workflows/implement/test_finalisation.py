@@ -517,3 +517,49 @@ class TestRunFinalisationBashGrants:
 
         mock_perms.assert_called_once_with(tmp_path, "claude")
         assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm run lint)"]
+
+
+class TestRunFinalisationPromptSlots:
+    """run_finalisation fills the [check_instructions] slot."""
+
+    def _run(self, tmp_path: Path, slot_value: str) -> str:
+        """Run finalisation with a stubbed slot value; return the prompt."""
+        base = "mcp_coder.workflows.implement.finalisation"
+        with (
+            patch(f"{base}.has_incomplete_work", return_value=True),
+            patch(f"{base}.prepare_llm_environment", return_value={}),
+            patch(f"{base}.llm_permissions", return_value=[]),
+            patch(
+                f"{base}.resolve_prompt_slots",
+                return_value={"check_instructions": slot_value},
+            ),
+            patch(f"{base}.prompt_llm") as mock_prompt_llm,
+            patch(f"{base}.store_session"),
+            patch(
+                f"{base}.get_full_status",
+                return_value={"staged": [], "modified": [], "untracked": []},
+            ),
+        ):
+            mock_prompt_llm.return_value = _make_llm_response("done")
+            run_finalisation(tmp_path, "claude")
+        prompt: str = mock_prompt_llm.call_args.args[0]
+        return prompt
+
+    def test_slot_value_inserted(self, tmp_path: Path) -> None:
+        """The check_instructions value appears in the prompt."""
+        prompt = self._run(tmp_path, "Run npm test and fix all issues.")
+
+        assert "Run npm test and fix all issues." in prompt
+        assert "[check_instructions]" not in prompt
+
+    def test_empty_slot_removes_line(self, tmp_path: Path) -> None:
+        """An empty value drops the slot line; [pr_info_dir] is still substituted."""
+        prompt = self._run(tmp_path, "")
+
+        assert "[check_instructions]" not in prompt
+        assert "[pr_info_dir]" not in prompt
+        assert "pr_info/TASK_TRACKER.md" in prompt
+        assert (
+            "Run the project's quality checks if any code changes were made.\n"
+            "Write commit message to"
+        ) in prompt

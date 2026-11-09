@@ -66,7 +66,7 @@ Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TR
 
 Each step produces one commit. Standard sub-tasks per step (one [ ] each):
 - Implementation (tests + production code)
-- Quality checks: pylint, pytest, mypy — fix all issues
+- Quality checks — fix all issues
 - Commit message prepared
 
 If a step has multiple independent parts (A, B, C), split them into separate steps instead.
@@ -143,9 +143,11 @@ Implement ONE step from the task tracker.
 **2. FOR EACH SUB-TASK**
 - Read linked files in `pr_info/steps/` if referenced
 - Implement only what's described
-- Run code checks (pylint, pytest, mypy) when required
+- Run the project's quality checks when required
 - Fix all issues before proceeding
 - Mark sub-task complete: `- [ ]` → `- [x]`
+
+[check_instructions]
 
 **3. COMPLETE THE STEP**
 - All sub-tasks must be `[x]` before finishing — unless something blocks you (see RULES)
@@ -155,7 +157,7 @@ Implement ONE step from the task tracker.
 **RULES:**
 - ONE step per run (but complete all its sub-tasks)
 - Mark each sub-task `[x]` immediately after completing it
-- Use MCP tools for all operations
+- Use MCP tools for file and git operations
 - If a sub-task is already complete and you saw its checks pass, STILL tick the box `[ ]` → `[x]`. Ticking the checkbox IS the required deliverable for that sub-task.
 - If something blocks you from verifying or completing a sub-task, write one line to `pr_info/.blocked.txt` saying what blocked you, and stop. That file is the ONLY way to report a problem. Writing notes, explanations or status paragraphs into a step file, a plan file or the task tracker is NOT a report and does NOT count as progress. Do not tick a check you did not see pass.
 ```
@@ -273,7 +275,8 @@ If not, analyse based on task names and codebase.
 If you cannot complete a task, DO NOT mark the box as done.
 Instead, briefly explain the issue.
 
-Run quality checks (pylint, pytest, mypy) if any code changes were made.
+Run the project's quality checks if any code changes were made.
+[check_instructions]
 Write commit message to [commit_message_path].
 ```
 
@@ -303,7 +306,8 @@ Make sure to preserve the issue's requirements - only propose simplifications th
 ### Implementation Plan Creation
 
 ```
-## Python Project Implementation Plan Request
+## Implementation Plan Request
+[language_context]
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
 Can you also give a summary of the architectural / design changes in the summary document?
 Also list the folders \ modules \ files that should be created or modified by this implementation.
@@ -377,10 +381,12 @@ Fix the CI pipeline failure based on the problem description below.
 **Your Task:**
 1. Read the problem description carefully
 2. Make the necessary code changes to fix the issue
-3. Run all quality checks — not just the one that failed
+3. Run the project's quality checks — all of them, not just the one that failed
 4. Fix any issues found by ANY of the quality checks above
 5. Repeat step 3-4 until all checks pass
 6. Write a commit message to `pr_info/.commit_message.txt`
+
+[check_instructions]
 
 **Rules:**
 - Make minimal, focused changes
@@ -404,7 +410,7 @@ review the implementation on the current branch for GitHub issue #{issue_number}
 
 **Gather your own context — do not wait to be handed anything:**
 1. Read every file under `.claude/knowledge_base/*.md` (e.g. software engineering principles,
-   Python conventions). Judge the code against those principles.
+   language conventions). Judge the code against those principles.
 2. Read the issue and ALL linked issues (epic, design doc, dependencies, siblings) with the
    `mcp__mcp-workspace__github_issue_view` MCP tool, starting from issue #{issue_number}. The
    issue may not be self-contained.

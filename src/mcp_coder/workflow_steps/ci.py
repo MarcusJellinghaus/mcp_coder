@@ -27,8 +27,9 @@ from mcp_coder.mcp_workspace_github import (
     CIStatusData,
     GithubException,
 )
-from mcp_coder.prompt_manager import get_prompt_with_substitutions
+from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
@@ -201,12 +202,18 @@ def _run_ci_fix(
     Returns:
         True if fix was successfully committed and pushed, False otherwise
     """
-    # Load fix prompt with problem_description
+    # Load fix prompt with problem_description and the toolkit's slots
     try:
-        fix_prompt = get_prompt_with_substitutions(
-            str(PROMPTS_FILE_PATH),
-            config.fix_prompt_header,
+        bash_grants = bash_grants_of(
+            llm_permissions(config.project_dir, config.provider)
+        )
+        template = get_prompt(str(PROMPTS_FILE_PATH), config.fix_prompt_header)
+        fix_prompt = fill_prompt(
+            template,
             {"problem_description": problem_description},
+            resolve_prompt_slots(
+                template, config.project_dir, config.provider, bash_grants
+            ),
         )
     except Exception as e:
         logger.error(f"Failed to load CI fix prompt: {e}")
@@ -218,9 +225,6 @@ def _run_ci_fix(
     # Call LLM with fix prompt
     try:
         logger.info("Calling LLM to fix CI issues...")
-        bash_grants = bash_grants_of(
-            llm_permissions(config.project_dir, config.provider)
-        )
         llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,

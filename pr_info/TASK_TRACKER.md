@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Workflow prompts — neutral wording + slots, filled by their callers — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests + `prompts.md` rewording/slots, callers (`_run_ci_fix`, `run_finalisation`, `process_single_task`, create_plan) fill slots, `claude-code.md` doc
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `prompts.md` rewording/slots, callers (`_run_ci_fix`, `run_finalisation`, `process_single_task`, create_plan) fill slots, `claude-code.md` doc
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: System and project prompts, filled on the inject path — [step_3.md](./steps/step_3.md)
 

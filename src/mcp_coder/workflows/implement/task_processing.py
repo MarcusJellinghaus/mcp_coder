@@ -17,6 +17,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.utils.toolkit_runner import (
     bash_grants_of,
     get_binding,
@@ -417,8 +418,15 @@ def process_single_task(
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
     try:
-        prompt_template = get_prompt(
+        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+        template = get_prompt(
             str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
+        )
+        # Fill before the task line is appended: task names are never filled
+        prompt_template = fill_prompt(
+            template,
+            {},
+            resolve_prompt_slots(template, project_dir, provider, bash_grants),
         )
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error loading prompt template: {e}")
@@ -445,7 +453,6 @@ Please implement this task step by step."""
             )
 
         branch_name = get_branch_name_for_logging(str(project_dir))
-        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,

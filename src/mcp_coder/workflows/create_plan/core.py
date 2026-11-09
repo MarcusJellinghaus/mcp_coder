@@ -23,6 +23,7 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
@@ -207,6 +208,10 @@ def run_planning_prompts(
     logger.debug(f"Prompt 2 loaded: {len(prompt_2)} chars")
 
     prompt_3 = _load_prompt_or_exit("Implementation Plan Creation")
+    # create_plan's prompt_llm calls pass no Bash grants
+    prompt_3 = fill_prompt(
+        prompt_3, {}, resolve_prompt_slots(prompt_3, project_dir, provider, None)
+    )
     logger.debug(f"Prompt 3 loaded: {len(prompt_3)} chars")
 
     # Format initial prompt with issue data

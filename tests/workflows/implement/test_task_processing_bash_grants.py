@@ -59,3 +59,39 @@ class TestProcessSingleTaskBashGrants:
 
         mock_perms.assert_called_once_with(project, "claude")
         assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm test)"]
+
+
+class TestProcessSingleTaskPromptSlots:
+    """The template's slots are filled before the task line is appended."""
+
+    def test_template_filled_before_task_line(self) -> None:
+        """The slot value is inserted; a slot name inside the task stays literal."""
+        base = "mcp_coder.workflows.implement.task_processing"
+        project = Path("/test/project")
+        task = "Step 1: Document the [check_instructions] slot"
+        with (
+            patch(f"{base}.llm_permissions", return_value=["Bash(npm test)"]),
+            patch(f"{base}.get_incomplete_tasks", return_value=[task]),
+            patch(
+                f"{base}.get_prompt",
+                return_value="Template\n\n[check_instructions]\n\nEnd",
+            ),
+            patch(
+                f"{base}.resolve_prompt_slots",
+                return_value={"check_instructions": "Run npm test."},
+            ) as mock_slots,
+            patch(f"{base}.prompt_llm") as mock_prompt_llm,
+            patch(f"{base}.store_session"),
+            patch(
+                f"{base}.get_full_status",
+                return_value={"staged": [], "modified": [], "untracked": []},
+            ),
+        ):
+            mock_prompt_llm.return_value = _make_llm_response("LLM response")
+            process_single_task(project, "claude")
+
+        prompt: str = mock_prompt_llm.call_args.args[0]
+        assert prompt.startswith("Template\n\nRun npm test.\n\nEnd")
+        assert f"Current task from TASK_TRACKER.md: {task}" in prompt
+        assert mock_slots.call_args.args[3] == ["Bash(npm test)"]
+        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm test)"]
