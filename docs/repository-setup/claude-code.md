@@ -151,13 +151,13 @@ Provides Python code-quality MCP tools.
 
 ### `mcp-workspace` Server
 
-Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_directory`, etc.) for files in your project, plus optional read-only access to reference projects.
+Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_directory`, etc.) for files in your project, plus reference projects: their files are read-only, but their GitHub issues can be created, edited and commented on through `reference_name`.
 
 **Arguments:**
 
 - `--project-dir`: Project root (typically `${MCP_CODER_PROJECT_DIR}`)
 - `--log-level`: Log verbosity
-- `--reference-project name=<path>` (repeatable): Make additional repositories readable from MCP. Useful for cross-repository development and learning from examples.
+- `--reference-project name=<name>,path=<path>[,url=<url>]` (repeatable): Make additional repositories readable from MCP, as `.mcp.json` does. Useful for cross-repository development and learning from examples. `url` is the explicit `url=` or, when omitted, auto-detected from the checkout's git `origin`. A reference project with neither has a null `url`, so its issues can't be written and it never matches cross-repo approval. The old `name=<path>` form is skipped with a warning.
 
 **Required env:**
 
@@ -196,7 +196,15 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 ```json
 {
   "permissions": {
-    "allow": ["mcp__mcp-workspace__*", "mcp__mcp-tools-py__run_format_code", "Bash(git status:*)", "Skill(commit_push)"]
+    "allow": [
+      "mcp__mcp-workspace__read_file",
+      "mcp__mcp-workspace__save_file",
+      "mcp__mcp-workspace__edit_file",
+      "mcp__mcp-workspace__github_issue_view",
+      "mcp__mcp-tools-py__run_format_code",
+      "Bash(git status:*)",
+      "Skill(commit_push)"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": ["mcp-tools-py", "mcp-workspace"]
@@ -204,6 +212,8 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 ```
 
 `permissions.allow` pre-approves tools. `enableAllProjectMcpServers` and `enabledMcpjsonServers` enable the servers defined in `.mcp.json`.
+
+The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue_comment`) are deliberately left out so issue writes prompt in the main session (see [agent-permissions.md](agent-permissions.md)).
 
 ### Pinning the settings file with `--settings`
 

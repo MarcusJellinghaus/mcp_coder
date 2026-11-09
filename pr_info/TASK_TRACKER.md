@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Update `docs/repository-setup/` for the MCP-only agents
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: precondition check, edit `agent-permissions.md`, `README.md`, `claude-code.md`, run the verification searches
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition check, edit `agent-permissions.md`, `README.md`, `claude-code.md`, run the verification searches
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
