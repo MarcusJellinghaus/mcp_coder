@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Fix stale docs and tach comments
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: comment-only edits in `tach.toml`, fix shim sentence in `docs/architecture/enforcement.md`, remove Issue #011 and #008 from `docs/tests/issues.md`
-- [ ] Quality checks: pylint, pytest, mypy (plus tach) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: comment-only edits in `tach.toml`, fix shim sentence in `docs/architecture/enforcement.md`, remove Issue #011 and #008 from `docs/tests/issues.md`
+- [x] Quality checks: pylint, pytest, mypy (plus tach) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
