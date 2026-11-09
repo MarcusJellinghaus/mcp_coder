@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Remove dead check wrappers from the shim
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: trim `mcp_tools_py.py` to `resolve_steps` re-export, reduce `tests/test_mcp_tools_py.py`, delete `tests/test_mcp_tools_py_integration.py`, remove `checker_integration` marker from `pyproject.toml` and `has_mypy_errors` from `vulture_whitelist.py`
+- [ ] Quality checks: pylint, pytest, mypy (plus format, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Fix stale docs and tach comments
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: comment-only edits in `tach.toml`, fix shim sentence in `docs/architecture/enforcement.md`, remove Issue #011 and #008 from `docs/tests/issues.md`
+- [ ] Quality checks: pylint, pytest, mypy (plus tach) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch
+- [ ] PR summary prepared
