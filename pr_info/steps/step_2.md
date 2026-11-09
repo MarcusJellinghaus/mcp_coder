@@ -121,5 +121,8 @@ directory part and no extension does not).
   stale report deleted before the run (script exits 1 without writing → `error`);
   report with no failed cases → fallback finding; exit 0 ignores the report.
 - Malformed step in requested depth → `error`; other depths still run.
+- Non-shell-safe argv element (e.g. `"a b"` or `"a,b"`) under `"bash"` is not
+  malformed: the step runs and returns `ok` / `findings` (not `error`), and its
+  `grant is None`.
 - Global config error → every request `error`; undeclared action/depth → `error`.
 - `fix_text` capped at the last 200 lines.

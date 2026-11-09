@@ -124,3 +124,6 @@ messages name the key/value, e.g.
   a `,` or `C:\\x` → warning, `grant is None`; `llm_permissions = "none"` → all
   `None`; `llm_permissions = "yes"` → global error, all `None`.
 - Config order of depths and steps preserved.
+- `errors_for(action, depth)` and `global_errors()` return only problems with
+  `status == "error"`: a scoped `warning` (non-shell-safe element) is in
+  `problems` but not in `errors_for`.
