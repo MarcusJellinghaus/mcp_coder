@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Verify MCP edit smoke test in `.scratch/` with gitignore pre-check
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: precondition check, tests in `test_verify_mcp_edit_smoke.py`, then shim re-export, `_run_mcp_edit_smoke_test`, `tach.toml` and `.gitignore`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition check, tests in `test_verify_mcp_edit_smoke.py`, then shim re-export, `_run_mcp_edit_smoke_test`, `tach.toml` and `.gitignore`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

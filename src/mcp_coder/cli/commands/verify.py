@@ -5,6 +5,7 @@ MLflow, GitHub) and formats their output for the terminal.
 """
 
 import argparse
+import contextlib
 import datetime
 import logging
 import os
@@ -18,6 +19,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_verify import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...mcp_workspace import is_path_gitignored
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import (
@@ -67,6 +69,9 @@ from .verify_sections import (
 
 logger = logging.getLogger(__name__)
 
+# POSIX spelling on all platforms: used in the LLM prompt and the gitignore check
+_SMOKE_TEST_FILE = ".scratch/mcp_coder_verify.md"
+
 
 def _run_mcp_edit_smoke_test(
     project_dir: Path,
@@ -91,11 +96,22 @@ def _run_mcp_edit_smoke_test(
         Formatted output line for the smoke test result.
     """
     label = "MCP edit smoke test"
-    test_file = project_dir / ".mcp_coder_verify.md"
+    # mcp-workspace refuses gitignored paths, so the edit could never succeed
+    if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
+        return _format_row(
+            label,
+            symbols["warning"],
+            f"skipped: {_SMOKE_TEST_FILE} is gitignored",
+            indent=2,
+        )
+    scratch_dir = project_dir / ".scratch"
+    test_file = project_dir / _SMOKE_TEST_FILE
+    created_scratch = not scratch_dir.exists()
     try:
+        scratch_dir.mkdir(exist_ok=True)
         write_lf_text(test_file, "A\n\nC\n")
         prompt_llm(
-            "Edit the file .mcp_coder_verify.md to insert a line 'B' between 'A' and 'C'",
+            f"Edit the file {_SMOKE_TEST_FILE} to insert a line 'B' between 'A' and 'C'",
             provider=provider,
             timeout=60,
             mcp_config=mcp_config,
@@ -122,6 +138,10 @@ def _run_mcp_edit_smoke_test(
         )
     finally:
         test_file.unlink(missing_ok=True)
+        if created_scratch:
+            # rmdir fails on a non-empty directory, which keeps other files
+            with contextlib.suppress(OSError):
+                scratch_dir.rmdir()
 
 
 def execute_verify(args: argparse.Namespace) -> int:
