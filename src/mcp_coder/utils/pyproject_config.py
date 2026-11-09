@@ -6,12 +6,11 @@ which reads from config.toml.
 """
 
 import logging
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .toml_utils import format_toml_error
+from .toml_utils import load_toml
 
 logger = logging.getLogger(__name__)
 
@@ -50,23 +49,8 @@ def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any
     Raises:
         ValueError: If strict is True and the file exists but cannot be
             read or parsed. The message names the file.
-    """
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
-        return {}
-
-    try:
-        with open(path, "rb") as f:
-            data: dict[str, Any] = tomllib.load(f)
-            return data
-    except tomllib.TOMLDecodeError as e:
-        if strict:
-            raise ValueError(format_toml_error(path, e)) from e
-        return {}
-    except OSError as e:
-        if strict:
-            raise ValueError(f"Error reading {path}\n{e}") from e
-        return {}
+    """  # noqa: DOC502 - raised by load_toml, part of this contract
+    return load_toml(project_dir / "pyproject.toml", strict=strict)
 
 
 def get_prompts_config(project_dir: Path) -> PromptsConfig:

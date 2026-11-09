@@ -438,12 +438,13 @@ class TestRunImplementWorkflow:
         assert result == 0
         # mypy should still be called since check_type_hints=True
         mock_check_mypy.assert_called_once()
+        assert mock_check_mypy.call_args.kwargs["entry"] == "implement_final"
         # run_formatters owns the format_code gate, so it is always called
         mock_run_formatters.assert_called_once_with(Path("/test/project"))
         call_names = [name for name, _, _ in manager.mock_calls]
         assert call_names.index("read_blocked") < call_names.index("get_status")
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -480,7 +481,7 @@ class TestRunImplementWorkflow:
         _mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         _mock_check_ci: MagicMock,
-        mock_run_format_code: MagicMock,
+        mock_run_binding: MagicMock,
         tmp_path: Path,
     ) -> None:
         """``format_code = false`` → the post-mypy formatting never calls the formatter."""
@@ -498,4 +499,4 @@ class TestRunImplementWorkflow:
 
         assert result == 0
         mock_check_mypy.assert_called_once()
-        mock_run_format_code.assert_not_called()
+        mock_run_binding.assert_not_called()

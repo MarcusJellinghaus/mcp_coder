@@ -1,6 +1,9 @@
-"""Tests for the PROJECT section's format_code, Formatter and leftover-key rows."""
+"""Tests for the PROJECT section's format_code, Formatter, Toolkit, leftover-key rows."""
 
+from collections.abc import Generator
+from contextlib import AbstractContextManager
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -8,9 +11,26 @@ import pytest
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import _format_row
 from mcp_coder.cli.commands.verify_sections import _print_project_section
+from mcp_coder.utils.toolkit import VerifyItem
 from tests.cli.commands.conftest import _make_args, _make_verify_mocks
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+_VERIFY_TOOLKIT = "mcp_coder.cli.commands.verify_sections.verify_toolkit"
+
+
+@pytest.fixture(autouse=True)
+def _stub_toolkit() -> Generator[None, None, None]:
+    """Stub the toolkit registry and verify so only the formatter item reports."""
+    from mcp_tools_py.toolkit import PythonToolkit
+
+    with (
+        patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: PythonToolkit,
+        ),
+        patch(_VERIFY_TOOLKIT, lambda _l, _p, _a: [VerifyItem("formatter", "ok")]),
+    ):
+        yield
 
 
 def _run(
@@ -143,6 +163,87 @@ class TestLegacyKeyRow:
     ) -> None:
         _, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert not any("legacy format_code" in line for line in lines)
+
+
+def _items(*items: VerifyItem) -> AbstractContextManager[Any]:
+    """Patch verify_toolkit to return *items*."""
+    return patch(_VERIFY_TOOLKIT, lambda _l, _p, _a: list(items))
+
+
+class TestToolkitRows:
+    """Toolkit row and the toolkit's own verify items."""
+
+    def test_default_toolkit_row(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert ok is True
+        assert _row(lines, "Toolkit") == _format_row(
+            "Toolkit", "[OK]", "mcp-tools-py", indent=4
+        )
+
+    def test_formatter_item_skipped(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with _items(VerifyItem("ruff", "ok"), VerifyItem("formatter", "error", "x")):
+            ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert ok is True
+        assert _row(lines, "ruff") == _format_row("ruff", "[OK]", "ok", indent=6)
+        assert not any(line.strip().startswith("formatter ") for line in lines)
+        assert "[OK]" in _row(lines, "Formatter")
+
+    def test_error_item_fails_section(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with _items(VerifyItem("ruff", "error", "ruff not available")):
+            ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert ok is False
+        assert _row(lines, "ruff") == _format_row(
+            "ruff", "[ERR]", "ruff not available", indent=6
+        )
+
+    def test_warning_item_does_not_fail(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with _items(VerifyItem("mypy", "warning", "old")):
+            ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert ok is True
+        assert _row(lines, "mypy") == _format_row("mypy", "[WARN]", "old", indent=6)
+
+    def test_invalid_config_is_error(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        ok, lines = _run(
+            tmp_path, "[tool.black]\n[tool.mcp-coder.toolkit]\nbogus = 1\n", capsys
+        )
+        assert ok is False
+        row = _row(lines, "Toolkit")
+        assert "[ERR]" in row
+        assert "bogus" in row
+
+    def test_verify_raising_is_error(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        def _raise(*_args: object) -> list[VerifyItem]:
+            raise ValueError("verify failed: boom")
+
+        with patch(_VERIFY_TOOLKIT, _raise):
+            ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert ok is False
+        row = _row(lines, "Toolkit")
+        assert "[ERR]" in row
+        assert "boom" in row
+
+    def test_mcp_coder_toml_without_pyproject(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n', encoding="utf-8"
+        )
+        _, lines = _run(tmp_path, None, capsys)
+        assert _row(lines, "Toolkit") == _format_row(
+            "Toolkit", "[OK]", "mcp-tools-py", indent=2
+        )
 
 
 class TestExecuteVerifyProjectExit:

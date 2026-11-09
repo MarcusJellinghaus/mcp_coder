@@ -10,7 +10,6 @@ repository state plus a set-difference of failure keys; the LLM never
 self-reports an outcome.
 """
 
-import json
 import logging
 from collections import Counter
 from dataclasses import dataclass
@@ -46,6 +45,7 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
+from mcp_coder.utils.toolkit_runner import get_fragment, load_toolkit
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import (
@@ -352,24 +352,27 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
     return template.replace("[conflict_context]", "\n\n".join(blocks))
 
 
-def _build_regression_fix_prompt(
-    regression_text: str, markers: list[str] | None = None
-) -> str:
+def _marker_filter_text(project_dir: Path, automated: bool) -> str:
+    """Return the toolkit's unattended test-filter instruction for the fix prompt.
+
+    Returns:
+        ``""`` when not automated; otherwise the toolkit's
+        ``check_instructions.unattended`` fragment (``""`` if it has none).
+    """
+    if not automated:
+        return ""
+    return get_fragment(load_toolkit(project_dir), "check_instructions.unattended")
+
+
+def _build_regression_fix_prompt(regression_text: str, filter_text: str = "") -> str:
     """Build the regression-fix prompt with the failure-key text inlined.
 
-    With ``markers``, the prompt tells the LLM to pass the same pytest marker
-    filter the deterministic checks used; without, the placeholder is removed.
+    ``filter_text`` tells the LLM to filter its test runs the way the
+    deterministic checks did; empty removes the placeholder.
 
     Returns:
         The assembled regression-fix prompt string.
     """
-    filter_text = ""
-    if markers:
-        filter_text = (
-            "When you run `mcp__mcp-tools-py__run_pytest_check`, pass "
-            f"markers={json.dumps(markers)} so tests that reach external "
-            "services are excluded."
-        )
     template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
     return template.replace("[regression_output]", regression_text).replace(
         "[pytest_marker_filter]", filter_text
@@ -386,7 +389,7 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
         The sorted, newline-joined text rendering of the keys, or an empty
         string for an empty set.
     """
-    return "\n".join(f"{key[0]}: {' '.join(key[1:])}" for key in sorted(keys))
+    return "\n".join(sorted(keys))
 
 
 # --- Orchestrator --------------------------------------------------------------
@@ -436,7 +439,7 @@ def run_rebase_workflow(
     base_branch: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    markers: list[str] | None = None,
+    automated: bool = False,
 ) -> RebaseRunResult:
     """Orchestrate the automated rebase (Python-driven).
 
@@ -450,8 +453,9 @@ def run_rebase_workflow(
 
     See the exit-code contract in ``summary.md``.
 
-    ``markers`` (pytest ``-m`` expressions) filter every check run and are
-    passed on to the regression-fix prompt; ``None`` runs the full suite.
+    ``automated`` runs every check through the ``rebase_automated`` binding
+    instead of ``rebase`` and adds the toolkit's unattended test-filter
+    instruction to the regression-fix prompt.
 
     Returns:
         A ``RebaseRunResult``: ``exit_code`` ``0`` (success or no-op), ``1``
@@ -505,9 +509,9 @@ def run_rebase_workflow(
             branch_check=branch_check,
         )
 
-    logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
+    logger.log(OUTPUT, "Running baseline checks...")
     try:
-        baseline = _run_all_checks(project_dir, markers)
+        baseline = _run_all_checks(project_dir, automated)
     except CheckRunError as exc:
         # No git mutation has happened yet — plain infrastructure error.
         return _end(2, f"Baseline checks failed to run: {exc}")
@@ -617,7 +621,7 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        regressions = _run_all_checks(project_dir, markers) - baseline
+        regressions = _run_all_checks(project_dir, automated) - baseline
         attempt = 0
         last_text: str | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
@@ -634,7 +638,9 @@ def run_rebase_workflow(
                 _MAX_FIX_ATTEMPTS,
             )
             _, session_id = _prompt_in_session(
-                _build_regression_fix_prompt(text, markers),
+                _build_regression_fix_prompt(
+                    text, _marker_filter_text(project_dir, automated)
+                ),
                 session_id,
                 project_dir=project_dir,
                 provider=provider,
@@ -649,7 +655,7 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            regressions = _run_all_checks(project_dir, markers) - baseline
+            regressions = _run_all_checks(project_dir, automated) - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)
             return _end(1, f"{len(regressions)} unfixed regression(s){note}")

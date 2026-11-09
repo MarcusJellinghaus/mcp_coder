@@ -26,6 +26,7 @@ from ...utils.pyproject_config import (
     get_implement_config,
     has_legacy_format_code_key,
 )
+from ...utils.toolkit_runner import load_toolkit, verify_toolkit
 from .verify_formatting import (
     _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
@@ -392,6 +393,50 @@ def _formatter_row(
     return True
 
 
+# VerifyItem.status mapped to the symbols-dict key it prints with
+_VERIFY_STATUS_SYMBOL: dict[str, str] = {
+    "ok": "success",
+    "warning": "warning",
+    "error": "failure",
+}
+
+
+def _toolkit_rows(
+    project_dir: Path, symbols: dict[str, str], *, indent: int = 4
+) -> bool:
+    """Print the Toolkit row and one row per toolkit verify item for ``format``.
+
+    The toolkit's ``formatter`` item is skipped: the Formatter row covers it.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+        indent: Number of leading spaces of the Toolkit row.
+
+    Returns:
+        False if the toolkit fails to load or verify, or any printed item is
+        an error.
+    """
+    try:
+        loaded = load_toolkit(project_dir)
+        items = verify_toolkit(loaded, project_dir, "format")
+    except ValueError as exc:
+        print(_format_row("Toolkit", symbols["failure"], str(exc), indent=indent))
+        return False
+    print(_format_row("Toolkit", symbols["success"], loaded.name, indent=indent))
+    shown = [item for item in items if item.name != "formatter"]
+    for item in shown:
+        print(
+            _format_row(
+                item.name,
+                symbols[_VERIFY_STATUS_SYMBOL[item.status]],
+                item.message or item.status,
+                indent=indent + 2,
+            )
+        )
+    return all(item.status != "error" for item in shown)
+
+
 def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
     """Print the PROJECT section showing language detection and tool config.
 
@@ -407,13 +452,15 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
     if not pyproject_exists:
         print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
         print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
-        return _formatter_row(project_dir, symbols, indent=2)
+        ok = _formatter_row(project_dir, symbols, indent=2)
+        return _toolkit_rows(project_dir, symbols, indent=2) and ok
     print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
     print(_format_row("Language", symbols["success"], "Python (detected)", indent=2))
     print()
     print("  [Python]")
     ok = _format_code_row(project_dir, symbols)
     ok = _formatter_row(project_dir, symbols) and ok
+    ok = _toolkit_rows(project_dir, symbols) and ok
     if has_legacy_format_code_key(project_dir):
         print(
             _format_row(

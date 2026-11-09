@@ -135,6 +135,7 @@ forbidden_modules =
 ignore_imports =
     mcp_coder.utils.subprocess_runner -> mcp_coder_utils
     mcp_coder.utils.subprocess_streaming -> mcp_coder_utils
+    mcp_coder.utils.toolkit -> mcp_coder_utils
     mcp_coder.utils.log_utils -> mcp_coder_utils
     mcp_coder.utils.user_app_data -> mcp_coder_utils
 

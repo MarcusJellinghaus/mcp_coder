@@ -9,12 +9,12 @@ import logging
 import re
 from pathlib import Path
 
-from mcp_coder.mcp_tools_py import resolve_steps, run_format_code
 from mcp_coder.mcp_workspace_git import commit_all_changes, git_push
 from mcp_coder.utils.pyproject_config import (
     get_format_code,
     has_legacy_format_code_key,
 )
+from mcp_coder.utils.toolkit_runner import load_toolkit, run_binding, verify_toolkit
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -59,7 +59,7 @@ class PushRejectedError(Exception):
 def check_formatter_config(
     project_dir: Path, warn_legacy_key: bool = False
 ) -> str | None:
-    """Check that formatting is off or the project's formatter resolves.
+    """Check that the toolkit config loads and formatting is off or verifies.
 
     Args:
         project_dir: Path to the project directory
@@ -67,7 +67,8 @@ def check_formatter_config(
             [tool.mcp-coder.implement] format_code key is present
 
     Returns:
-        None when formatting is off or resolves cleanly, else the error message.
+        None when the config loads and formatting is off, has an empty commit
+        binding, or verifies cleanly; else the error message.
     """
     if warn_legacy_key and has_legacy_format_code_key(project_dir):
         logger.warning(
@@ -75,51 +76,56 @@ def check_formatter_config(
             "use [tool.mcp-coder] format_code"
         )
     try:
-        if not get_format_code(project_dir).enabled:
+        # Loaded before the gate: a broken toolkit config stops the run anyway
+        loaded = load_toolkit(project_dir)
+        if (
+            not get_format_code(project_dir).enabled
+            or not loaded.config.bindings["commit"]
+        ):
             return None
-        resolve_steps(project_dir)
-        return None
+        items = verify_toolkit(loaded, project_dir, "format")
     except ValueError as e:
         return str(e)
+    errors = [
+        f"{item.name}: {item.message}" if item.message else item.name
+        for item in items
+        if item.status == "error"
+    ]
+    return "\n".join(errors) or None
 
 
 def run_formatters(project_dir: Path) -> bool:
-    """Run the project's configured formatter and return success status.
+    """Run the commit binding's format requests and return success status.
 
     Args:
         project_dir: Path to the project directory
 
     Returns:
-        True when formatting is disabled or all steps succeeded, False if a
-        step failed.
+        True when formatting is disabled, the commit binding is empty, or all
+        requests succeeded or were skipped; False if a request failed.
 
     Raises:
-        FormatterConfigError: If the formatter configuration is invalid.
+        FormatterConfigError: If the formatter or toolkit configuration is invalid.
     """
-    message = check_formatter_config(project_dir)
-    if message:
-        raise FormatterConfigError(message)
-    if not get_format_code(project_dir).enabled:
+    try:
+        loaded = load_toolkit(project_dir)
+        enabled = get_format_code(project_dir).enabled
+    except ValueError as e:
+        raise FormatterConfigError(str(e)) from e
+    if not enabled:
         logger.info("Code formatting disabled ([tool.mcp-coder] format_code = false)")
+        return True
+    if not loaded.config.bindings["commit"]:
+        logger.info("No formatting configured (commit binding is empty)")
         return True
 
     logger.info("Running code formatters...")
 
-    try:
-        results = run_format_code(project_dir)
-    except ValueError as e:
-        # resolve_steps inside the wrapper: a config error, not a step failure.
-        raise FormatterConfigError(str(e)) from e
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error running formatters: {e}")
-        return False
-
-    # Check if any formatter failed
-    for formatter_name, result in results.items():
-        if not result.success:
-            logger.error(f"{formatter_name} formatting failed: {result.output}")
+    for request, result in run_binding(loaded, project_dir, "commit"):
+        if result.status not in ("ok", "skipped"):
+            logger.error(f"{request} formatting failed: {result.summary}")
             return False
-        logger.info(f"{formatter_name} formatting completed successfully")
+        logger.info(f"{request} formatting completed successfully")
 
     logger.info("All formatters completed successfully")
     return True

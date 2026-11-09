@@ -22,7 +22,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection (`[tool.mcp-coder.toolkit]`: `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`) |
 
 The formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections).
 

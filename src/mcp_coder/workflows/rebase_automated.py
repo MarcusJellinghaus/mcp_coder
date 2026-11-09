@@ -18,15 +18,6 @@ from mcp_coder.workflows.rebase_permissions import rebase_settings_file
 
 logger = logging.getLogger(__name__)
 
-AUTOMATED_EXCLUDED_MARKERS: list[str] = [
-    "not claude_cli_integration",
-    "not copilot_cli_integration",
-    "not langchain_integration",
-    "not llm_integration",
-    "not jenkins_integration",
-    "not install_integration",
-]
-
 _LLM_TRIGGER_REASONS = ("conflict", "rebase_failed")
 # A path inside the folder, never ".mcp-coder" itself: a "/.mcp-coder/*" rule
 # does not match the folder, and a ".mcp-coder/" rule cannot match a missing one.
@@ -102,7 +93,7 @@ def rebase_with_llm_fallback(
                 outcome.base_branch,
                 mcp_config,
                 settings,
-                markers=AUTOMATED_EXCLUDED_MARKERS,
+                automated=True,
             )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.error("LLM rebase crashed", exc_info=True)

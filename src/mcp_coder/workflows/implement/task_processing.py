@@ -17,6 +17,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.toolkit_runner import get_binding, load_toolkit, run_binding
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
     push_changes,
@@ -34,7 +35,6 @@ from .constants import (
     LLM_INACTIVITY_TIMEOUT_SECONDS,
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
-    RUN_MYPY_AFTER_EACH_TASK,
 )
 
 # Setup logger
@@ -98,32 +98,35 @@ def _count_incomplete_tasks(project_dir: Path) -> int:
     )
 
 
-def _run_mypy_check(project_dir: Path) -> str | None:
-    """Run mypy check using our wrapper and return error output or None if clean.
+def _run_check(project_dir: Path, entry: str) -> str | None:
+    """Run the requests bound to a workflow entry and return their fix text.
 
     Args:
         project_dir: Path to the project directory
+        entry: Binding entry name (e.g. 'implement_task', 'implement_final')
 
     Returns:
-        String containing mypy error output if errors were found, or None if no errors.
+        The fix text of all results with findings, joined by a blank line, or
+        None if every result is ok or skipped.
 
     Raises:
-        RuntimeError: If mypy check fails to run.
+        RuntimeError: If the toolkit fails to load or any request errors.
     """
-    from mcp_coder.mcp_tools_py import run_mypy_check
-
     try:
-        result = run_mypy_check(project_dir)
-
-        # Check if there are errors
-        if (result.errors_found or 0) > 0:
-            # Return raw output for error details
-            return result.raw_output or "Mypy found type errors"
-        else:
-            return None  # No errors found
-
+        results = run_binding(load_toolkit(project_dir), project_dir, entry)
     except Exception as e:
-        raise RuntimeError(f"Failed to run mypy check: {e}") from e
+        raise RuntimeError(f"Failed to run checks: {e}") from e
+
+    errors = [f"{req}: {res.summary}" for req, res in results if res.status == "error"]
+    if errors:
+        raise RuntimeError("Failed to run checks: " + "; ".join(errors))
+    for req, res in results:
+        if res.status == "skipped":
+            logger.info("%s skipped: %s", req, res.summary)
+    texts = [
+        res.fix_text or res.summary for _, res in results if res.status == "findings"
+    ]
+    return "\n\n".join(texts) or None
 
 
 def check_and_fix_mypy(
@@ -133,6 +136,7 @@ def check_and_fix_mypy(
     env_vars: dict[str, str] | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
+    entry: str = "implement_final",
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
 
@@ -143,6 +147,7 @@ def check_and_fix_mypy(
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
+        entry: Toolkit binding entry whose requests are run as the check.
 
     Returns:
         True if mypy check passes (no type errors), False if errors remain after fix attempts.
@@ -160,8 +165,8 @@ def check_and_fix_mypy(
     mypy_attempt_counter = 0
 
     try:
-        # Initial mypy check using MCP tool
-        mypy_result = _run_mypy_check(project_dir)
+        # Initial check through the toolkit binding
+        mypy_result = _run_check(project_dir, entry)
 
         if mypy_result is None:
             logger.info("Mypy check passed - no type errors found")
@@ -254,7 +259,7 @@ def check_and_fix_mypy(
 
             # Re-run mypy check to see if issues were resolved
             try:
-                mypy_result = _run_mypy_check(project_dir)
+                mypy_result = _run_check(project_dir, entry)
 
                 if mypy_result is None:
                     logger.info("Mypy check passed after fixes")
@@ -508,22 +513,32 @@ Please implement this task step by step."""
         return TaskOutcome(False, "error")
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if check_type_hints and RUN_MYPY_AFTER_EACH_TASK:
-        if not check_and_fix_mypy(
+    if not check_type_hints:
+        logger.info("Skipping mypy check (check_type_hints disabled)")
+    else:
+        binding: tuple[str, ...] | None
+        try:
+            binding = get_binding(project_dir, "implement_task")
+        except ValueError as e:
+            # LLM sessions can edit the config mid-run; treat as a failed check
+            logger.warning(
+                f"Mypy check failed or found unresolved issues - continuing anyway: {e}"
+            )
+            binding = None
+        if binding == ():
+            logger.info("Skipping mypy check (will run after all tasks complete)")
+        elif binding and not check_and_fix_mypy(
             project_dir,
             step_num,
             provider,
             env_vars,
             mcp_config,
             settings_file,
+            entry="implement_task",
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
             )
-    elif not check_type_hints:
-        logger.info("Skipping mypy check (check_type_hints disabled)")
-    else:
-        logger.info("Skipping mypy check (will run after all tasks complete)")
 
     # Step 8: Run formatters
     if not run_formatters(project_dir):

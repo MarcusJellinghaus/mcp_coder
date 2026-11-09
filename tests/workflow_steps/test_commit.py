@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.mcp_tools_py import resolve_steps as real_resolve_steps
+from mcp_coder.utils.toolkit import ActionResult, VerifyItem
 from mcp_coder.workflow_steps.commit import (
     FALLBACK_COMMIT_MESSAGE,
     FormatterConfigError,
@@ -17,112 +17,175 @@ from mcp_coder.workflow_steps.commit import (
 )
 
 LEGACY_WARNING = "[tool.mcp-coder.implement] format_code is ignored"
+VERIFY_TOOLKIT = "mcp_coder.workflow_steps.commit.verify_toolkit"
+INVALID_TOOLKIT = "[tool.mcp-coder.toolkit]\nbogus = 1\n"
 
 
 def _write_pyproject(project_dir: Path, content: str) -> None:
     (project_dir / "pyproject.toml").write_text(content, encoding="utf-8")
 
 
-def _raise_value_error(_p: Path) -> list[str]:
+def _raise_value_error(*_args: object) -> list[VerifyItem]:
     raise ValueError("No formatter declared")
+
+
+def _ok(request: str = "format@apply") -> list[tuple[str, ActionResult]]:
+    return [(request, ActionResult(status="ok", summary=""))]
 
 
 class TestRunFormattersGate:
     """Test the format_code gate and config errors in run_formatters."""
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
     def test_disabled_skips_formatting(
-        self, mock_run_format_code: MagicMock, tmp_path: Path
+        self, mock_run_binding: MagicMock, tmp_path: Path
     ) -> None:
-        """format_code = false → run_format_code not called, True."""
+        """format_code = false → run_binding not called, True."""
         _write_pyproject(tmp_path, "[tool.mcp-coder]\nformat_code = false\n")
 
         assert run_formatters(tmp_path) is True
-        mock_run_format_code.assert_not_called()
+        mock_run_binding.assert_not_called()
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
     def test_key_absent_runs_formatting(
-        self, mock_run_format_code: MagicMock, tmp_path: Path
+        self, mock_run_binding: MagicMock, tmp_path: Path
     ) -> None:
-        """Key absent → run_format_code called."""
-        mock_run_format_code.return_value = {}
+        """Key absent → run_binding called once with the commit entry."""
+        mock_run_binding.return_value = _ok()
 
         assert run_formatters(tmp_path) is True
-        mock_run_format_code.assert_called_once_with(tmp_path)
+        mock_run_binding.assert_called_once()
+        assert mock_run_binding.call_args.args[1:] == (tmp_path, "commit")
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
-    def test_resolve_error_raises_config_error(
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_load_error_raises_config_error(
         self,
-        mock_run_format_code: MagicMock,
+        mock_run_binding: MagicMock,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """resolve_steps ValueError → FormatterConfigError with its message."""
+        """load_toolkit ValueError → FormatterConfigError with its message."""
         monkeypatch.setattr(
-            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
+            "mcp_coder.workflow_steps.commit.load_toolkit", _raise_value_error
         )
-
-        with pytest.raises(FormatterConfigError, match="No formatter declared"):
-            run_formatters(tmp_path)
-        mock_run_format_code.assert_not_called()
-
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
-    def test_resolve_error_inside_wrapper_raises_config_error(
-        self, mock_run_format_code: MagicMock, tmp_path: Path
-    ) -> None:
-        """resolve_steps ValueError raised inside run_format_code → config error."""
-        mock_run_format_code.side_effect = ValueError("No formatter declared")
 
         with pytest.raises(FormatterConfigError, match="No formatter declared") as exc:
             run_formatters(tmp_path)
         assert isinstance(exc.value.__cause__, ValueError)
+        mock_run_binding.assert_not_called()
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_error_result_returns_false(
+        self,
+        mock_run_binding: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """An error result from run_binding → False and logged, no exception."""
+        mock_run_binding.return_value = [
+            (
+                "format@apply",
+                ActionResult(status="error", summary="No formatter declared"),
+            )
+        ]
+
+        assert run_formatters(tmp_path) is False
+        assert "No formatter declared" in caplog.text
+
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
     def test_non_bool_format_code_raises_config_error(
-        self, mock_run_format_code: MagicMock, tmp_path: Path
+        self, mock_run_binding: MagicMock, tmp_path: Path
     ) -> None:
         """Non-bool format_code → FormatterConfigError."""
         _write_pyproject(tmp_path, '[tool.mcp-coder]\nformat_code = "false"\n')
 
         with pytest.raises(FormatterConfigError, match="format_code"):
             run_formatters(tmp_path)
-        mock_run_format_code.assert_not_called()
+        mock_run_binding.assert_not_called()
+
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_empty_commit_binding_skips_formatting(
+        self, mock_run_binding: MagicMock, tmp_path: Path
+    ) -> None:
+        """An empty commit binding → True, run_binding not called."""
+        _write_pyproject(tmp_path, "[tool.mcp-coder.toolkit.bindings]\ncommit = []\n")
+
+        assert run_formatters(tmp_path) is True
+        mock_run_binding.assert_not_called()
+
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_broken_toolkit_config_raises_when_disabled(
+        self, mock_run_binding: MagicMock, tmp_path: Path
+    ) -> None:
+        """Invalid toolkit config with format_code = false → FormatterConfigError."""
+        _write_pyproject(
+            tmp_path, f"[tool.mcp-coder]\nformat_code = false\n\n{INVALID_TOOLKIT}"
+        )
+
+        with pytest.raises(FormatterConfigError, match="bogus"):
+            run_formatters(tmp_path)
+        mock_run_binding.assert_not_called()
 
 
 class TestCheckFormatterConfig:
     """Test check_formatter_config helper."""
 
-    def test_disabled_returns_none_even_if_resolve_fails(
+    def test_disabled_returns_none_without_verify(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """format_code = false → None without resolving."""
+        """format_code = false → None, verify_toolkit not called."""
         _write_pyproject(tmp_path, "[tool.mcp-coder]\nformat_code = false\n")
+        monkeypatch.setattr(VERIFY_TOOLKIT, _raise_value_error)
+
+        assert check_formatter_config(tmp_path) is None
+
+    def test_clean_verify_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify with only ok items → None."""
         monkeypatch.setattr(
-            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
+            VERIFY_TOOLKIT, lambda _l, _p, _a: [VerifyItem("formatter", "ok")]
         )
 
         assert check_formatter_config(tmp_path) is None
 
-    def test_resolves_cleanly_returns_none(
+    def test_verify_error_item_returns_message(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A declared formatter resolves with the real resolve_steps → None."""
+        """A verify error item → message naming it and its detail."""
         monkeypatch.setattr(
-            "mcp_coder.workflow_steps.commit.resolve_steps", real_resolve_steps
+            VERIFY_TOOLKIT,
+            lambda _l, _p, _a: [
+                VerifyItem("formatter", "error", "No formatter declared")
+            ],
         )
-        _write_pyproject(tmp_path, "[tool.black]\nline-length = 88\n")
 
-        assert check_formatter_config(tmp_path) is None
+        message = check_formatter_config(tmp_path)
 
-    def test_resolve_error_returns_message(
+        assert message is not None
+        assert "formatter" in message
+        assert "No formatter declared" in message
+
+    def test_verify_raising_returns_message(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """resolve_steps ValueError → its message."""
-        monkeypatch.setattr(
-            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
-        )
+        """verify_toolkit ValueError → its message."""
+        monkeypatch.setattr(VERIFY_TOOLKIT, _raise_value_error)
 
         assert check_formatter_config(tmp_path) == "No formatter declared"
+
+    def test_invalid_toolkit_config_when_disabled_returns_message(
+        self, tmp_path: Path
+    ) -> None:
+        """Invalid toolkit config with format_code = false → message."""
+        _write_pyproject(
+            tmp_path, f"[tool.mcp-coder]\nformat_code = false\n\n{INVALID_TOOLKIT}"
+        )
+
+        message = check_formatter_config(tmp_path)
+
+        assert message is not None
+        assert "bogus" in message
 
     def test_non_bool_format_code_returns_message(self, tmp_path: Path) -> None:
         """Non-bool format_code → error message naming the key."""
@@ -165,41 +228,33 @@ class TestCheckFormatterConfig:
 class TestRunFormatters:
     """Test run_formatters function."""
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
-    def test_run_formatters_success(self, mock_run_format_code: MagicMock) -> None:
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_run_formatters_success(self, mock_run_binding: MagicMock) -> None:
         """Test running formatters successfully."""
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_run_format_code.return_value = {"black": mock_result, "isort": mock_result}
+        mock_run_binding.return_value = _ok()
 
         result = run_formatters(Path("/test/project"))
 
         assert result is True
-        mock_run_format_code.assert_called_once_with(Path("/test/project"))
+        mock_run_binding.assert_called_once()
 
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
-    def test_run_formatters_failure(self, mock_run_format_code: MagicMock) -> None:
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_run_formatters_skipped_counts_as_success(
+        self, mock_run_binding: MagicMock
+    ) -> None:
+        """A skipped result is not a failure."""
+        mock_run_binding.return_value = [
+            ("format@apply", ActionResult(status="skipped", summary="nothing to do"))
+        ]
+
+        assert run_formatters(Path("/test/project")) is True
+
+    @patch("mcp_coder.workflow_steps.commit.run_binding")
+    def test_run_formatters_failure(self, mock_run_binding: MagicMock) -> None:
         """Test running formatters with failure."""
-        mock_success_result = MagicMock()
-        mock_success_result.success = True
-
-        mock_failed_result = MagicMock()
-        mock_failed_result.success = False
-        mock_failed_result.output = "Black formatting failed"
-
-        mock_run_format_code.return_value = {
-            "black": mock_failed_result,
-            "isort": mock_success_result,
-        }
-
-        result = run_formatters(Path("/test/project"))
-
-        assert result is False
-
-    @patch("mcp_coder.workflow_steps.commit.run_format_code")
-    def test_run_formatters_exception(self, mock_run_format_code: MagicMock) -> None:
-        """A generic exception from run_format_code is not a config error → False."""
-        mock_run_format_code.side_effect = Exception("Formatter error")
+        mock_run_binding.return_value = [
+            ("format@apply", ActionResult(status="error", summary="Black failed"))
+        ]
 
         result = run_formatters(Path("/test/project"))
 

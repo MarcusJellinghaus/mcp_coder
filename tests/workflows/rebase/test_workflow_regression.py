@@ -42,33 +42,33 @@ def test_regression_fixed_on_first_attempt(
     patched.push.assert_called_once()
 
 
-def test_markers_reach_every_check_run_and_fix_prompt(
+def test_automated_reaches_every_check_run_and_fix_prompt(
     patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``markers`` is passed to baseline, verification, re-check and the prompt."""
-    markers = ["not claude_cli_integration"]
+    """``automated`` reaches baseline, verification, re-check and the filter text."""
     fix_prompt = MagicMock(return_value="FIX:")
+    filter_text = MagicMock(return_value="FILTER")
     monkeypatch.setattr(rebase_module, "_build_regression_fix_prompt", fix_prompt)
+    monkeypatch.setattr(rebase_module, "_marker_filter_text", filter_text)
     patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
 
     result = rebase_module.run_rebase_workflow(
-        tmp_path, provider="claude", markers=markers
+        tmp_path, provider="claude", automated=True
     )
 
     assert result.exit_code == 0
-    assert [c.args for c in patched.all_checks.call_args_list] == [
-        (tmp_path, markers)
-    ] * 3
-    assert fix_prompt.call_args.args[1] == markers
+    assert [c.args for c in patched.all_checks.call_args_list] == [(tmp_path, True)] * 3
+    filter_text.assert_called_once_with(tmp_path, True)
+    assert fix_prompt.call_args.args[1] == "FILTER"
 
 
-def test_no_markers_runs_unfiltered_checks(
+def test_not_automated_runs_rebase_binding(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """Without ``markers`` (the CLI), every check run gets ``None``."""
+    """Without ``automated`` (the CLI), every check run gets ``False``."""
     assert _run(tmp_path).exit_code == 0
     assert patched.all_checks.call_count == 2
-    assert all(c.args[1] is None for c in patched.all_checks.call_args_list)
+    assert all(c.args[1] is False for c in patched.all_checks.call_args_list)
 
 
 def test_regression_fix_formats_through_run_formatters(
@@ -79,8 +79,8 @@ def test_regression_fix_formats_through_run_formatters(
     (tmp_path / "pyproject.toml").write_text(
         "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
     )
-    wrapper = MagicMock(return_value={})
-    monkeypatch.setattr(commit_module, "run_format_code", wrapper)
+    wrapper = MagicMock(return_value=[])
+    monkeypatch.setattr(commit_module, "run_binding", wrapper)
     patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
 
     assert _run(tmp_path).exit_code == 0
@@ -104,7 +104,7 @@ def test_regressions_after_two_attempts_reset_and_return_1(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """Still-failing regressions after 2 attempts reset to ``pre_sha`` (exit 1)."""
-    other: set[FailureKey] = {("mypy", "src/m.py", "arg-type", "bad")}
+    other: set[FailureKey] = {"check: src/m.py|arg-type|bad"}
     patched.all_checks.side_effect = [
         set(),
         set(_REGRESSION),

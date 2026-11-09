@@ -31,9 +31,6 @@ LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes of silence
 # Inactivity budget (was wall-clock), kept below the CI step cap.
 LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes of silence
 
-# Mypy checking behavior
-RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
-
 # Used by the `implement` workflow's task-processing retry loop
 # (process_task_with_retry in task_processing.py) to bound retries
 # when an LLM call produces zero file changes for a task.
