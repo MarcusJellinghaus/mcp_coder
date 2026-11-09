@@ -108,7 +108,7 @@ def test_regression_fix_prompt_loads() -> None:
     assert prompt.strip()
     for placeholder in (
         "[check_tools]",
-        "[pytest_marker_filter]",
+        "[test_filter]",
         "[regression_output]",
         "[fix_text]",
         "[shell_ban]",

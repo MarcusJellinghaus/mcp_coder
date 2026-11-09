@@ -61,7 +61,7 @@ def test_automated_reaches_every_check_run_and_fix_prompt(
     assert [c.args for c in patched.all_checks.call_args_list] == [(tmp_path, True)] * 3
     patched.permissions.assert_called_once_with(tmp_path, "claude", "rebase_automated")
     filter_text.assert_called_once_with(tmp_path, True, [])
-    assert fix_prompt.call_args.args[0]["pytest_marker_filter"] == "FILTER"
+    assert fix_prompt.call_args.args[0]["test_filter"] == "FILTER"
 
 
 def test_not_automated_uses_rebase_entry_permissions(

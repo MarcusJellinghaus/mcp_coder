@@ -630,9 +630,7 @@ def run_rebase_workflow(
             prompt = _build_regression_fix_prompt(
                 {
                     "check_tools": check_tools,
-                    "pytest_marker_filter": _marker_filter_text(
-                        project_dir, automated, perms
-                    ),
+                    "test_filter": _marker_filter_text(project_dir, automated, perms),
                     "regression_output": text,
                     "fix_text": "\n\n".join(
                         fix_texts[a] for a in actions if fix_texts.get(a)

@@ -559,12 +559,11 @@ must contain its final merged content with no conflict markers
 
 ## Rebase Regression Fix
 
-The regression-fix prompt for the Python-driven rebase, modeled on the Mypy Fix
-Prompt: Python inlines the concrete failure keys and the check output, the LLM
-re-runs the toolkit's granted checks (if any) for detail and edits files to fix
-the regressions. The check-tool sentence and the shell ban come from the
-toolkit's LLM permissions.
-Placeholders: `[check_tools]`, `[pytest_marker_filter]`, `[regression_output]`,
+The regression-fix prompt for the Python-driven rebase: Python inlines the
+concrete failure keys and the check output, the LLM re-runs the toolkit's
+granted checks (if any) for detail and edits files to fix the regressions. The
+check-tool sentence, the test filter and the shell ban come from the toolkit.
+Placeholders: `[check_tools]`, `[test_filter]`, `[regression_output]`,
 `[fix_text]`, `[shell_ban]`
 
 ```
@@ -575,7 +574,7 @@ baseline. Fix them while preserving the intent of both branches.
 The list contains failure keys only. The check output after the rebase follows
 below; it may also show pre-existing failures — fix only the listed regressions.
 [check_tools]
-[pytest_marker_filter]
+[test_filter]
 
 Regressions (new failures versus the pre-rebase baseline):
 [regression_output]
