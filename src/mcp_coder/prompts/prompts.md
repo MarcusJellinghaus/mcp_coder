@@ -579,23 +579,28 @@ must contain its final merged content with no conflict markers
 ## Rebase Regression Fix
 
 The regression-fix prompt for the Python-driven rebase, modeled on the Mypy Fix
-Prompt: Python inlines the concrete failure keys, the LLM re-runs the check
-tools for detail and edits files to fix the regressions.
-Placeholders: `[regression_output]`, `[pytest_marker_filter]`
+Prompt: Python inlines the concrete failure keys and the check output, the LLM
+re-runs the toolkit's granted checks (if any) for detail and edits files to fix
+the regressions. The check-tool sentence and the shell ban come from the
+toolkit's LLM permissions.
+Placeholders: `[check_tools]`, `[pytest_marker_filter]`, `[regression_output]`,
+`[fix_text]`, `[shell_ban]`
 
 ```
 The rebase of the current feature branch onto its base branch introduced the
 regressions listed below — failures that are new compared to the pre-rebase
 baseline. Fix them while preserving the intent of both branches.
 
-The list contains failure keys only (for pytest: bare test node IDs, no
-tracebacks). Before editing anything, re-run the granted MCP check tools
-(`mcp__mcp-tools-py__run_pytest_check`, `mcp__mcp-tools-py__run_pylint_check`,
-`mcp__mcp-tools-py__run_mypy_check`) to get the full failure detail.
+The list contains failure keys only. The check output after the rebase follows
+below; it may also show pre-existing failures — fix only the listed regressions.
+[check_tools]
 [pytest_marker_filter]
 
 Regressions (new failures versus the pre-rebase baseline):
 [regression_output]
+
+Check output after the rebase:
+[fix_text]
 
 Keep changes minimal and focused on the listed regressions — pre-existing
 failures are out of scope and must not block you.
@@ -606,7 +611,7 @@ failures are out of scope and must not block you.
 To inspect repository state, use the read-only `mcp__mcp-workspace__git` tool —
 nothing else.
 
-**Prohibited:** no shell commands of any kind; no staging, committing, or
-pushing — the Python program performs every git write itself; no outcome
-markers or status lines in your response.
+**Prohibited:** [shell_ban]no staging, committing, or pushing — the Python
+program performs every git write itself; no outcome markers or status lines in
+your response.
 ```

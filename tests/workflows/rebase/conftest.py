@@ -176,8 +176,10 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(
         rebase_module,
         "_build_regression_fix_prompt",
-        lambda text, _filter_text="": "FIX:" + text,
+        lambda replacements: "FIX:" + replacements["regression_output"],
     )
+    permissions = MagicMock(return_value=[])
+    monkeypatch.setattr(rebase_module, "llm_permissions", permissions)
 
     # Checks + formatter.
     all_checks = MagicMock(return_value=_checked())
@@ -235,6 +237,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     return SimpleNamespace(
         prompt=prompt,
+        permissions=permissions,
         all_checks=all_checks,
         formatters=formatters,
         rebase_start=rebase_start,

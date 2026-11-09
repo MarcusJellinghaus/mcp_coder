@@ -59,8 +59,60 @@ def test_automated_reaches_every_check_run_and_fix_prompt(
 
     assert result.exit_code == 0
     assert [c.args for c in patched.all_checks.call_args_list] == [(tmp_path, True)] * 3
-    filter_text.assert_called_once_with(tmp_path, True)
-    assert fix_prompt.call_args.args[1] == "FILTER"
+    patched.permissions.assert_called_once_with(tmp_path, "claude", "rebase_automated")
+    filter_text.assert_called_once_with(tmp_path, True, [])
+    assert fix_prompt.call_args.args[0]["pytest_marker_filter"] == "FILTER"
+
+
+def test_not_automated_uses_rebase_entry_permissions(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The CLI run renders the fix prompt from the ``rebase`` binding."""
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION), _checked()]
+
+    assert _run(tmp_path).exit_code == 0
+    patched.permissions.assert_called_once_with(tmp_path, "claude", "rebase")
+
+
+def test_fix_turns_get_bash_grants_conflict_turns_do_not(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Only regression-fix turns carry the toolkit's ``Bash(...)`` grants."""
+    _start_conflict_loop(patched)
+    patched.blob_info.return_value = _blob_info("src/a.py")
+    patched.has_markers.side_effect = [True, False]
+    patched.permissions.return_value = ["mcp__tools__x", "Bash(npm run lint)"]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION), _checked()]
+
+    assert _run(tmp_path).exit_code == 0
+
+    calls = {c.kwargs["step_name"]: c.kwargs for c in patched.prompt.call_args_list}
+    assert set(calls) == {"conflict_1", "conflict_1_retry", "fix_1"}
+    assert calls["fix_1"]["bash_grants"] == ["Bash(npm run lint)"]
+    assert calls["conflict_1"].get("bash_grants") is None
+    assert calls["conflict_1_retry"].get("bash_grants") is None
+
+
+def test_second_fix_prompt_uses_recheck_fix_text(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Attempt 2 inlines the output of the re-check after attempt 1."""
+    fix_prompt = MagicMock(return_value="FIX:")
+    monkeypatch.setattr(rebase_module, "_build_regression_fix_prompt", fix_prompt)
+    other: set[FailureKey] = {"check: src/m.py|arg-type|bad"}
+    patched.all_checks.side_effect = [
+        _checked(),
+        (set(_REGRESSION), {"test": "FIRST OUTPUT"}),
+        (other, {"check": "SECOND OUTPUT"}),
+        _checked(),
+    ]
+
+    assert _run(tmp_path).exit_code == 0
+
+    first, second = (c.args[0] for c in fix_prompt.call_args_list)
+    assert first["fix_text"] == "FIRST OUTPUT"
+    assert second["fix_text"] == "SECOND OUTPUT"
+    assert second["regression_output"] == "check: src/m.py|arg-type|bad"
 
 
 def test_not_automated_runs_rebase_binding(

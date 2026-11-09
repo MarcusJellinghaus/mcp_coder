@@ -6,11 +6,18 @@ conflict prompt's strategy rows in sync with the packaged ``SKILL.md``, plus a
 guard that the legacy ``Automated Rebase`` section stays removed.
 """
 
+from collections.abc import Iterator
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.data_files import find_data_file
+from mcp_coder.utils.toolkit_runner import llm_permissions
+from mcp_coder.workflows.rebase import _build_regression_fix_prompt, _check_tool_texts
 
 _CONFLICT_HEADER = "Rebase Conflict Resolution"
 _REGRESSION_HEADER = "Rebase Regression Fix"
@@ -93,28 +100,103 @@ def test_conflict_resolution_prompt_has_no_shell_or_markers() -> None:
 
 
 def test_regression_fix_prompt_loads() -> None:
-    """Regression prompt is retrievable, has its placeholder and the git tool."""
+    """Regression prompt is retrievable, has its placeholders and the git tool."""
     prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
     assert prompt.strip()
-    assert "[regression_output]" in prompt
-    assert "[pytest_marker_filter]" in prompt
+    for placeholder in (
+        "[check_tools]",
+        "[pytest_marker_filter]",
+        "[regression_output]",
+        "[fix_text]",
+        "[shell_ban]",
+    ):
+        assert placeholder in prompt
     assert "mcp__mcp-workspace__git" in prompt
 
 
-def test_regression_fix_prompt_rerequests_check_detail() -> None:
-    """Regression prompt tells the LLM to re-run the MCP check tools for detail."""
-    prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
+_COMMAND_CONFIG = """\
+[tool.mcp-coder.toolkit]
+toolkit = "command"
+
+[tool.mcp-coder.toolkit.command]
+{extra}check.standard = [{{ argv = ["npm", "run", "lint"], name = "lint" }}]
+test.standard = [{{ argv = ["npm", "test"], name = "unit" }}]
+"""
+
+
+def _render(permissions: list[str]) -> str:
+    """Render the regression-fix prompt the way ``run_rebase_workflow`` does."""
+    check_tools, shell_ban = _check_tool_texts(permissions)
+    return _build_regression_fix_prompt(
+        {
+            "check_tools": check_tools,
+            "regression_output": "test: unit",
+            "fix_text": "FIX OUTPUT: 1 failed",
+            "shell_ban": shell_ban,
+        }
+    )
+
+
+def _command_project(tmp_path: Path, extra: str = "") -> Path:
+    (tmp_path / "mcp-coder.toml").write_text(
+        _COMMAND_CONFIG.format(extra=extra), encoding="utf-8"
+    )
+    return tmp_path
+
+
+@pytest.fixture
+def command_toolkit() -> Iterator[None]:
+    """Resolve the toolkit to ``CommandToolkit`` (the autouse fixture says Python)."""
+    with patch(
+        "mcp_coder.utils.toolkit_runner._toolkit_class", lambda _name: CommandToolkit
+    ):
+        yield
+
+
+def test_rendered_prompt_python_toolkit(tmp_path: Path) -> None:
+    """``PythonToolkit``: the MCP check tools are named; shell stays banned."""
+    prompt = _render(llm_permissions(tmp_path, "claude", "rebase"))
     for tool in (
         "mcp__mcp-tools-py__run_pytest_check",
         "mcp__mcp-tools-py__run_pylint_check",
         "mcp__mcp-tools-py__run_mypy_check",
     ):
         assert tool in prompt
+    assert "no shell commands of any kind" in prompt
+    assert "Bash" not in prompt
 
 
-def test_regression_fix_prompt_has_no_shell_or_markers() -> None:
-    """Regression prompt never instructs shell git or outcome markers."""
-    prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
+@pytest.mark.usefixtures("command_toolkit")
+def test_rendered_prompt_command_toolkit_claude(tmp_path: Path) -> None:
+    """``command`` under Claude: the granted commands, no shell ban."""
+    perms = llm_permissions(_command_project(tmp_path), "claude", "rebase")
+    prompt = _render(perms)
+    assert "`npm run lint`" in prompt
+    assert "`npm test`" in prompt
+    assert "no shell commands" not in prompt
+    assert "mcp__mcp-tools-py__" not in prompt
+
+
+@pytest.mark.usefixtures("command_toolkit")
+@pytest.mark.parametrize(
+    ("extra", "provider"),
+    [('llm_permissions = "none"\n', "claude"), ("", "copilot")],
+)
+def test_rendered_prompt_without_permissions(
+    tmp_path: Path, extra: str, provider: str
+) -> None:
+    """No grants (``"none"`` or non-Claude): use the output; shell stays banned."""
+    perms = llm_permissions(_command_project(tmp_path, extra), provider, "rebase")
+    assert not perms
+    prompt = _render(perms)
+    assert "You cannot re-run the checks; use the output below." in prompt
+    assert "no shell commands of any kind" in prompt
+
+
+def test_rendered_prompt_inlines_fix_text_without_markers() -> None:
+    """The check output is inlined; no outcome markers or shell git."""
+    prompt = _render([])
+    assert "FIX OUTPUT: 1 failed" in prompt
+    assert "[fix_text]" not in prompt
     assert "REBASE_OUTCOME" not in prompt
     assert "git rebase" not in prompt
-    assert "Bash" not in prompt

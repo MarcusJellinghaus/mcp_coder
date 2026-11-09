@@ -58,9 +58,7 @@ def command_toolkit_only() -> Generator[MagicMock, None, None]:
             "mcp_coder.utils.toolkit_runner._toolkit_class",
             lambda _name: CommandToolkit,
         ),
-        patch.multiple(
-            mcp_tools_py, **{name: forbidden for name in mcp_tools_py.__all__}
-        ),
+        patch.multiple(mcp_tools_py, **dict.fromkeys(mcp_tools_py.__all__, forbidden)),
     ):
         yield forbidden
     forbidden.assert_not_called()

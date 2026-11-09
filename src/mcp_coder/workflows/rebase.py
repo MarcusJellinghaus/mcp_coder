@@ -11,7 +11,9 @@ self-reports an outcome.
 """
 
 import logging
+import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,7 +47,12 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.utils.toolkit_runner import get_fragment, load_toolkit
+from mcp_coder.utils.toolkit_runner import (
+    bash_grants_of,
+    get_fragment,
+    llm_permissions,
+    load_toolkit,
+)
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import (
@@ -253,6 +260,9 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
 
 _CONFLICT_PROMPT_HEADER = "Rebase Conflict Resolution"
 _REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
+_REGRESSION_PLACEHOLDERS = re.compile(
+    r"\[(check_tools|pytest_marker_filter|regression_output|fix_text|shell_ban)\]"
+)
 
 _ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
 
@@ -279,13 +289,15 @@ def _prompt_in_session(
     mcp_config: str | None,
     settings_file: str | None,
     step_name: str,
+    bash_grants: Sequence[str] | None = None,
 ) -> tuple[str, str | None]:
     """Send one prompt in the resumable rebase LLM session.
 
     Issues a single ``prompt_llm`` call (``session_id=None`` starts the
     session; a previous id resumes it), then best-effort persists the exchange
     under ``.mcp-coder/rebase_sessions``. LLM errors/timeouts propagate to the
-    orchestrator, which maps them to a needs-human exit.
+    orchestrator, which maps them to a needs-human exit. ``bash_grants`` are
+    passed on regression-fix turns only.
 
     Returns:
         ``(response_text, new_session_id)`` — the caller threads the session
@@ -306,6 +318,7 @@ def _prompt_in_session(
         mcp_config=mcp_config,
         settings_file=settings_file,
         branch_name=branch_name,
+        bash_grants=bash_grants,
     )
     try:
         store_session(
@@ -352,30 +365,71 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
     return template.replace("[conflict_context]", "\n\n".join(blocks))
 
 
-def _marker_filter_text(project_dir: Path, automated: bool) -> str:
+def _marker_filter_text(
+    project_dir: Path, automated: bool, permissions: Sequence[str]
+) -> str:
     """Return the toolkit's unattended test-filter instruction for the fix prompt.
 
+    ``permissions`` are the fix session's permissions for the
+    ``rebase_automated`` binding. When the toolkit declares ``Bash(`` grants
+    for it but ``permissions`` has none, the provider dropped them and the
+    LLM cannot run the filtered commands, so no instruction is given.
+
     Returns:
-        ``""`` when not automated; otherwise the toolkit's
-        ``check_instructions.unattended`` fragment (``""`` if it has none).
+        ``""`` when not automated or when the Bash grants were dropped;
+        otherwise the toolkit's ``check_instructions.unattended`` fragment
+        (``""`` if it has none).
     """
     if not automated:
+        return ""
+    if not bash_grants_of(permissions) and bash_grants_of(
+        llm_permissions(project_dir, "claude", "rebase_automated")
+    ):
         return ""
     return get_fragment(load_toolkit(project_dir), "check_instructions.unattended")
 
 
-def _build_regression_fix_prompt(regression_text: str, filter_text: str = "") -> str:
-    """Build the regression-fix prompt with the failure-key text inlined.
+def _check_tool_texts(permissions: Sequence[str]) -> tuple[str, str]:
+    """Render the check-tool sentence and the shell ban from the permissions.
 
-    ``filter_text`` tells the LLM to filter its test runs the way the
-    deterministic checks did; empty removes the placeholder.
+    Returns:
+        ``(check sentence, shell ban)``; the ban is ``""`` when Bash grants
+        are present, else ``"no shell commands of any kind; "``.
+    """
+    bash = bash_grants_of(permissions)
+    mcp = [p for p in permissions if p not in bash]
+    parts: list[str] = []
+    if mcp:
+        tools = ", ".join(f"`{p}`" for p in mcp)
+        parts.append(
+            f"Before editing anything, re-run the granted MCP check tools ({tools}) "
+            "to get the full failure detail."
+        )
+    if bash:
+        commands = ", ".join(f"`{g[len('Bash(') : -1]}`" for g in bash)
+        parts.append(
+            "Before editing anything, re-run the granted check commands, exactly "
+            f"as written: {commands}."
+        )
+    if not parts:
+        parts.append("You cannot re-run the checks; use the output below.")
+    ban = "" if bash else "no shell commands of any kind; "
+    return " ".join(parts), ban
+
+
+def _build_regression_fix_prompt(replacements: dict[str, str]) -> str:
+    """Build the regression-fix prompt by filling its placeholders.
+
+    ``replacements`` maps placeholder names without brackets (e.g.
+    ``"regression_output"``) to their text; a missing name renders as ``""``.
+    One pass, so inlined check output is never substituted again.
 
     Returns:
         The assembled regression-fix prompt string.
     """
     template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
-    return template.replace("[regression_output]", regression_text).replace(
-        "[pytest_marker_filter]", filter_text
+    return _REGRESSION_PLACEHOLDERS.sub(
+        lambda match: replacements.get(match.group(1), ""), template
     )
 
 
@@ -621,7 +675,10 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        keys, _ = _run_all_checks(project_dir, automated)
+        entry = "rebase_automated" if automated else "rebase"
+        perms = llm_permissions(project_dir, provider, entry)
+        check_tools, shell_ban = _check_tool_texts(perms)
+        keys, fix_texts = _run_all_checks(project_dir, automated)
         regressions = keys - baseline
         attempt = 0
         last_text: str | None = None
@@ -638,10 +695,22 @@ def run_rebase_workflow(
                 attempt,
                 _MAX_FIX_ATTEMPTS,
             )
+            actions = sorted({key.split(": ", 1)[0] for key in regressions})
+            prompt = _build_regression_fix_prompt(
+                {
+                    "check_tools": check_tools,
+                    "pytest_marker_filter": _marker_filter_text(
+                        project_dir, automated, perms
+                    ),
+                    "regression_output": text,
+                    "fix_text": "\n\n".join(
+                        fix_texts[a] for a in actions if fix_texts.get(a)
+                    ),
+                    "shell_ban": shell_ban,
+                }
+            )
             _, session_id = _prompt_in_session(
-                _build_regression_fix_prompt(
-                    text, _marker_filter_text(project_dir, automated)
-                ),
+                prompt,
                 session_id,
                 project_dir=project_dir,
                 provider=provider,
@@ -649,6 +718,7 @@ def run_rebase_workflow(
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 step_name=f"fix_{attempt}",
+                bash_grants=bash_grants_of(perms),
             )
             run_formatters(project_dir)
             # Result ignored: nothing to commit is harmless (re-check runs anyway;
@@ -656,7 +726,7 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            keys, _ = _run_all_checks(project_dir, automated)
+            keys, fix_texts = _run_all_checks(project_dir, automated)
             regressions = keys - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)

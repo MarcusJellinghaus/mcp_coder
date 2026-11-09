@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 7: Rebase toolkit-filled regression prompt and fix-turn grants — [step_7.md](./steps/step_7.md)
-- [ ] Implementation: "Rebase Regression Fix" prompt placeholders, `_check_tool_texts`, `_build_regression_fix_prompt`, `_marker_filter_text`, fix-turn `bash_grants`, `rebase_permissions.py` docstring, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: "Rebase Regression Fix" prompt placeholders, `_check_tool_texts`, `_build_regression_fix_prompt`, `_marker_filter_text`, fix-turn `bash_grants`, `rebase_permissions.py` docstring, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: `mcp-coder verify` gating — [step_8.md](./steps/step_8.md)
 - [ ] Implementation: `_toolkit_rows` format gating, `_uses_mcp_tools_py`, Formatter row only for `mcp-tools-py`, tests
