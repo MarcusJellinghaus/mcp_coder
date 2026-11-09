@@ -11,7 +11,7 @@
 - *What it does* — one sentence.
 - *Why MCP doesn't* — which tool you'd have used, and what stops it.
 
-If you can't name the gap, use the MCP tool. Exempt: the approved git/gh commands under Git operations.
+If you can't name the gap, use the MCP tool. Exempt: the approved commands under Git operations.
 
 **No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`.
 
@@ -49,12 +49,17 @@ If you can't name the gap, use the MCP tool. Exempt: the approved git/gh command
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | `mcp__mcp-workspace__git` |
-| `gh issue view` | `mcp__mcp-workspace__github_issue_view` |
-| `gh issue list` | `mcp__mcp-workspace__github_issue_list` |
-| `gh pr view` | `mcp__mcp-workspace__github_pr_view` |
-| `gh search` | `mcp__mcp-workspace__github_search` |
+| View GitHub issue | `mcp__mcp-workspace__github_issue_view` |
+| List GitHub issues | `mcp__mcp-workspace__github_issue_list` |
+| View GitHub PR | `mcp__mcp-workspace__github_pr_view` |
+| Search GitHub issues/PRs | `mcp__mcp-workspace__github_search` |
+| Create GitHub issue | `mcp__mcp-workspace__github_issue_create` |
+| Edit GitHub issue | `mcp__mcp-workspace__github_issue_edit` |
+| Comment on GitHub issue | `mcp__mcp-workspace__github_issue_comment` |
+| Create GitHub PR | `mcp__mcp-workspace__github_pr_create` |
+| List GitHub labels | `mcp__mcp-workspace__github_label_list` |
 
-Sibling repos are readable in full via the reference tools and `git` with `reference_name` (`get_reference_projects` lists them). Check there before asking about another repo.
+Sibling repos are readable in full via the reference tools and `git` with `reference_name` (`get_reference_projects` lists them). Check there before asking about another repo. The GitHub issue/PR read tools and the issue write tools also take `reference_name` for reference projects. That is the only cross-repo route; for repos that aren't reference projects, stop and report.
 
 ## Code quality checks
 
@@ -103,17 +108,12 @@ Never use `python -c` via Bash. If you reason instead of running, label the conc
 
 ```
 git commit / add / rebase / push / checkout -b / branch
-gh issue create / edit / comment (labels only via set-status)
-gh issue view (cross-repo only — otherwise use the MCP tool)
-gh pr create
 mcp-coder gh-tool set-status <label>
 ```
 
-**Status labels:** use `mcp-coder gh-tool set-status` to change issue workflow status — never use raw `gh issue edit` with label flags.
+**Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp-coder gh-tool set-status` to change issue workflow status.
 
-**Slash-prefixed `gh` arguments:** prefix with `MSYS_NO_PATHCONV=1` — Git Bash rewrites a leading `/` into a Windows path.
-
-**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts these commands normally trigger. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside them. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts these commands and the MCP issue write tools normally trigger. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `commit-pusher` and `issue-approver`; `issue-updater` has no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
