@@ -12,6 +12,7 @@ self-reports an outcome.
 
 import logging
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,7 +46,7 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.utils.toolkit_runner import get_fragment, load_toolkit
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import (
@@ -61,6 +62,11 @@ from mcp_coder.workflows.rebase_checks import (
     CheckRunError,
     FailureKey,
     _run_all_checks,
+)
+from mcp_coder.workflows.rebase_prompt import (
+    _build_regression_fix_prompt,
+    _check_tool_texts,
+    _marker_filter_text,
 )
 
 logger = logging.getLogger(__name__)
@@ -252,7 +258,6 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
 # --- LLM steps ---
 
 _CONFLICT_PROMPT_HEADER = "Rebase Conflict Resolution"
-_REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
 
 _ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
 
@@ -279,13 +284,15 @@ def _prompt_in_session(
     mcp_config: str | None,
     settings_file: str | None,
     step_name: str,
+    bash_grants: Sequence[str] | None = None,
 ) -> tuple[str, str | None]:
     """Send one prompt in the resumable rebase LLM session.
 
     Issues a single ``prompt_llm`` call (``session_id=None`` starts the
     session; a previous id resumes it), then best-effort persists the exchange
     under ``.mcp-coder/rebase_sessions``. LLM errors/timeouts propagate to the
-    orchestrator, which maps them to a needs-human exit.
+    orchestrator, which maps them to a needs-human exit. ``bash_grants`` are
+    passed on regression-fix turns only.
 
     Returns:
         ``(response_text, new_session_id)`` — the caller threads the session
@@ -306,6 +313,7 @@ def _prompt_in_session(
         mcp_config=mcp_config,
         settings_file=settings_file,
         branch_name=branch_name,
+        bash_grants=bash_grants,
     )
     try:
         store_session(
@@ -350,33 +358,6 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
         blocks.append("\n\n".join(parts))
     template = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_PROMPT_HEADER)
     return template.replace("[conflict_context]", "\n\n".join(blocks))
-
-
-def _marker_filter_text(project_dir: Path, automated: bool) -> str:
-    """Return the toolkit's unattended test-filter instruction for the fix prompt.
-
-    Returns:
-        ``""`` when not automated; otherwise the toolkit's
-        ``check_instructions.unattended`` fragment (``""`` if it has none).
-    """
-    if not automated:
-        return ""
-    return get_fragment(load_toolkit(project_dir), "check_instructions.unattended")
-
-
-def _build_regression_fix_prompt(regression_text: str, filter_text: str = "") -> str:
-    """Build the regression-fix prompt with the failure-key text inlined.
-
-    ``filter_text`` tells the LLM to filter its test runs the way the
-    deterministic checks did; empty removes the placeholder.
-
-    Returns:
-        The assembled regression-fix prompt string.
-    """
-    template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
-    return template.replace("[regression_output]", regression_text).replace(
-        "[pytest_marker_filter]", filter_text
-    )
 
 
 def _format_failure_keys(keys: set[FailureKey]) -> str:
@@ -511,7 +492,7 @@ def run_rebase_workflow(
 
     logger.log(OUTPUT, "Running baseline checks...")
     try:
-        baseline = _run_all_checks(project_dir, automated)
+        baseline, _ = _run_all_checks(project_dir, automated)
     except CheckRunError as exc:
         # No git mutation has happened yet — plain infrastructure error.
         return _end(2, f"Baseline checks failed to run: {exc}")
@@ -621,15 +602,23 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        regressions = _run_all_checks(project_dir, automated) - baseline
+        keys, fix_texts = _run_all_checks(project_dir, automated)
+        regressions = keys - baseline
         attempt = 0
         last_text: str | None = None
+        # Loaded on the first fix turn only, so a clean rebase logs no
+        # dropped-grants warning.
+        perms: list[str] | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
             text = _format_failure_keys(regressions)
             if text == last_text:
                 break  # stall guard: the LLM changed nothing observable
             last_text = text
             attempt += 1
+            if perms is None:
+                entry = "rebase_automated" if automated else "rebase"
+                perms = llm_permissions(project_dir, provider, entry)
+            check_tools, shell_ban = _check_tool_texts(perms)
             logger.log(
                 OUTPUT,
                 "Fixing %d regression(s) (attempt %d/%d)...",
@@ -637,10 +626,22 @@ def run_rebase_workflow(
                 attempt,
                 _MAX_FIX_ATTEMPTS,
             )
+            actions = sorted({key.split(": ", 1)[0] for key in regressions})
+            prompt = _build_regression_fix_prompt(
+                {
+                    "check_tools": check_tools,
+                    "pytest_marker_filter": _marker_filter_text(
+                        project_dir, automated, perms
+                    ),
+                    "regression_output": text,
+                    "fix_text": "\n\n".join(
+                        fix_texts[a] for a in actions if fix_texts.get(a)
+                    ),
+                    "shell_ban": shell_ban,
+                }
+            )
             _, session_id = _prompt_in_session(
-                _build_regression_fix_prompt(
-                    text, _marker_filter_text(project_dir, automated)
-                ),
+                prompt,
                 session_id,
                 project_dir=project_dir,
                 provider=provider,
@@ -648,6 +649,7 @@ def run_rebase_workflow(
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 step_name=f"fix_{attempt}",
+                bash_grants=bash_grants_of(perms),
             )
             run_formatters(project_dir)
             # Result ignored: nothing to commit is harmless (re-check runs anyway;
@@ -655,7 +657,8 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            regressions = _run_all_checks(project_dir, automated) - baseline
+            keys, fix_texts = _run_all_checks(project_dir, automated)
+            regressions = keys - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)
             return _end(1, f"{len(regressions)} unfixed regression(s){note}")

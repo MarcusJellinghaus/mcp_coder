@@ -31,6 +31,7 @@ from tests.workflows.rebase.conftest import (
     _REGRESSION,
     _STOPPED,
     _blob_info,
+    _checked,
     _run,
     _start_conflict_loop,
 )
@@ -183,7 +184,7 @@ def test_pre_existing_baseline_failures_do_not_block(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """Identical failures before and after the rebase are not regressions."""
-    patched.all_checks.side_effect = [set(_REGRESSION), set(_REGRESSION)]
+    patched.all_checks.side_effect = [_checked(*_REGRESSION), _checked(*_REGRESSION)]
 
     assert _run(tmp_path).exit_code == 0
     patched.prompt.assert_not_called()

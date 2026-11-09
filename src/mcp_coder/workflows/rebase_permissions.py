@@ -6,10 +6,13 @@ session needs: the MCP check/file tools and the read-only git tool from
 ``settings.local.json`` permission-string format.
 
 Deliberately narrower than SKILL.md:
-- **no ``Bash(...)`` grants** — non-interactive LLM sessions load no Bash tool
-  (the Claude CLI provider hardcodes ``--tools ToolSearch``), so shell grants
-  would be dead entries. All git writes are performed by the surrounding Python
-  program; the LLM reads git state via ``mcp__mcp-workspace__git`` only.
+- **no ``Bash(...)`` grants in this dict** — regression-fix turns get the
+  toolkit's exact ``Bash(...)`` grants via ``--allowedTools``
+  (``llm_permissions``), which also applies when a ``--settings`` override
+  replaces this dict; conflict turns get none. All git writes are performed by
+  the surrounding Python program; the LLM reads git state via
+  ``mcp__mcp-workspace__git`` only. ``REBASE_LLM_PERMISSIONS`` itself is
+  unchanged (#1197).
 - **no ``push``** — Python performs the final ``--force-with-lease`` push, so the
   LLM never needs a push grant (see summary.md, "Python executes the force-push").
 - **no ``uv lock``** — lockfile handling is out of scope for this repo (no tracked

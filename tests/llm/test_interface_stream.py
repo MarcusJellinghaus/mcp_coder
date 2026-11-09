@@ -61,6 +61,7 @@ class TestPromptLlmStream:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert len(events) == 2
         assert events[0]["type"] == "text_delta"
@@ -188,6 +189,7 @@ class TestPromptLlmStream:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
 
 
@@ -280,5 +282,6 @@ class TestPromptLlmStreamToolsParam:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert len(events) == 2

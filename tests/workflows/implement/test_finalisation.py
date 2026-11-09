@@ -484,3 +484,36 @@ class TestFinalisationBlockedMarkerCleanup:
         prompt = call_args[0][0] if call_args[0] else call_args[1].get("question", "")
         assert "pr_info/.commit_message.txt" in prompt
         assert "pr_info/pr_info" not in prompt
+
+
+class TestRunFinalisationBashGrants:
+    """run_finalisation passes the toolkit's Bash grants to the LLM."""
+
+    @patch("mcp_coder.workflows.implement.finalisation.get_full_status")
+    @patch("mcp_coder.workflows.implement.finalisation.store_session")
+    @patch("mcp_coder.workflows.implement.finalisation.prompt_llm")
+    @patch("mcp_coder.workflows.implement.finalisation.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.finalisation.has_incomplete_work")
+    @patch(
+        "mcp_coder.workflows.implement.finalisation.llm_permissions",
+        return_value=["Bash(npm run lint)", "mcp__x__y"],
+    )
+    def test_passes_bash_grants(
+        self,
+        mock_perms: MagicMock,
+        mock_has_incomplete: MagicMock,
+        _mock_prepare_env: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Only the Bash entries reach prompt_llm."""
+        mock_has_incomplete.return_value = True
+        mock_prompt_llm.return_value = _make_llm_response("done")
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+
+        run_finalisation(tmp_path, "claude")
+
+        mock_perms.assert_called_once_with(tmp_path, "claude")
+        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm run lint)"]

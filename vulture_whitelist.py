@@ -261,6 +261,15 @@ _.base_is_main
 # workflows/create_pr/test_post_creation.py - Autouse fixture method, never requested by name
 _.branch_moved
 
+# utils/test_toolkit_permissions.py - Fixture registered under alias name="perm_project"
+_._perm_project
+
+# workflows/rebase/test_command_toolkit_binding.py - Autouse fixture, never requested by name
+_.command_toolkit_only
+
+# workflows/rebase/test_prompt.py - Only activated via @pytest.mark.usefixtures string
+_.command_toolkit
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================

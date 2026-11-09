@@ -20,6 +20,7 @@ from tests.workflows.rebase.conftest import (
     _REAL_SUCCESS_SHAPE,
     _REGRESSION,
     _blob_info,
+    _checked,
     _run,
     _start_conflict_loop,
 )
@@ -63,7 +64,7 @@ def test_unknown_rebase_state_in_except_skips_reset_and_abort(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """``is_rebase_in_progress`` raising in except/finally: exit 1, no reset/abort."""
-    patched.all_checks.side_effect = [set(), set(_REGRESSION)]
+    patched.all_checks.side_effect = [_checked(), _checked(*_REGRESSION)]
     patched.prompt.side_effect = LLMTimeoutError("no output for 600s")
     patched.mid_rebase.side_effect = ValueError("not a git repository")
 

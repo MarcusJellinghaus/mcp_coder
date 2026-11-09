@@ -80,7 +80,7 @@ def test_both_checks_pass_pushes(patched: SimpleNamespace, tmp_path: Path) -> No
 @pytest.fixture
 def all_checks(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Stub everything but git around the workflow; return the checks stub."""
-    checks = MagicMock(return_value=set())
+    checks = MagicMock(return_value=(set(), {}))
     monkeypatch.setattr(rebase_module, "_preflight", lambda _pd: None)
     monkeypatch.setattr(
         rebase_module, "_resolve_base_branch", lambda _pd, _arg: ("main", None)
@@ -119,11 +119,11 @@ class TestRealGit:
 
         def foreign_push_on_second_call(
             _project_dir: Path, _automated: bool
-        ) -> set[object]:
+        ) -> tuple[set[object], dict[str, str]]:
             if all_checks.call_count == 2:
                 pushed.append(bare_remote.push_foreign("foreign1"))
                 bare_remote.local.git.fetch("origin")
-            return set()
+            return set(), {}
 
         all_checks.side_effect = foreign_push_on_second_call
 

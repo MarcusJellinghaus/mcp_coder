@@ -15,12 +15,15 @@ import pytest
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflows.rebase import (
     _build_conflict_prompt,
-    _build_regression_fix_prompt,
     _format_failure_keys,
-    _marker_filter_text,
     _prompt_in_session,
 )
 from mcp_coder.workflows.rebase_checks import FailureKey
+from mcp_coder.workflows.rebase_prompt import (
+    _build_regression_fix_prompt,
+    _check_tool_texts,
+    _marker_filter_text,
+)
 
 _ABSENT_NOTE = "(absent — file does not exist on this side)"
 
@@ -84,6 +87,34 @@ class TestPromptInSession:
         assert kwargs["env_vars"] == {"KEY": "value"}
         assert kwargs["mcp_config"] == "mcp.json"
         assert kwargs["branch_name"] == "feature-branch"
+
+    def test_bash_grants_default_none_and_forwarded(self, tmp_path: Path) -> None:
+        """No grants by default; given grants reach prompt_llm unchanged."""
+        _, mock_prompt, _ = _call_prompt_in_session(tmp_path)
+        assert mock_prompt.call_args.kwargs["bash_grants"] is None
+
+        with (
+            patch(
+                "mcp_coder.workflows.rebase.prompt_llm", return_value=_response()
+            ) as granted,
+            patch("mcp_coder.workflows.rebase.store_session"),
+            patch(
+                "mcp_coder.workflows.rebase.get_branch_name_for_logging",
+                return_value="b",
+            ),
+        ):
+            _prompt_in_session(
+                "fix it",
+                None,
+                project_dir=tmp_path,
+                provider="claude",
+                env_vars={},
+                mcp_config=None,
+                settings_file=None,
+                step_name="fix_1",
+                bash_grants=["Bash(npm test)"],
+            )
+        assert granted.call_args.kwargs["bash_grants"] == ["Bash(npm test)"]
 
     def test_resume_passes_given_session_id(self, tmp_path: Path) -> None:
         """A resume threads the provided session id into prompt_llm."""
@@ -194,27 +225,61 @@ class TestBuildConflictPrompt:
 
 
 class TestBuildRegressionFixPrompt:
-    """Regression prompt: placeholder replaced with the given failure text."""
+    """Regression prompt: placeholders replaced with the given texts."""
+
+    _KEY = "test: tests/test_x.py::test_new"
 
     def test_placeholder_replaced_with_text(self) -> None:
         """[regression_output] is fully replaced by the regression text."""
-        prompt = _build_regression_fix_prompt("test: tests/test_x.py::test_new")
-        assert "test: tests/test_x.py::test_new" in prompt
+        prompt = _build_regression_fix_prompt({"regression_output": self._KEY})
+        assert self._KEY in prompt
         assert "[regression_output]" not in prompt
 
     def test_filter_text_replaces_placeholder(self) -> None:
         """The filter text takes the placeholder's place."""
         prompt = _build_regression_fix_prompt(
-            "test: tests/test_x.py::test_new", "FILTER"
+            {"regression_output": self._KEY, "pytest_marker_filter": "FILTER"}
         )
         assert "[pytest_marker_filter]" not in prompt
         assert "FILTER" in prompt
 
-    def test_no_filter_text_removes_placeholder(self) -> None:
-        """Without filter text, neither the placeholder nor any filter remains."""
-        prompt = _build_regression_fix_prompt("test: tests/test_x.py::test_new")
-        assert "[pytest_marker_filter]" not in prompt
+    def test_missing_names_remove_placeholders(self) -> None:
+        """Placeholders without a replacement render as empty text."""
+        prompt = _build_regression_fix_prompt({"regression_output": self._KEY})
+        for name in ("check_tools", "pytest_marker_filter", "fix_text", "shell_ban"):
+            assert f"[{name}]" not in prompt
         assert "markers=" not in prompt
+
+    def test_inlined_output_is_not_substituted_again(self) -> None:
+        """A placeholder-like string inside the check output stays verbatim."""
+        prompt = _build_regression_fix_prompt(
+            {"fix_text": "log mentions [shell_ban]", "shell_ban": "BAN; "}
+        )
+        assert "log mentions [shell_ban]" in prompt
+        assert "**Prohibited:** BAN; no staging" in prompt
+
+
+class TestCheckToolTexts:
+    """The check-tool sentence and shell ban follow the permissions."""
+
+    def test_mcp_tools_only(self) -> None:
+        """MCP tools are named; the shell ban stays."""
+        sentence, ban = _check_tool_texts(["mcp__a", "mcp__b"])
+        assert "granted MCP check tools (`mcp__a`, `mcp__b`)" in sentence
+        assert ban == "no shell commands of any kind; "
+
+    def test_bash_grants_listed_as_commands(self) -> None:
+        """Bash grants render as the exact commands; no shell ban."""
+        sentence, ban = _check_tool_texts(["Bash(npm run lint)", "Bash(npm test)"])
+        assert "exactly as written: `npm run lint`, `npm test`." in sentence
+        assert "MCP" not in sentence
+        assert ban == ""
+
+    def test_no_permissions(self) -> None:
+        """Nothing granted: use the inlined output; the shell ban stays."""
+        sentence, ban = _check_tool_texts([])
+        assert sentence == "You cannot re-run the checks; use the output below."
+        assert ban == "no shell commands of any kind; "
 
 
 class TestMarkerFilterText:
@@ -222,8 +287,8 @@ class TestMarkerFilterText:
 
     def test_not_automated_is_empty(self, tmp_path: Path) -> None:
         """Interactive runs add no filter text and never load the toolkit."""
-        with patch("mcp_coder.workflows.rebase.load_toolkit") as mock_load:
-            assert _marker_filter_text(tmp_path, False) == ""
+        with patch("mcp_coder.workflows.rebase_prompt.load_toolkit") as mock_load:
+            assert _marker_filter_text(tmp_path, False, []) == ""
         mock_load.assert_not_called()
 
     def test_automated_returns_unattended_fragment(self, tmp_path: Path) -> None:
@@ -231,15 +296,48 @@ class TestMarkerFilterText:
         loaded = MagicMock()
         with (
             patch(
-                "mcp_coder.workflows.rebase.load_toolkit", return_value=loaded
+                "mcp_coder.workflows.rebase_prompt.llm_permissions",
+                return_value=["mcp"],
+            ),
+            patch(
+                "mcp_coder.workflows.rebase_prompt.load_toolkit", return_value=loaded
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.rebase.get_fragment", return_value="FRAGMENT"
+                "mcp_coder.workflows.rebase_prompt.get_fragment",
+                return_value="FRAGMENT",
             ) as mock_fragment,
         ):
-            assert _marker_filter_text(tmp_path, True) == "FRAGMENT"
+            assert _marker_filter_text(tmp_path, True, ["mcp"]) == "FRAGMENT"
         mock_load.assert_called_once_with(tmp_path)
         mock_fragment.assert_called_once_with(loaded, "check_instructions.unattended")
+
+    def test_automated_with_bash_grants_returns_fragment(self, tmp_path: Path) -> None:
+        """Granted Bash commands keep the filter instruction."""
+        grants = ["Bash(npm test)"]
+        with (
+            patch(
+                "mcp_coder.workflows.rebase_prompt.llm_permissions", return_value=grants
+            ),
+            patch("mcp_coder.workflows.rebase_prompt.load_toolkit"),
+            patch(
+                "mcp_coder.workflows.rebase_prompt.get_fragment",
+                return_value="FRAGMENT",
+            ),
+        ):
+            assert _marker_filter_text(tmp_path, True, grants) == "FRAGMENT"
+
+    def test_dropped_bash_grants_are_empty(self, tmp_path: Path) -> None:
+        """Copilot: the toolkit declares Bash grants but the session has none."""
+        with (
+            patch(
+                "mcp_coder.workflows.rebase_prompt.llm_permissions",
+                return_value=["Bash(npm test)"],
+            ) as mock_perms,
+            patch("mcp_coder.workflows.rebase_prompt.get_fragment") as mock_fragment,
+        ):
+            assert _marker_filter_text(tmp_path, True, []) == ""
+        mock_perms.assert_called_once_with(tmp_path, "claude", "rebase_automated")
+        mock_fragment.assert_not_called()
 
 
 class TestFormatFailureKeys:

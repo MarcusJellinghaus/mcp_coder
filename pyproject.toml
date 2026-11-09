@@ -121,6 +121,9 @@ dev = [
 [project.scripts]
 mcp-coder = "mcp_coder.cli.main:main"
 
+[project.entry-points."mcp_coder.toolkits"]
+command = "mcp_coder.toolkits.command:CommandToolkit"
+
 [project.urls]
 "Homepage" = "https://github.com/MarcusJellinghaus/mcp_coder"
 "Repository" = "https://github.com/MarcusJellinghaus/mcp_coder"

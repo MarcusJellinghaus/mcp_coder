@@ -4,14 +4,20 @@ from collections.abc import Generator
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import _format_row
-from mcp_coder.cli.commands.verify_sections import _print_project_section
+from mcp_coder.cli.commands.verify_sections import (
+    _print_project_section,
+    _toolkit_rows,
+    _uses_mcp_tools_py,
+)
+from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit import VerifyItem
+from mcp_coder.utils.toolkit_runner import verify_toolkit
 from tests.cli.commands.conftest import _make_args, _make_verify_mocks
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
@@ -244,6 +250,108 @@ class TestToolkitRows:
         assert _row(lines, "Toolkit") == _format_row(
             "Toolkit", "[OK]", "mcp-tools-py", indent=2
         )
+
+
+_COMMAND_TOML = (
+    '[tool.mcp-coder.toolkit]\ntoolkit = "command"\n'
+    "[tool.mcp-coder.toolkit.command.format]\n"
+    'apply = [{argv = ["fakenpm", "fmt"]}]\n'
+)
+
+
+@pytest.fixture
+def command_project(tmp_path: Path, fake_npm: Path) -> Generator[Path, None, None]:
+    """A ``command`` toolkit project with only ``mcp-coder.toml``, real verify."""
+    (fake_npm / "fmt.py").write_text("", encoding="utf-8")
+    (tmp_path / "mcp-coder.toml").write_text(_COMMAND_TOML, encoding="utf-8")
+    with (
+        patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: CommandToolkit,
+        ),
+        patch(_VERIFY_TOOLKIT, verify_toolkit),
+    ):
+        yield tmp_path
+
+
+class TestCommandToolkitGating:
+    """Formatter row and format verify only where they apply."""
+
+    def test_command_project_has_no_formatter_row(
+        self, command_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        ok = _print_project_section(command_project, _SYMBOLS)
+        lines = capsys.readouterr().out.splitlines()
+        assert ok is True
+        assert not any(line.strip().startswith("Formatter ") for line in lines)
+        assert not any("[ERR]" in line for line in lines)
+        assert _row(lines, "Toolkit") == _format_row(
+            "Toolkit", "[OK]", "command", indent=2
+        )
+
+    def test_empty_commit_binding_skips_verify(
+        self, command_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (command_project / "mcp-coder.toml").write_text(
+            _COMMAND_TOML.replace(
+                "[tool.mcp-coder.toolkit.command",
+                "[tool.mcp-coder.toolkit.bindings]\ncommit = []\n"
+                "[tool.mcp-coder.toolkit.command",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        mock_verify = MagicMock()
+        with patch(_VERIFY_TOOLKIT, mock_verify):
+            assert _toolkit_rows(command_project, _SYMBOLS) is True
+        mock_verify.assert_not_called()
+        assert "command" in _row(capsys.readouterr().out.splitlines(), "Toolkit")
+
+    def test_format_code_false_skips_verify(self, command_project: Path) -> None:
+        (command_project / "pyproject.toml").write_text(
+            "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+        )
+        mock_verify = MagicMock()
+        with patch(_VERIFY_TOOLKIT, mock_verify):
+            assert _toolkit_rows(command_project, _SYMBOLS) is True
+        mock_verify.assert_not_called()
+
+    def test_broken_command_config_is_error(
+        self, command_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (command_project / "mcp-coder.toml").write_text(
+            _COMMAND_TOML.replace(
+                "[tool.mcp-coder.toolkit.command.format]",
+                "[tool.mcp-coder.toolkit.command]\nbogus = 1\n"
+                "[tool.mcp-coder.toolkit.command.format]",
+            ),
+            encoding="utf-8",
+        )
+        assert _toolkit_rows(command_project, _SYMBOLS) is False
+        errors = [
+            line for line in capsys.readouterr().out.splitlines() if "[ERR]" in line
+        ]
+        assert any("unknown top-level key 'bogus'" in line for line in errors)
+        assert _print_project_section(command_project, _SYMBOLS) is False
+
+
+class TestUsesMcpToolsPy:
+    """_uses_mcp_tools_py reads the configured toolkit name."""
+
+    def test_no_config_is_default(self, tmp_path: Path) -> None:
+        assert _uses_mcp_tools_py(tmp_path) is True
+
+    def test_command_toolkit(self, tmp_path: Path) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.toolkit]\ntoolkit = "command"\n', encoding="utf-8"
+        )
+        assert _uses_mcp_tools_py(tmp_path) is False
+
+    def test_invalid_config(self, tmp_path: Path) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder.toolkit]\nbogus = 1\n", encoding="utf-8"
+        )
+        assert _uses_mcp_tools_py(tmp_path) is False
 
 
 class TestExecuteVerifyProjectExit:
