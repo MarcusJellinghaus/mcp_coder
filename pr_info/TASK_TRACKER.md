@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Replace `gh` in `.claude/` (skills, agents, CLAUDE.md)
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: precondition check, edit the seven `.claude/` files, run the verification searches
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Update `docs/repository-setup/` for the MCP-only agents
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: precondition check, edit `agent-permissions.md`, `README.md`, `claude-code.md`, run the verification searches
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch
+- [ ] PR summary prepared
