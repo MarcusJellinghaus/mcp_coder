@@ -27,7 +27,11 @@ DEFAULT_CHECK_INSTRUCTIONS = (
 
 
 def _defaults() -> dict[str, str]:
-    """Neutral slot values used when the toolkit supplies none."""
+    """Neutral slot values used when the toolkit supplies none.
+
+    Returns:
+        Mapping of each slot name to its neutral default value.
+    """
     return {
         "language_context": DEFAULT_LANGUAGE_CONTEXT,
         "check_instructions": DEFAULT_CHECK_INSTRUCTIONS,

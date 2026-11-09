@@ -562,3 +562,9 @@ _.fixture_mock_auto_merge
 _.fixture_read_sha
 _.fixture_read_status
 _.fixture_prompt_llm
+
+# tests/workflows/rebase/test_rebase_permissions.py - fixtures registered via
+# @pytest.fixture(name="python_perms") and name="command_perms", pulled in via
+# usefixtures and injected by pytest.
+_.fixture_python_perms
+_.fixture_command_perms
