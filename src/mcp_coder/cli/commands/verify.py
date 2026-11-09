@@ -96,18 +96,18 @@ def _run_mcp_edit_smoke_test(
         Formatted output line for the smoke test result.
     """
     label = "MCP edit smoke test"
-    # mcp-workspace refuses gitignored paths, so the edit could never succeed
-    if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
-        return _format_row(
-            label,
-            symbols["warning"],
-            f"skipped: {_SMOKE_TEST_FILE} is gitignored",
-            indent=2,
-        )
     scratch_dir = project_dir / ".scratch"
     test_file = project_dir / _SMOKE_TEST_FILE
     created_scratch = not scratch_dir.exists()
     try:
+        # mcp-workspace refuses gitignored paths, so the edit could never succeed
+        if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
+            return _format_row(
+                label,
+                symbols["warning"],
+                f"skipped: {_SMOKE_TEST_FILE} is gitignored",
+                indent=2,
+            )
         scratch_dir.mkdir(exist_ok=True)
         write_lf_text(test_file, "A\n\nC\n")
         prompt_llm(

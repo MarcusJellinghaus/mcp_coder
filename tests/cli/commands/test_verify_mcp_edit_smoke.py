@@ -293,6 +293,75 @@ class TestMcpEditSmokeTest:
         assert exit_code == 0
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_gitignore_check_error_displays_warning(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An error from the gitignore check becomes a warning row."""
+        with patch(
+            f"{_VERIFY}.is_path_gitignored",
+            side_effect=OSError("gitignore unreadable"),
+        ):
+            result = _run_mcp_edit_smoke_test(
+                tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+            )
+
+        assert "[WARN]" in result
+        assert "edit not verified (gitignore unreadable)" in result
+        mock_prompt_llm.assert_not_called()
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch(f"{_VERIFY}.is_path_gitignored", side_effect=OSError("gitignore unreadable"))
+    @patch(f"{_VERIFY}.verify_config")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(
+        f"{_VERIFY}.resolve_mcp_config_path",
+        return_value="/fake/.mcp.json",
+    )
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_LC_VERIFY}.verify_langchain")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_gitignore_check_error_does_not_stop_verify(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        _mock_resolve_mcp: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
+        _mock_gitignored: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """verify completes and shows the smoke test row when the check raises."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_ok()
+        mock_verify_config.return_value = {
+            "entries": [],
+            "has_error": False,
+        }
+
+        exit_code = execute_verify(
+            _make_args(mcp_config=".mcp.json", project_dir=str(tmp_path))
+        )
+        output = capsys.readouterr().out
+
+        assert exit_code == 0
+        assert "MCP edit smoke test" in output
+        assert "edit not verified (gitignore unreadable)" in output
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_cleans_up_file(
         self,
         mock_prompt_llm: MagicMock,
