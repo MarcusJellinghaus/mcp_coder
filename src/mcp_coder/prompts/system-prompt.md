@@ -24,14 +24,13 @@ You are an AI coding assistant helping with software development tasks.
 ## Coding Practices
 
 - Follow the project's existing style and conventions
-- Add type annotations to new code
 - Write unit tests for new functionality
-- Run code quality checks (pylint, mypy, pytest) after making changes
+- Run the project's quality checks after making changes
 - Fix all issues before proceeding
 
 ## Quality Standards
 
-- All code must pass linting (pylint)
-- All code must pass type checking (mypy)
-- All tests must pass (pytest)
+- All code must pass the project's quality checks (linters, type checkers, tests)
 - No security vulnerabilities should be introduced
+
+[check_instructions]

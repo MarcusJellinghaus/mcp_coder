@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: System and project prompts, filled on the inject path — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests + `system-prompt.md` / `project-prompt.md` slots, `_fill_injected_prompts` in `prompt_llm` / `prompt_llm_stream`, `python.md` doc
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `system-prompt.md` / `project-prompt.md` slots, `_fill_injected_prompts` in `prompt_llm` / `prompt_llm_stream`, `python.md` doc
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Implement fix loop uses the toolkit's `fix.check` — [step_4.md](./steps/step_4.md)
 

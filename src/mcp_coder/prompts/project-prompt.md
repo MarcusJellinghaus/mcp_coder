@@ -1,6 +1,7 @@
 # Project Prompt
 
-This is a Python project. Follow existing code conventions and patterns.
+[language_context]
+Follow existing code conventions and patterns.
 
 ## Guidelines
 

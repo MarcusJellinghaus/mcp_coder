@@ -6,6 +6,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
 from .mlflow_conversation_logger import mlflow_conversation
@@ -37,6 +38,31 @@ __all__ = [
     "prompt_llm",
     "prompt_llm_stream",
 ]
+
+
+def _fill_injected_prompts(
+    system_prompt: str | None,
+    project_prompt: str | None,
+    project_dir: Path,
+    provider: str,
+    bash_grants: Sequence[str] | None,
+) -> tuple[str | None, str | None]:
+    """Fill toolkit slots in the injected system and project prompts.
+
+    Prompts without slots are returned unchanged and load no toolkit.
+
+    Returns:
+        (system_prompt, project_prompt), filled; None stays None.
+    """
+    text = (system_prompt or "") + "\n" + (project_prompt or "")
+    slots = resolve_prompt_slots(text, project_dir, provider, bash_grants)
+    if not slots:
+        return system_prompt, project_prompt
+
+    def fill(prompt: str | None) -> str | None:
+        return None if prompt is None else fill_prompt(prompt, {}, slots)
+
+    return fill(system_prompt), fill(project_prompt)
 
 
 def _build_claude_system_prompts(
@@ -175,6 +201,9 @@ def prompt_llm(
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
         system_prompt, project_prompt, prompts_config = load_prompts(project_path)
+        system_prompt, project_prompt = _fill_injected_prompts(
+            system_prompt, project_prompt, project_path, provider, bash_grants
+        )
 
     # Unsupported provider check — before context manager (no MLflow run needed)
     if provider not in SUPPORTED_PROVIDERS:
@@ -375,6 +404,9 @@ def prompt_llm_stream(
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
         system_prompt, project_prompt, prompts_config = load_prompts(project_path)
+        system_prompt, project_prompt = _fill_injected_prompts(
+            system_prompt, project_prompt, project_path, provider, bash_grants
+        )
 
     if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(

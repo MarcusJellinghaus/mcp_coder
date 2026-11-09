@@ -4,6 +4,7 @@ import pytest
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.data_files import find_data_file
 
 _SLOTTED_PROMPTS = {
     "Implementation Prompt Template using task tracker": "[check_instructions]",
@@ -49,3 +50,20 @@ def test_review_implementation_reviewer_is_language_neutral() -> None:
     prompt = _load("Review Implementation Reviewer")
     assert "language conventions" in prompt
     assert "Python conventions" not in prompt
+
+
+@pytest.mark.parametrize("filename", ["system-prompt.md", "project-prompt.md"])
+def test_injected_prompt_is_language_neutral(filename: str) -> None:
+    """The shipped system and project prompts name no Python tool."""
+    prompt = find_data_file("mcp_coder.prompts", filename).read_text(encoding="utf-8")
+    for word in (*_TOOL_NAMES, "mcp__mcp-tools-py__"):
+        assert word not in prompt
+    assert "python project" not in prompt.lower()
+
+
+def test_system_prompt_has_one_check_instructions_slot() -> None:
+    """The shipped system prompt carries [check_instructions] exactly once."""
+    prompt = find_data_file("mcp_coder.prompts", "system-prompt.md").read_text(
+        encoding="utf-8"
+    )
+    assert prompt.count("[check_instructions]") == 1
