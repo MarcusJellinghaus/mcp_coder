@@ -74,6 +74,37 @@ def test_not_automated_uses_rebase_entry_permissions(
     patched.permissions.assert_called_once_with(tmp_path, "claude", "rebase")
 
 
+def test_no_regressions_skips_permissions(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A clean rebase never derives fix-turn permissions.
+
+    ``llm_permissions`` logs the dropped-grants warning for non-Claude
+    providers, so not calling it means no warning on a clean rebase.
+    """
+    result = rebase_module.run_rebase_workflow(tmp_path, provider="copilot")
+
+    assert result.exit_code == 0
+    patched.permissions.assert_not_called()
+
+
+def test_permissions_derived_once_across_attempts(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Two fix attempts share one ``llm_permissions`` lookup."""
+    other: set[FailureKey] = {"check: src/m.py|arg-type|bad"}
+    patched.all_checks.side_effect = [
+        _checked(),
+        _checked(*_REGRESSION),
+        _checked(*other),
+        _checked(),
+    ]
+
+    assert _run(tmp_path).exit_code == 0
+    assert patched.prompt.call_count == 2
+    patched.permissions.assert_called_once()
+
+
 def test_fix_turns_get_bash_grants_conflict_turns_do_not(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:

@@ -182,18 +182,18 @@ class CommandToolkit(Toolkit):
 
 
 def _steps_text(steps: list[Step]) -> str:
-    """List steps for the LLM, one line each, deduplicated by label.
+    """List steps for the LLM, one line each, deduplicated by argv.
 
     Returns:
         Granted steps as their exact command; ungranted ones marked as not
         re-runnable.
     """
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     lines: list[str] = []
     for step in steps:
-        if step.label in seen:
+        if step.argv in seen:
             continue
-        seen.add(step.label)
+        seen.add(step.argv)
         if step.grant:
             lines.append(f"- `{' '.join(step.argv)}`")
         else:

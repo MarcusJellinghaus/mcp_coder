@@ -602,19 +602,23 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        entry = "rebase_automated" if automated else "rebase"
-        perms = llm_permissions(project_dir, provider, entry)
-        check_tools, shell_ban = _check_tool_texts(perms)
         keys, fix_texts = _run_all_checks(project_dir, automated)
         regressions = keys - baseline
         attempt = 0
         last_text: str | None = None
+        # Loaded on the first fix turn only, so a clean rebase logs no
+        # dropped-grants warning.
+        perms: list[str] | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
             text = _format_failure_keys(regressions)
             if text == last_text:
                 break  # stall guard: the LLM changed nothing observable
             last_text = text
             attempt += 1
+            if perms is None:
+                entry = "rebase_automated" if automated else "rebase"
+                perms = llm_permissions(project_dir, provider, entry)
+            check_tools, shell_ban = _check_tool_texts(perms)
             logger.log(
                 OUTPUT,
                 "Fixing %d regression(s) (attempt %d/%d)...",

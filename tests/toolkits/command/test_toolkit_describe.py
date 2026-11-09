@@ -137,6 +137,17 @@ class TestPromptFragments:
             "- `fakenpm test --unit`",
         ]
 
+    def test_same_name_different_commands_both_listed(self) -> None:
+        config = {
+            "check": {
+                "quick": [{"argv": ["npm", "run", "lint"], "name": "lint"}],
+                "full": [{"argv": ["npm", "run", "lint:strict"], "name": "lint"}],
+            }
+        }
+        text = CommandToolkit(config).prompt_fragments()["check_instructions"]
+        assert "- `npm run lint`" in text.splitlines()
+        assert "- `npm run lint:strict`" in text.splitlines()
+
     def test_unattended_only_when_declared(self) -> None:
         without = CommandToolkit({"test": {"q": [_UNIT]}}).prompt_fragments()
         assert without["check_instructions.unattended"] == ""
