@@ -3,7 +3,7 @@ description: Create a new GitHub issue from discussion context
 disable-model-invocation: true
 argument-hint: "<title>"
 allowed-tools:
-  - "Bash(gh issue create *)"
+  - mcp__mcp-workspace__github_issue_create
   - mcp__mcp-workspace__git
 ---
 
@@ -38,9 +38,6 @@ Call `mcp__mcp-workspace__git` with command `"ls_remote"` and args `["--heads", 
 
 If no base branch is needed, omit this section entirely.
 
-**Create the issue using:**
-```bash
-gh issue create --title "TITLE" --body "BODY"
-```
+**Create the issue:** call `mcp__mcp-workspace__github_issue_create` with `title` and `body`.
 
 If no prior discussion context is found, respond: "No discussion context found. Please discuss the feature or bug first before creating an issue."
