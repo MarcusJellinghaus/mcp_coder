@@ -19,12 +19,27 @@ from mcp_coder.utils.toolkit import (
     Finding,
     Toolkit,
     ToolkitInfo,
+    VerifyItem,
 )
 
 logger = logging.getLogger(__name__)
 
 _SEVERITY = {"skipped": 0, "ok": 1, "findings": 2, "error": 3}
 _TAIL_LINES = 200
+_GLOBAL_NAME = "command"
+_RERUN_INTRO = (
+    "Re-run the checks with these exact commands; run each one unchanged — "
+    "extra arguments, flags or changed spacing are denied:\n"
+)
+_FIX_CHECK = (
+    "Fix the findings reported in the check output below. Make minimal "
+    "changes and fix the cause in the code, not the check or its configuration."
+)
+_FIX_TEST = (
+    "Fix the failing tests reported in the test output below. Make minimal "
+    "changes and fix the cause in the code, not the tests' expectations unless "
+    "they are wrong."
+)
 
 
 class CommandToolkit(Toolkit):
@@ -57,6 +72,76 @@ class CommandToolkit(Toolkit):
             },
             llm_permissions=llm_permissions,
         )
+
+    def verify(self, project_dir: Path, action: str | None = None) -> list[VerifyItem]:
+        """Report config problems and executables missing for the steps in scope.
+
+        Returns:
+            Global problems always; scoped problems and missing executables for
+            `action` (every action when None); a single `ok` item when clean.
+        """
+        parsed = parse_config(self.config)
+        items = [
+            VerifyItem(name=p.name, status=p.status, message=p.message)
+            for p in parsed.problems
+            if p.scope is None
+        ]
+        if action is not None and action not in parsed.steps:
+            items.append(
+                VerifyItem(
+                    name=_GLOBAL_NAME, status="error", message=f"{action}: not declared"
+                )
+            )
+        items.extend(
+            VerifyItem(name=p.name, status=p.status, message=p.message)
+            for p in parsed.problems
+            if p.scope is not None and (action is None or p.scope[0] == action)
+        )
+        for step_action, depths in parsed.steps.items():
+            if action is not None and step_action != action:
+                continue
+            for depth, steps in depths.items():
+                for step in steps:
+                    if _resolve_exe(step.argv[0], project_dir) is None:
+                        items.append(
+                            VerifyItem(
+                                name=f"{step_action}.{depth}",
+                                status="error",
+                                message=f"{step.label}: {step.argv[0]!r} not found",
+                            )
+                        )
+        return items or [VerifyItem(name=_GLOBAL_NAME, status="ok")]
+
+    def prompt_fragments(self) -> dict[str, str]:
+        """Return the check re-run instructions and the generic fix texts.
+
+        Returns:
+            `language_context`, `check_instructions`,
+            `check_instructions.unattended`, `fix.check` and `fix.test`; the
+            check instructions are empty when the LLM gets no grants.
+        """
+        parsed = parse_config(self.config)
+        none = self.config.get("llm_permissions", "bash") == "none" or bool(
+            parsed.global_errors()
+        )
+        all_steps = [
+            step
+            for depths in parsed.steps.values()
+            for steps in depths.values()
+            for step in steps
+        ]
+        unattended = parsed.steps.get("test", {}).get("unattended")
+        return {
+            "language_context": "",
+            "check_instructions": "" if none else _RERUN_INTRO + _steps_text(all_steps),
+            "check_instructions.unattended": (
+                ""
+                if none or unattended is None
+                else _RERUN_INTRO + _steps_text(unattended)
+            ),
+            "fix.check": _FIX_CHECK,
+            "fix.test": _FIX_TEST,
+        }
 
     def run(self, request: ActionRequest) -> ActionResult:
         """Run every step of the requested action depth and merge the results.
@@ -94,6 +179,28 @@ class CommandToolkit(Toolkit):
                     step.label,
                 )
         return _merge(results)
+
+
+def _steps_text(steps: list[Step]) -> str:
+    """List steps for the LLM, one line each, deduplicated by label.
+
+    Returns:
+        Granted steps as their exact command; ungranted ones marked as not
+        re-runnable.
+    """
+    seen: set[str] = set()
+    lines: list[str] = []
+    for step in steps:
+        if step.label in seen:
+            continue
+        seen.add(step.label)
+        if step.grant:
+            lines.append(f"- `{' '.join(step.argv)}`")
+        else:
+            lines.append(
+                f"- {step.label}: can't be re-run; results come in the fix prompt"
+            )
+    return "\n".join(lines)
 
 
 def _resolve_exe(argv0: str, project_dir: Path) -> str | None:

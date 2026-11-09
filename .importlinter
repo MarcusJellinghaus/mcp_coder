@@ -139,6 +139,56 @@ ignore_imports =
     mcp_coder.utils.log_utils -> mcp_coder_utils
     mcp_coder.utils.user_app_data -> mcp_coder_utils
 
+# -----------------------------------------------------------------------------
+# Contract: Toolkits Isolation
+# -----------------------------------------------------------------------------
+# Core reaches toolkits only through the mcp_coder.toolkits entry-point
+# registry, never by import. New core packages must be added here; the source
+# list must not cover mcp_coder.toolkits itself.
+# -----------------------------------------------------------------------------
+[importlinter:contract:toolkits_isolation]
+name = Toolkits Isolation
+type = forbidden
+source_modules =
+    mcp_coder.cli
+    mcp_coder.icoder
+    mcp_coder.workflows
+    mcp_coder.workflow_steps
+    mcp_coder.services
+    mcp_coder.checks
+    mcp_coder.workflow_utils
+    mcp_coder.llm
+    mcp_coder.prompt_manager
+    mcp_coder.prompt_sources
+    mcp_coder.prompt_parsing
+    mcp_coder.prompts
+    mcp_coder.install
+    mcp_coder.utils
+    mcp_coder.mcp_tools_py
+    mcp_coder.mcp_workspace
+    mcp_coder.mcp_workspace_git
+    mcp_coder.mcp_workspace_github
+    mcp_coder.config
+    mcp_coder.constants
+forbidden_modules =
+    mcp_coder.toolkits
+
+# -----------------------------------------------------------------------------
+# Contract: Toolkits Isolation (package root)
+# -----------------------------------------------------------------------------
+# Covers mcp_coder/__init__.py. as_packages = False applies to the forbidden
+# side too, so each toolkit module is listed by name.
+# -----------------------------------------------------------------------------
+[importlinter:contract:toolkits_isolation_root]
+name = Toolkits Isolation (package root)
+type = forbidden
+as_packages = False
+source_modules =
+    mcp_coder
+forbidden_modules =
+    mcp_coder.toolkits
+    mcp_coder.toolkits.command
+
 # =============================================================================
 # THIRD-PARTY LIBRARY ISOLATION CONTRACTS
 # =============================================================================

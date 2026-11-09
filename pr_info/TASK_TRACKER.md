@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: `verify`, `prompt_fragments` and registration — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: `verify`, `prompt_fragments`, `command` entry point in `pyproject.toml`, `toolkits_isolation` import-linter contracts, tests in `test_toolkit_describe.py` / `test_registration.py`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `verify`, `prompt_fragments`, `command` entry point in `pyproject.toml`, `toolkits_isolation` import-linter contracts, tests in `test_toolkit_describe.py` / `test_registration.py`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Claude provider `bash_grants` + probe integration test — [step_4.md](./steps/step_4.md)
 - [ ] Implementation: `bash_grants` through `prompt_llm` / `prompt_llm_stream` to `build_cli_command`, unit tests, `test_bash_grants_integration.py`
