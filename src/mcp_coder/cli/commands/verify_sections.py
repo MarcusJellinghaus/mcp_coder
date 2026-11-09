@@ -10,7 +10,6 @@ those printers are driven by. Same one-directional shape as
 import json
 import logging
 import os
-import re
 import sys
 from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
@@ -21,6 +20,7 @@ import yaml
 
 from ...mcp_tools_py import resolve_steps
 from ...mcp_workspace_github import CheckResult, verify_github_security
+from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import (
     get_format_code,
     get_implement_config,
@@ -67,11 +67,14 @@ class _DropUnexpandedWarnings(logging.Filter):
 
 def _validate_mcp_config(
     mcp_json_path: str,
+    env_vars: dict[str, str] | None = None,
 ) -> tuple[bool | None, str, list[tuple[str, str]]]:
-    """Validate ``.mcp.json`` and collect ``${...}`` placeholder findings in one parse.
+    """Validate ``.mcp.json`` and collect unresolved ``env`` placeholders in one parse.
 
     Args:
         mcp_json_path: Path to ``.mcp.json``.
+        env_vars: Extra variables used to resolve placeholders; they take
+            precedence over ``os.environ``.
 
     Returns:
         ``(ok, message, warnings)`` where:
@@ -80,8 +83,11 @@ def _validate_mcp_config(
           - ``ok=False`` -> hard fail: unparseable JSON, top-level JSON not an
             object, or ``mcpServers`` missing / not an object.
           - ``message``  -> human-readable status for the validity row.
-          - ``warnings`` -> list of ``(f"{server} / {env_var}", value)`` pairs
-            for unresolved ``${...}`` templates (always ``[]`` on hard fail).
+          - ``warnings`` -> list of ``(f"{server} / {env_var}", "${A}, ${B} not set")``
+            pairs for placeholders unresolved via ``os.environ`` and
+            ``env_vars``; a ``${VAR:-default}`` counts as resolved. A server
+            whose ``env`` is not an object is skipped. Always ``[]`` on hard
+            fail.
     """
     try:
         data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
@@ -95,13 +101,21 @@ def _validate_mcp_config(
     servers = data.get("mcpServers")
     if not isinstance(servers, dict):
         return (False, "mcpServers missing or not an object", [])
-    warnings: list[tuple[str, str]] = [
-        (f"{name} / {var}", val)
-        for name, srv in servers.items()
-        if isinstance(srv, dict)
-        for var, val in srv.get("env", {}).items()
-        if isinstance(val, str) and re.search(r"\$\{[^}]+\}", val)
-    ]
+    warnings: list[tuple[str, str]] = []
+    for name, srv in servers.items():
+        env = srv.get("env") if isinstance(srv, dict) else None
+        if not isinstance(env, dict):
+            continue
+        for var, val in env.items():
+            if isinstance(val, str) and (
+                missing := resolve_placeholders(val, env_vars)[1]
+            ):
+                warnings.append(
+                    (
+                        f"{name} / {var}",
+                        ", ".join(f"${{{m}}}" for m in missing) + " not set",
+                    )
+                )
     if not servers:
         return (None, "config present but no servers defined", warnings)
     return (True, "well-formed", warnings)

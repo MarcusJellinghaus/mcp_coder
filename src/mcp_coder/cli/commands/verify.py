@@ -354,7 +354,9 @@ def execute_verify(args: argparse.Namespace) -> int:
     mcp_config_ok: bool | None = None
     mcp_warnings: list[tuple[str, str]] = []
     if mcp_config_resolved:
-        _ok, _msg, mcp_warnings = _validate_mcp_config(mcp_config_resolved)
+        _ok, _msg, mcp_warnings = _validate_mcp_config(
+            mcp_config_resolved, env_vars=env_vars
+        )
         marker = {
             True: symbols["success"],
             None: symbols["warning"],

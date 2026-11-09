@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Verify warns only on unresolved `env` placeholders
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: rewrite placeholder tests in `test_verify_mcp_orchestration.py`, then `_validate_mcp_config` in `verify_sections.py` and its call site in `verify.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite placeholder tests in `test_verify_mcp_orchestration.py`, then `_validate_mcp_config` in `verify_sections.py` and its call site in `verify.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Verify MCP edit smoke test in `.scratch/` with gitignore pre-check
 See [step_5.md](./steps/step_5.md)

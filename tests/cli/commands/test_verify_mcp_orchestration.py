@@ -365,25 +365,75 @@ class TestMcpConfigWarnings:
         assert ok is False
         assert warnings == []
 
-    def test_unresolved_placeholder_found(self, tmp_path: Path) -> None:
+    def test_unresolved_placeholder_found(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("MCPC_TEST_A", raising=False)
         p = tmp_path / ".mcp.json"
         p.write_text(
             json.dumps(
-                {
-                    "mcpServers": {
-                        "mcp-tools-py": {
-                            "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
-                        }
-                    }
-                }
+                {"mcpServers": {"srv": {"env": {"PYTHONPATH": "${MCPC_TEST_A}/src"}}}}
             ),
             encoding="utf-8",
         )
         ok, _message, warnings = _validate_mcp_config(str(p))
         assert ok is True
-        assert warnings == [
-            ("mcp-tools-py / PYTHONPATH", "${MCP_CODER_PROJECT_DIR}/src")
-        ]
+        assert warnings == [("srv / PYTHONPATH", "${MCPC_TEST_A} not set")]
+
+    def test_placeholder_resolved_via_env_vars(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("MCPC_TEST_A", raising=False)
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps(
+                {"mcpServers": {"srv": {"env": {"PYTHONPATH": "${MCPC_TEST_A}/src"}}}}
+            ),
+            encoding="utf-8",
+        )
+        ok, _message, warnings = _validate_mcp_config(
+            str(p), env_vars={"MCPC_TEST_A": "x"}
+        )
+        assert ok is True
+        assert warnings == []
+
+    def test_placeholder_resolved_via_os_environ(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("MCPC_TEST_A", "x")
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps(
+                {"mcpServers": {"srv": {"env": {"PYTHONPATH": "${MCPC_TEST_A}/src"}}}}
+            ),
+            encoding="utf-8",
+        )
+        ok, _message, warnings = _validate_mcp_config(str(p))
+        assert ok is True
+        assert warnings == []
+
+    def test_default_syntax_counts_as_resolved(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("MCPC_TEST_A", raising=False)
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps({"mcpServers": {"srv": {"env": {"X": "${MCPC_TEST_A:-d}"}}}}),
+            encoding="utf-8",
+        )
+        ok, _message, warnings = _validate_mcp_config(str(p))
+        assert ok is True
+        assert warnings == []
+
+    def test_non_dict_env_skipped(self, tmp_path: Path) -> None:
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps({"mcpServers": {"srv": {"env": ["x"]}}}),
+            encoding="utf-8",
+        )
+        ok, _message, warnings = _validate_mcp_config(str(p))
+        assert ok is True
+        assert warnings == []
 
     def test_no_placeholders_returns_no_warnings(self, tmp_path: Path) -> None:
         p = tmp_path / ".mcp.json"
@@ -395,14 +445,23 @@ class TestMcpConfigWarnings:
         assert ok is True
         assert warnings == []
 
-    def test_multiple_servers_multiple_vars(self, tmp_path: Path) -> None:
+    def test_multiple_servers_multiple_vars(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        for name in ("MCPC_TEST_A", "MCPC_TEST_B", "MCPC_TEST_C"):
+            monkeypatch.delenv(name, raising=False)
         p = tmp_path / ".mcp.json"
         p.write_text(
             json.dumps(
                 {
                     "mcpServers": {
-                        "srv-a": {"env": {"PYTHONPATH": "${VAR_A}/src"}},
-                        "srv-b": {"env": {"LIBPATH": "${VAR_B}\\Lib\\"}},
+                        "srv-a": {
+                            "env": {
+                                "PYTHONPATH": "${MCPC_TEST_A}/src",
+                                "BOTH": "${MCPC_TEST_A};${MCPC_TEST_B}",
+                            }
+                        },
+                        "srv-b": {"env": {"LIBPATH": "${MCPC_TEST_C}\\Lib\\"}},
                     }
                 }
             ),
@@ -411,8 +470,9 @@ class TestMcpConfigWarnings:
         ok, _message, warnings = _validate_mcp_config(str(p))
         assert ok is True
         assert warnings == [
-            ("srv-a / PYTHONPATH", "${VAR_A}/src"),
-            ("srv-b / LIBPATH", "${VAR_B}\\Lib\\"),
+            ("srv-a / PYTHONPATH", "${MCPC_TEST_A} not set"),
+            ("srv-a / BOTH", "${MCPC_TEST_A}, ${MCPC_TEST_B} not set"),
+            ("srv-b / LIBPATH", "${MCPC_TEST_C} not set"),
         ]
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
@@ -477,16 +537,16 @@ class TestMcpConfigWarnings:
         _mock_smoke: MagicMock,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Section header and finding row are printed when unresolved vars exist."""
+        monkeypatch.delenv("MCPC_TEST_A", raising=False)
         mcp_json = tmp_path / ".mcp.json"
         mcp_json.write_text(
             json.dumps(
                 {
                     "mcpServers": {
-                        "mcp-tools-py": {
-                            "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
-                        }
+                        "mcp-tools-py": {"env": {"PYTHONPATH": "${MCPC_TEST_A}/src"}}
                     }
                 }
             ),
@@ -503,7 +563,7 @@ class TestMcpConfigWarnings:
         output = capsys.readouterr().out
         assert "MCP CONFIG WARNINGS" in output
         assert "mcp-tools-py / PYTHONPATH" in output
-        assert "${MCP_CODER_PROJECT_DIR}/src" in output
+        assert "${MCPC_TEST_A} not set" in output
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
@@ -595,12 +655,16 @@ class TestMcpConfigWarningsDynamicWidth:
         _mock_smoke: MagicMock,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A long label widens the section's value column; rows align consistently."""
         from mcp_coder.cli.commands.verify_formatting import (
             _LABEL_WIDTH,
             _MARKER_SLOT_WIDTH,
         )
+
+        monkeypatch.delenv("VAR_A", raising=False)
+        monkeypatch.delenv("VAR_B", raising=False)
 
         long_server = "langchain-mcp-adapters"
         short_server = "srv"
