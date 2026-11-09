@@ -56,6 +56,7 @@ class TestPromptLLMProjectDirRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with project_dir"
 
@@ -90,6 +91,7 @@ class TestPromptLLMProjectDirRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with absolute path"
 
@@ -128,6 +130,7 @@ class TestIntegration:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Full chain response"
 
@@ -171,6 +174,7 @@ class TestIntegration:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Full chain response with session"
 
@@ -213,6 +217,7 @@ class TestPromptLLMProjectDir:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "CLI response with project_dir"
 

@@ -4,6 +4,7 @@
 import json
 import logging
 import time
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, TypedDict
 
@@ -159,6 +160,7 @@ def build_cli_command(
     append_system_prompt: str | None = None,
     system_prompt_replace: str | None = None,
     settings_file: str | None = None,
+    bash_grants: Sequence[str] | None = None,
 ) -> list[str]:
     """Build CLI command arguments for stdin input (pure function).
 
@@ -187,6 +189,8 @@ def build_cli_command(
             Mutually exclusive with append_system_prompt.
         settings_file: Optional path to Claude settings file passed via --settings,
             overriding matching keys in lower-precedence settings files for the session.
+        bash_grants: Exact `Bash(...)` grants; enables the Bash tool only when
+            non-empty. Passed last via --allowedTools (a variadic flag).
 
     Returns:
         Command list ready for subprocess execution with stdin
@@ -227,8 +231,9 @@ def build_cli_command(
     command = [claude_cmd, "-p", "", "--output-format", output_format]
 
     # Keep only ToolSearch (the MCP wait-bridge); all other built-ins
-    # (Bash/Edit/Read/Write) stay disabled.
-    command.extend(["--tools", CLAUDE_BUILTIN_TOOLS])
+    # (Bash/Edit/Read/Write) stay disabled. Bash is enabled only with grants.
+    tools = CLAUDE_BUILTIN_TOOLS + (",Bash" if bash_grants else "")
+    command.extend(["--tools", tools])
 
     # stream-json output requires additional flags for complete logging
     if use_stream_json:
@@ -265,6 +270,11 @@ def build_cli_command(
         command.extend(["--append-system-prompt", append_system_prompt])
     if system_prompt_replace:
         command.extend(["--system-prompt", system_prompt_replace])
+
+    # Exact Bash grants. Last on purpose: --allowedTools is variadic, and the
+    # prompt arrives on stdin, so nothing positional follows it.
+    if bash_grants:
+        command.extend(["--allowedTools", *bash_grants])
 
     return command
 
@@ -329,6 +339,7 @@ def ask_claude_code_cli(
     branch_name: str | None = None,
     append_system_prompt: str | None = None,
     system_prompt_replace: str | None = None,
+    bash_grants: Sequence[str] | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support and stream logging.
 
@@ -362,6 +373,8 @@ def ask_claude_code_cli(
             Mutually exclusive with system_prompt_replace.
         system_prompt_replace: Optional system prompt to replace via --system-prompt.
             Mutually exclusive with append_system_prompt.
+        bash_grants: Exact `Bash(...)` grants; enables the Bash tool only when
+            non-empty.
 
     This is a thin drain-wrapper over :func:`ask_claude_code_cli_stream`: it
     consumes the streaming generator to completion, assembles the result via
@@ -443,6 +456,7 @@ def ask_claude_code_cli(
             branch_name=branch_name,
             append_system_prompt=append_system_prompt,
             system_prompt_replace=system_prompt_replace,
+            bash_grants=bash_grants,
         ):
             assembler.add(event)
             event_type = event.get("type")

@@ -2,7 +2,7 @@
 
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -85,6 +85,7 @@ def prompt_llm(
     settings_file: str | None = None,
     branch_name: str | None = None,
     inject_prompts: bool = False,
+    bash_grants: Sequence[str] | None = None,
 ) -> LLMResponseDict:
     """Ask a question to an LLM provider with full session management.
 
@@ -112,6 +113,8 @@ def prompt_llm(
         inject_prompts: When True, load the system and project prompts from
             project_dir and pass them to the provider. Default False: headless
             runs inject nothing.
+        bash_grants: Exact `Bash(...)` grants; enables the Bash tool only when
+            non-empty. Claude provider only; ignored for other providers.
 
     Returns:
         LLMResponseDict containing:
@@ -274,6 +277,7 @@ def prompt_llm(
                     logs_dir=logs_dir,
                     append_system_prompt=claude_append,
                     system_prompt_replace=claude_replace,
+                    bash_grants=bash_grants,
                 )
             except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -307,6 +311,7 @@ def prompt_llm_stream(
     tools: list[Any] | None = None,
     inject_prompts: bool = False,
     approval_bridge: "ApprovalBridge | None" = None,
+    bash_grants: Sequence[str] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LLM responses as events.
 
@@ -339,6 +344,8 @@ def prompt_llm_stream(
         approval_bridge: Optional runtime approval engine (langchain provider
             only). Attached for the duration of the turn so an ``ask``-gated
             tool call can pause the stream on a human decision.
+        bash_grants: Exact `Bash(...)` grants; enables the Bash tool only when
+            non-empty. Claude provider only; ignored for other providers.
 
     Yields:
         StreamEvent dicts from the underlying provider.
@@ -445,4 +452,5 @@ def prompt_llm_stream(
             logs_dir=logs_dir,
             append_system_prompt=claude_append,
             system_prompt_replace=claude_replace,
+            bash_grants=bash_grants,
         )

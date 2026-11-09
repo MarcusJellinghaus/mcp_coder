@@ -39,6 +39,7 @@ class TestPromptLLMLogsDirDerivation:
             logs_dir=str(Path("/home/user/mcp-coder") / "logs"),
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with logs_dir"
 
@@ -73,6 +74,7 @@ class TestPromptLLMLogsDirDerivation:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response without project dir"
 
@@ -104,6 +106,7 @@ class TestPromptLLMLogsDirDerivation:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with no env vars"
 
@@ -139,6 +142,7 @@ class TestPromptLLMStreamLogsDirDerivation:
             logs_dir=str(Path("/home/user/mcp-coder") / "logs"),
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
 
     @patch(
@@ -169,6 +173,7 @@ class TestPromptLLMStreamLogsDirDerivation:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
 
     @patch(
@@ -192,4 +197,5 @@ class TestPromptLLMStreamLogsDirDerivation:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )

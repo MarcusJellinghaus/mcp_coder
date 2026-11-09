@@ -8,7 +8,7 @@ Extracted from claude_code_cli.py to keep file sizes manageable.
 
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 
 from ....utils.subprocess_runner import CommandOptions, CommandResult
 from ....utils.subprocess_streaming import stream_subprocess
@@ -93,6 +93,7 @@ def ask_claude_code_cli_stream(
     branch_name: str | None = None,
     append_system_prompt: str | None = None,
     system_prompt_replace: str | None = None,
+    bash_grants: Sequence[str] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream Claude CLI responses as events.
 
@@ -102,6 +103,9 @@ def ask_claude_code_cli_stream(
 
     The ``settings_file`` parameter, when provided, is forwarded via ``--settings``
     to override matching keys in cwd-discovered Claude settings for the session.
+
+    ``bash_grants``: exact ``Bash(...)`` grants; enables the Bash tool only when
+    non-empty.
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error,
@@ -142,6 +146,7 @@ def ask_claude_code_cli_stream(
         append_system_prompt=append_system_prompt,
         system_prompt_replace=system_prompt_replace,
         settings_file=settings_file,
+        bash_grants=bash_grants,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
     # Announce the stream log path up front so consumers (e.g. the drain-wrapper)

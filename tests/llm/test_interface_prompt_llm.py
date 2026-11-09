@@ -41,6 +41,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Test response from Claude"
 
@@ -72,6 +73,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Default response"
 
@@ -118,6 +120,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Timeout response"
 
@@ -154,6 +157,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with session"
 
@@ -185,6 +189,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response without session"
 
@@ -241,6 +246,7 @@ class TestPromptLLMRouting:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with env vars"
 
@@ -347,6 +353,7 @@ class TestPromptLLM:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert isinstance(result, dict)
         assert result["version"] == "1.0"
@@ -385,6 +392,7 @@ class TestPromptLLM:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["session_id"] == "existing-session"
 
@@ -466,6 +474,7 @@ class TestPromptLLM:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with custom timeout"
 
@@ -498,6 +507,7 @@ class TestPromptLLM:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["provider"] == "claude"
 
@@ -533,6 +543,7 @@ class TestPromptLLM:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "CLI response with env vars"
 

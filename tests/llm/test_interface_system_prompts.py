@@ -40,6 +40,7 @@ class TestPromptLlmInjectPrompts:
             logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
+            bash_grants=None,
         )
 
     @patch("mcp_coder.prompts.prompt_loader.load_prompts")
@@ -92,6 +93,7 @@ class TestPromptLlmInjectPrompts:
             logs_dir=None,
             append_system_prompt=expected_combined,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert result["text"] == "Response with prompts"
 
@@ -146,6 +148,7 @@ class TestPromptLlmInjectPrompts:
             logs_dir=None,
             append_system_prompt=expected_combined,
             system_prompt_replace=None,
+            bash_grants=None,
         )
         assert len(events) == 2
 

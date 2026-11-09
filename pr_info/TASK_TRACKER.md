@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Claude provider `bash_grants` + probe integration test — [step_4.md](./steps/step_4.md)
-- [ ] Implementation: `bash_grants` through `prompt_llm` / `prompt_llm_stream` to `build_cli_command`, unit tests, `test_bash_grants_integration.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `bash_grants` through `prompt_llm` / `prompt_llm_stream` to `build_cli_command`, unit tests, `test_bash_grants_integration.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `llm_permissions` and granted implement / finalisation / CI-fix sessions — [step_5.md](./steps/step_5.md)
 - [ ] Implementation: `llm_permissions` / `bash_grants_of` in `toolkit_runner`, grants at implement task, mypy fix, finalisation and `_run_ci_fix`, tests
