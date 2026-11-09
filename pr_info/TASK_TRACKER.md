@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Slot filler in `mcp_coder.utils.prompt_slots` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests + `prompt_slots.py` (`resolve_prompt_slots`, `fill_prompt`), `get_prompt_with_substitutions` uses `fill_prompt`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `prompt_slots.py` (`resolve_prompt_slots`, `fill_prompt`), `get_prompt_with_substitutions` uses `fill_prompt`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Workflow prompts — neutral wording + slots, filled by their callers — [step_2.md](./steps/step_2.md)
 

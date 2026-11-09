@@ -313,3 +313,13 @@ Hello [name] and [other]!
             content, "Test Prompt", {"name": "World"}
         )
         assert result == "Hello World and [other]!"
+
+    def test_backslashes_in_value_inserted_verbatim(self) -> None:
+        """Backslashes in substitution values should not be interpreted."""
+        content = """# Test Prompt
+```
+Path: [path]
+```"""
+        value = r"C:\new\dir \1 \\"
+        result = get_prompt_with_substitutions(content, "Test Prompt", {"path": value})
+        assert result == f"Path: {value}"
