@@ -12,6 +12,7 @@ from mcp_coder.utils.prompt_slots import (
     DEFAULT_LANGUAGE_CONTEXT,
     fill_prompt,
     resolve_prompt_slots,
+    toolkit_declares_bash_grants,
 )
 
 BOTH_SLOTS = "Intro\n[language_context]\nBody\n[check_instructions]\n"
@@ -47,6 +48,35 @@ def _patch(
 
     monkeypatch.setattr(prompt_slots, "llm_permissions", fake_permissions)
     return load
+
+
+class TestToolkitDeclaresBashGrants:
+    """Tests for toolkit_declares_bash_grants."""
+
+    def test_bash_grants_declared(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(monkeypatch, {}, ["mcp__x__y", "Bash(make:*)"])
+        assert toolkit_declares_bash_grants(tmp_path) is True
+
+    def test_mcp_grants_only(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(monkeypatch, {}, ["mcp__x__y"])
+        assert toolkit_declares_bash_grants(tmp_path) is False
+
+    def test_reads_claude_grants(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        calls: list[tuple[Any, ...]] = []
+
+        def fake_permissions(*args: Any) -> list[str]:
+            calls.append(args)
+            return []
+
+        monkeypatch.setattr(prompt_slots, "llm_permissions", fake_permissions)
+        toolkit_declares_bash_grants(tmp_path)
+        assert calls == [(tmp_path, "claude")]
 
 
 class TestResolvePromptSlots:

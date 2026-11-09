@@ -17,7 +17,11 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
+from mcp_coder.utils.prompt_slots import (
+    fill_prompt,
+    resolve_prompt_slots,
+    toolkit_declares_bash_grants,
+)
 from mcp_coder.utils.toolkit_runner import (
     bash_grants_of,
     get_binding,
@@ -226,7 +230,7 @@ def check_and_fix_mypy(
 
         bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
         check_instructions = ""
-        if bash_grants_of(llm_permissions(project_dir, "claude")):
+        if toolkit_declares_bash_grants(project_dir):
             # Toolkits that check through Bash tell the LLM how to re-run checks
             check_instructions = resolve_prompt_slots(
                 "[check_instructions]", project_dir, provider, bash_grants

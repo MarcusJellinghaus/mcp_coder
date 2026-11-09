@@ -262,12 +262,17 @@ class TestCheckAndFixMypyBashGrants:
     @patch("mcp_coder.workflows.implement.task_processing._fix_check_text")
     @patch("mcp_coder.workflows.implement.task_processing._run_check")
     @patch(
+        "mcp_coder.workflows.implement.task_processing.toolkit_declares_bash_grants",
+        return_value=False,
+    )
+    @patch(
         "mcp_coder.workflows.implement.task_processing.llm_permissions",
         return_value=["Bash(npm run lint)", "mcp__x__y"],
     )
     def test_fix_call_passes_bash_grants(
         self,
         mock_perms: MagicMock,
+        _mock_declares: MagicMock,
         mock_check: MagicMock,
         mock_fix_check: MagicMock,
         mock_prompt_llm: MagicMock,
@@ -330,10 +335,12 @@ class TestFixPrompt:
     @patch(f"{_TP}.prompt_llm")
     @patch(f"{_TP}._fix_check_text", return_value=_FIX_CHECK)
     @patch(f"{_TP}._run_check", side_effect=["a.py:1: error", None])
+    @patch(f"{_TP}.toolkit_declares_bash_grants", return_value=False)
     @patch(f"{_TP}.llm_permissions", return_value=["mcp__tools-py__run_mypy_check"])
     def test_prompt_is_fragment_heading_and_fix_text(
         self,
         _mock_perms: MagicMock,
+        _mock_declares: MagicMock,
         _mock_check: MagicMock,
         _mock_fix_check: MagicMock,
         mock_prompt_llm: MagicMock,
@@ -382,10 +389,12 @@ class TestFixPrompt:
     @patch(f"{_TP}.resolve_prompt_slots")
     @patch(f"{_TP}._fix_check_text", return_value=_FIX_CHECK)
     @patch(f"{_TP}._run_check", side_effect=["a.ts:1: error", None])
+    @patch(f"{_TP}.toolkit_declares_bash_grants", return_value=True)
     @patch(f"{_TP}.llm_permissions", return_value=["Bash(npm run lint)"])
     def test_bash_grant_toolkit_appends_check_instructions(
         self,
         _mock_perms: MagicMock,
+        _mock_declares: MagicMock,
         _mock_check: MagicMock,
         _mock_fix_check: MagicMock,
         mock_slots: MagicMock,
@@ -410,10 +419,12 @@ class TestFixPrompt:
     @patch(f"{_TP}.resolve_prompt_slots")
     @patch(f"{_TP}._fix_check_text", return_value=_FIX_CHECK)
     @patch(f"{_TP}._run_check", side_effect=["a.py:1: error", None])
+    @patch(f"{_TP}.toolkit_declares_bash_grants", return_value=False)
     @patch(f"{_TP}.llm_permissions", return_value=["mcp__tools-py__run_mypy_check"])
     def test_toolkit_without_bash_grants_has_no_check_instructions(
         self,
         _mock_perms: MagicMock,
+        _mock_declares: MagicMock,
         _mock_check: MagicMock,
         _mock_fix_check: MagicMock,
         mock_slots: MagicMock,

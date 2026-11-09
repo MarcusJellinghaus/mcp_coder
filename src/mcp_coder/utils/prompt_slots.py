@@ -38,6 +38,21 @@ def _defaults() -> dict[str, str]:
     }
 
 
+def toolkit_declares_bash_grants(project_dir: Path) -> bool:
+    """Whether the toolkit's checks run through ``Bash(...)`` grants.
+
+    Reads the grants for provider ``"claude"``, since other providers get
+    their Bash grants stripped by ``llm_permissions``.
+
+    Args:
+        project_dir: Project root containing the toolkit config.
+
+    Returns:
+        True if the toolkit declares at least one ``Bash(...)`` grant.
+    """
+    return bool(bash_grants_of(llm_permissions(project_dir, "claude")))
+
+
 def resolve_prompt_slots(
     text: str,
     project_dir: Path,
@@ -72,7 +87,7 @@ def resolve_prompt_slots(
             if slot in fragments:
                 values[slot] = fragments[slot]
         resolved = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
-        if bash_grants_of(llm_permissions(project_dir, "claude")) and (
+        if toolkit_declares_bash_grants(project_dir) and (
             resolved != "claude" or not bash_grants
         ):
             values["check_instructions"] = ""
