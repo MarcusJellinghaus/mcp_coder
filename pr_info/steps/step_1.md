@@ -32,7 +32,7 @@ def resolve_placeholders(
 
 ```
 ci = (os.name == "nt") if case_insensitive is None else case_insensitive
-extra = {k.upper(): v for k, v in env_vars.items()} if ci else dict(env_vars or {})
+extra = {k.upper(): v for k, v in (env_vars or {}).items()} if ci else dict(env_vars or {})
 unresolved = []
 on each match of r"\$\{([^}]+?)(?::-([^}]*))?\}"  (single re.sub pass):
     name, default = groups; key = name.upper() if ci else name
@@ -63,6 +63,6 @@ Use `monkeypatch.setenv` / `monkeypatch.delenv(..., raising=False)` with unlikel
 - A default containing `${X}` stays literal, e.g. `${UNSET:-${X}}`. Single pass means no expansion and `X` is not reported.
   - Pin the actual result string the regex produces in the test. If it differs from intuition, keep the regex and assert what it does.
 - Unresolved `${UNSET}` stays literal and is returned in the list; duplicates appear once.
-- `case_insensitive=True`: `env_vars={"FOO": "1"}` resolves `${foo}` (runs on every OS).
-- `case_insensitive=False`: `${foo}` with `env_vars={"FOO": "1"}` is unresolved.
+- `case_insensitive=True`: `env_vars={"MCPC_TEST_PH_CI": "1"}` resolves `${mcpc_test_ph_ci}` (runs on every OS).
+- `case_insensitive=False`: `${mcpc_test_ph_ci}` with `env_vars={"MCPC_TEST_PH_CI": "1"}` is unresolved (`monkeypatch.delenv("MCPC_TEST_PH_CI", raising=False)` first, since `os.environ` stays case-insensitive on Windows).
 - `@pytest.mark.skipif(os.name != "nt")`: `monkeypatch.setenv("MCPC_TEST_PH_CASE", "x")` resolves `${Mcpc_Test_Ph_Case}` with default arguments.
