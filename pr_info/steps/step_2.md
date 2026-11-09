@@ -34,6 +34,9 @@ docs/repository-setup/claude-code.md
   `mcp-coder gh-tool set-status` only. `issue-updater` has no `Bash` at all.
 - **`PreToolUse` hook** bullet (around line 111): "the git/gh limit" → "the agents' shell
   limits".
+- **"Net trade"** sentence (around line 103): "the agents survive escalations but carry an
+  unrestricted `Bash`" → say that `commit-pusher` and `issue-approver` carry an unrestricted
+  `Bash`; `issue-updater` has none.
 - Search the file for any other claim that `issue-updater` uses `Bash` or `gh`, and fix it.
 
 ### `README.md` — agent rows in the file table (around lines 62–64)

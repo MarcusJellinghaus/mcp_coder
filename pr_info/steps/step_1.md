@@ -73,9 +73,9 @@ missing item and stop.
   - **Never** pass a repo to `set-status`.
   - Delete the sentence that `github_issue_view` "only reaches the current repository".
 - Step 1: call `github_issue_view` with the issue number, plus `reference_name` for
-  cross-repo. Success: the output starts with `# #<number>: `, or is `# #<number>` followed
-  by a newline (untrusted author; proceed normally). Anything else → "approval failed:
-  <result>".
+  cross-repo. Same-repo wording stays as it is. Cross-repo only: success means the output
+  starts with `# #<number>: `, or is `# #<number>` followed by a newline (untrusted author;
+  proceed normally). Anything else → "approval failed: <result>".
 - Step 3, cross-repo bullet: call
   `github_issue_comment(number=…, reference_name=…, body="/approve")` and report "approval
   requested, not confirmed". No polling. Remove the `MSYS_NO_PATHCONV` bash block.
