@@ -19,7 +19,10 @@ from mcp_coder.utils.env_placeholders import resolve_placeholders
 
 logger = logging.getLogger(__name__)
 
-_KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
+_KNOWN_FIELDS = {"command", "args", "env", "transport"}
+# Claude Code / VS Code fields with no MultiServerMCPClient equivalent;
+# dropped without a warning ('type' is replaced by the forced 'transport').
+_IGNORED_FIELDS = {"type", "alwaysLoad"}
 
 
 def _format_launch_error(server_name: str, command: object, exc: BaseException) -> str:
@@ -91,6 +94,8 @@ def _load_mcp_server_config(
         resolved: dict[str, object] = {}
 
         for key, value in server_cfg.items():
+            if key in _IGNORED_FIELDS:
+                continue
             if key not in _KNOWN_FIELDS:
                 logger.warning(
                     "Unknown field %r (value: %r) in server %r — ignoring",
@@ -111,10 +116,6 @@ def _load_mcp_server_config(
                     k: _resolve(v) if isinstance(v, str) else v
                     for k, v in value.items()
                 }
-            elif key == "type":
-                # 'type' is a VS Code / Claude Desktop convention;
-                # MultiServerMCPClient uses 'transport' instead.
-                pass
             elif key == "transport" and isinstance(value, str) and value != "stdio":
                 logger.warning(
                     "Server %r specifies transport %r — only 'stdio' is "

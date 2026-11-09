@@ -160,6 +160,19 @@ class TestLoadMcpServerConfig:
         # Unknown field should not appear in output
         assert "unknownField" not in result["s"]
 
+    def test_ignores_always_load_field(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Claude Code-only 'alwaysLoad' is dropped without a warning."""
+        path = self._write_config(
+            tmp_path,
+            {"mcpServers": {"s": {"command": "cmd", "alwaysLoad": True}}},
+        )
+        with caplog.at_level(logging.WARNING):
+            result = _load_mcp_server_config(path)
+        assert "alwaysLoad" not in caplog.text
+        assert "alwaysLoad" not in result["s"]
+
     def test_raises_on_invalid_json(self, tmp_path: Path) -> None:
         """Malformed JSON raises ValueError with user-friendly message."""
         cfg_file = tmp_path / ".mcp.json"

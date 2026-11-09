@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: LangChain silently ignores Claude Code-only `alwaysLoad`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: add `test_ignores_always_load_field`, then `_IGNORED_FIELDS` in `_mcp_tools.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_ignores_always_load_field`, then `_IGNORED_FIELDS` in `_mcp_tools.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Verify warns only on unresolved `env` placeholders
 See [step_4.md](./steps/step_4.md)
