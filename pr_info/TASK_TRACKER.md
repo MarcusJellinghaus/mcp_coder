@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: LangChain config loader uses the shared resolver
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: precondition check, adjust tests in `test_langchain_agent.py`, then replace `_resolve_env_vars` in `_mcp_tools.py`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition check, adjust tests in `test_langchain_agent.py`, then replace `_resolve_env_vars` in `_mcp_tools.py`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: LangChain silently ignores Claude Code-only `alwaysLoad`
 See [step_3.md](./steps/step_3.md)

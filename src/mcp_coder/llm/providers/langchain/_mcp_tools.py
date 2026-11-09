@@ -12,10 +12,10 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import os
-import re
 from pathlib import Path
 from typing import Any
+
+from mcp_coder.utils.env_placeholders import resolve_placeholders
 
 logger = logging.getLogger(__name__)
 
@@ -39,26 +39,6 @@ def _format_launch_error(server_name: str, command: object, exc: BaseException) 
     )
 
 
-def _resolve_env_vars(value: str, env: dict[str, str]) -> str:
-    """Replace ``${VAR}`` placeholders in *value* with values from *env*.
-
-    Unknown variables are left as-is (``${UNKNOWN}`` stays unchanged).
-    Uses a single-pass ``re.sub`` so replacement values that themselves
-    contain ``${…}`` patterns are **not** re-substituted.
-
-    Returns:
-        The input string with all known ``${VAR}`` placeholders replaced by
-        their corresponding values from *env*.
-    """
-    pattern = r"\$\{([^}]+)\}"
-
-    def _replacer(match: re.Match[str]) -> str:
-        var_name = match.group(1)
-        return env.get(var_name, match.group(0))
-
-    return re.sub(pattern, _replacer, value)
-
-
 def _load_mcp_server_config(
     mcp_config_path: str,
     env_vars: dict[str, str] | None = None,
@@ -68,8 +48,8 @@ def _load_mcp_server_config(
     Args:
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
             Callers should use ``resolve_mcp_config_path()`` from ``cli/utils.py``.
-        env_vars: Optional extra environment variables. These are merged on top
-            of ``os.environ`` (i.e. *env_vars* wins on conflicts).
+        env_vars: Optional extra environment variables. They take precedence
+            over ``os.environ`` when resolving placeholders.
 
     Returns:
         Mapping of server names to their resolved configuration, suitable for
@@ -87,8 +67,8 @@ def _load_mcp_server_config(
                 f"Failed to parse MCP config file {mcp_config_path}: {exc}"
             ) from exc
 
-    # Build merged environment: os.environ as base, env_vars overrides
-    merged_env: dict[str, str] = {**os.environ, **(env_vars or {})}
+    def _resolve(text: str) -> str:
+        return resolve_placeholders(text, env_vars)[0]
 
     servers_raw = raw_config.get("mcpServers")
     if not isinstance(servers_raw, dict):
@@ -121,19 +101,14 @@ def _load_mcp_server_config(
                 continue
 
             if key == "command" and isinstance(value, str):
-                resolved["command"] = _resolve_env_vars(value, merged_env)
+                resolved["command"] = _resolve(value)
             elif key == "args" and isinstance(value, list):
                 resolved["args"] = [
-                    (
-                        _resolve_env_vars(item, merged_env)
-                        if isinstance(item, str)
-                        else item
-                    )
-                    for item in value
+                    _resolve(item) if isinstance(item, str) else item for item in value
                 ]
             elif key == "env" and isinstance(value, dict):
                 resolved["env"] = {
-                    k: _resolve_env_vars(v, merged_env) if isinstance(v, str) else v
+                    k: _resolve(v) if isinstance(v, str) else v
                     for k, v in value.items()
                 }
             elif key == "type":

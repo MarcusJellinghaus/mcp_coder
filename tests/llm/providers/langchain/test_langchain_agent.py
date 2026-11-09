@@ -13,7 +13,6 @@ import pytest
 
 from mcp_coder.llm.providers.langchain._mcp_tools import (
     _load_mcp_server_config,
-    _resolve_env_vars,
     _sanitize_tool_schema,
 )
 from mcp_coder.llm.providers.langchain.agent import (
@@ -64,30 +63,6 @@ class TestCheckAgentDependencies:
         _check_agent_dependencies()
 
 
-class TestResolveEnvVars:
-    """Tests for _resolve_env_vars."""
-
-    def test_replaces_single_var(self) -> None:
-        result = _resolve_env_vars("${HOME}/bin", {"HOME": "/usr/local"})
-        assert result == "/usr/local/bin"
-
-    def test_replaces_multiple_vars(self) -> None:
-        result = _resolve_env_vars(
-            "${USER}@${HOST}", {"USER": "alice", "HOST": "server1"}
-        )
-        assert result == "alice@server1"
-
-    def test_preserves_unknown_vars(self) -> None:
-        result = _resolve_env_vars("${KNOWN}/${UNKNOWN}", {"KNOWN": "ok"})
-        assert result == "ok/${UNKNOWN}"
-
-    def test_empty_string_unchanged(self) -> None:
-        assert _resolve_env_vars("", {"A": "B"}) == ""
-
-    def test_no_placeholders_unchanged(self) -> None:
-        assert _resolve_env_vars("plain text", {"A": "B"}) == "plain text"
-
-
 class TestLoadMcpServerConfig:
     """Tests for _load_mcp_server_config."""
 
@@ -133,6 +108,24 @@ class TestLoadMcpServerConfig:
         # env_vars should win over os.environ
         result = _load_mcp_server_config(path, env_vars={"MY_VAR": "override"})
         assert result["s"]["command"] == "override"
+
+    def test_default_syntax_resolves(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("MCPC_TEST_UNSET", raising=False)
+        path = self._write_config(
+            tmp_path,
+            {
+                "mcpServers": {
+                    "s": {
+                        "command": "cmd",
+                        "env": {"X": "${MCPC_TEST_UNSET:-fallback}"},
+                    }
+                }
+            },
+        )
+        result = _load_mcp_server_config(path)
+        assert result["s"]["env"] == {"X": "fallback"}
 
     def test_raises_on_missing_file(self) -> None:
         with pytest.raises(FileNotFoundError):
