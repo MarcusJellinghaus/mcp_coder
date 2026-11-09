@@ -76,9 +76,6 @@ _.READY_FOR_REVIEW
 _._repo_owner
 _._repo_name
 
-# mcp_tools_py.py - Convenience function for simple pass/fail checks
-_.has_mypy_errors
-
 # task_tracker.py - Convenience function for simple yes/no checks
 _.has_incomplete_work
 
