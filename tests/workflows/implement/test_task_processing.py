@@ -718,6 +718,7 @@ Please implement this task step by step."""
             mcp_config=None,
             settings_file=None,
             branch_name=ANY,
+            bash_grants=[],
         )
 
         # Verify store_session called with step_name="step_2" and implement_sessions path

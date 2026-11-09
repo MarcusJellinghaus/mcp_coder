@@ -17,7 +17,13 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.toolkit_runner import get_binding, load_toolkit, run_binding
+from mcp_coder.utils.toolkit_runner import (
+    bash_grants_of,
+    get_binding,
+    llm_permissions,
+    load_toolkit,
+    run_binding,
+)
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
     push_changes,
@@ -211,6 +217,7 @@ def check_and_fix_mypy(
             # Call LLM for fixes
             try:
                 branch_name = get_branch_name_for_logging(str(project_dir))
+                bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
                 llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,
@@ -221,6 +228,7 @@ def check_and_fix_mypy(
                     mcp_config=mcp_config,
                     settings_file=settings_file,
                     branch_name=branch_name,
+                    bash_grants=bash_grants,
                 )
                 fix_response = llm_response["text"]
 
@@ -437,6 +445,7 @@ Please implement this task step by step."""
             )
 
         branch_name = get_branch_name_for_logging(str(project_dir))
+        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,
@@ -447,6 +456,7 @@ Please implement this task step by step."""
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,
+            bash_grants=bash_grants,
         )
         response = llm_response["text"]
 

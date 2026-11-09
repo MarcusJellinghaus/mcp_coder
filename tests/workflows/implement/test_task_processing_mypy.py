@@ -246,3 +246,32 @@ class TestCheckAndFixMypy:
 
         with pytest.raises(McpServersUnavailableError):
             check_and_fix_mypy(Path("/test/project"), 1, "claude")
+
+
+class TestCheckAndFixMypyBashGrants:
+    """The mypy fix call passes the toolkit's Bash grants."""
+
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing._run_check")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.llm_permissions",
+        return_value=["Bash(npm run lint)", "mcp__x__y"],
+    )
+    def test_fix_call_passes_bash_grants(
+        self,
+        mock_perms: MagicMock,
+        mock_check: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_store_session: MagicMock,
+    ) -> None:
+        mock_check.side_effect = ["error output", None]
+        mock_get_prompt.return_value = "Fix: [mypy_output]"
+        mock_prompt_llm.return_value = _make_llm_response("fixed")
+
+        assert check_and_fix_mypy(_PROJECT, 1, "claude") is True
+
+        mock_perms.assert_called_with(_PROJECT, "claude")
+        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm run lint)"]

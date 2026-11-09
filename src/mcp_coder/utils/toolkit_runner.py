@@ -11,7 +11,9 @@ load and ``verify()`` problems raise ``ValueError``.
 """
 
 import logging
+import os
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -62,6 +64,10 @@ _TABLE = "[tool.mcp-coder.toolkit]"
 _RESERVED_KEYS = frozenset({"toolkit", "bindings", "params"})
 # Per-action keys are reserved for a later version of the config format
 _PER_ACTION_KEYS = frozenset({"format", "check", "test"})
+
+_BASH_PREFIX = "Bash("
+# Warn once per process when Bash grants are dropped for a non-Claude provider
+_bash_drop_warned = False
 
 
 @dataclass(frozen=True)
@@ -455,3 +461,71 @@ def get_fragment(loaded: LoadedToolkit, name: str) -> str:
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning("Toolkit '%s' prompt_fragments failed: %s", loaded.name, exc)
         return ""
+
+
+def llm_permissions(
+    project_dir: Path, provider: str, entry: str | None = None
+) -> list[str]:
+    """Permission strings the LLM session gets from the loaded toolkit.
+
+    Args:
+        project_dir: Project root containing the config.
+        provider: LLM provider; empty falls back to MCP_CODER_LLM_PROVIDER,
+            then "claude", as in prompt_llm.
+        entry: Binding entry whose requests scope the permissions, or None
+            for the union over every action and depth.
+
+    Returns:
+        The deduplicated permissions in declaration order. ``Bash(`` entries
+        are dropped for non-Claude providers; empty if the toolkit fails to
+        load.
+    """
+    global _bash_drop_warned  # pylint: disable=global-statement
+    try:
+        loaded = load_toolkit(project_dir)
+    except ValueError as exc:
+        logger.warning("No toolkit grants: %s", exc)
+        return []
+
+    perms = loaded.info.llm_permissions
+    pairs: list[tuple[str, str]] = []
+    if entry is None:
+        pairs = [
+            (action, depth) for action, depths in perms.items() for depth in depths
+        ]
+    else:
+        for request in loaded.config.bindings[entry]:
+            action, depth = request.split("@", 1)
+            resolved = _resolve_depth(loaded.info.actions.get(action, []), depth)
+            if resolved is not None:
+                pairs.append((action, resolved))
+
+    out: list[str] = []
+    for action, depth in pairs:
+        for permission in perms.get(action, {}).get(depth, []):
+            if permission not in out:
+                out.append(permission)
+
+    provider = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
+    if provider != "claude" and bash_grants_of(out):
+        if not _bash_drop_warned:
+            logger.warning(
+                "Bash grants dropped for provider %s: the LLM cannot re-run the "
+                "toolkit's checks",
+                provider,
+            )
+            _bash_drop_warned = True
+        out = [p for p in out if not p.startswith(_BASH_PREFIX)]
+    return out
+
+
+def bash_grants_of(permissions: Sequence[str]) -> list[str]:
+    """Keep only the ``Bash(...)`` entries.
+
+    Args:
+        permissions: Permission strings, e.g. from llm_permissions.
+
+    Returns:
+        The ``Bash(...)`` entries, in order.
+    """
+    return [p for p in permissions if p.startswith(_BASH_PREFIX)]

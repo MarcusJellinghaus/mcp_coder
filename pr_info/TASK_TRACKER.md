@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: `llm_permissions` and granted implement / finalisation / CI-fix sessions — [step_5.md](./steps/step_5.md)
-- [ ] Implementation: `llm_permissions` / `bash_grants_of` in `toolkit_runner`, grants at implement task, mypy fix, finalisation and `_run_ci_fix`, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `llm_permissions` / `bash_grants_of` in `toolkit_runner`, grants at implement task, mypy fix, finalisation and `_run_ci_fix`, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Rebase checks return `fix_text`; binding-level Done-when test — [step_6.md](./steps/step_6.md)
 - [ ] Implementation: `_run_all_checks` returns `(keys, fix_texts)`, callers in `rebase.py` updated, `test_command_toolkit_binding.py`

@@ -14,6 +14,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
@@ -76,6 +77,7 @@ def run_finalisation(
         },
     )
 
+    bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
     try:
         llm_response = prompt_llm(
             finalisation_prompt,
@@ -87,6 +89,7 @@ def run_finalisation(
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,
+            bash_grants=bash_grants,
         )
     finally:
         # Never let a marker reach a commit: commit_all_changes stages everything,

@@ -29,6 +29,7 @@ from mcp_coder.mcp_workspace_github import (
 )
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
     push_changes,
@@ -217,6 +218,9 @@ def _run_ci_fix(
     # Call LLM with fix prompt
     try:
         logger.info("Calling LLM to fix CI issues...")
+        bash_grants = bash_grants_of(
+            llm_permissions(config.project_dir, config.provider)
+        )
         llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
@@ -227,6 +231,7 @@ def _run_ci_fix(
             mcp_config=config.mcp_config,
             settings_file=config.settings_file,
             branch_name=branch_name,
+            bash_grants=bash_grants,
         )
         fix_response = llm_response["text"]
     except Exception as e:
