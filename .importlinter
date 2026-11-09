@@ -548,6 +548,7 @@ modules =
     tests.icoder
     tests.prompts
     tests.install
+    tests.toolkits
 
 # -----------------------------------------------------------------------------
 # Contract: CLI Tests Focus (commented - has violations)

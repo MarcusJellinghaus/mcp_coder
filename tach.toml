@@ -167,6 +167,13 @@ depends_on = [
     { path = "mcp_coder.mcp_workspace_github" },  # GitHub operations shim
 ]
 
+[[modules]]
+path = "mcp_coder.toolkits"
+layer = "tools"
+# Toolkits shipped with mcp-coder (command). Reached by core only through the
+# mcp_coder.toolkits entry points; import only the utils shims.
+depends_on = [{ path = "mcp_coder.utils" }]
+
 # =============================================================================
 # Layer 3: DOMAIN
 # =============================================================================
@@ -494,6 +501,7 @@ depends_on = [
     { path = "mcp_coder.prompts" },
     { path = "mcp_coder.services" },
     { path = "mcp_coder.install" },
+    { path = "mcp_coder.toolkits" },
 ]
 
 # -----------------------------------------------------------------------------

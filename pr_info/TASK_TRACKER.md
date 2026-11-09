@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Command toolkit config model — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: `mcp_coder.toolkits.command.config` (`parse_config`, `Step`, `Problem`, `ParsedConfig`), packages, `.importlinter` / `tach.toml` entries, tests in `tests/toolkits/command/test_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `mcp_coder.toolkits.command.config` (`parse_config`, `Step`, `Problem`, `ParsedConfig`), packages, `.importlinter` / `tach.toml` entries, tests in `tests/toolkits/command/test_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `CommandToolkit.describe` and `run` with the parsers — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: `toolkit.py` with `describe`, `run`, exit-code / junit parsers, `fake_npm` fixture in `tests/conftest.py`, tests in `test_toolkit_run.py`
