@@ -136,6 +136,42 @@ def _run_check(project_dir: Path, entry: str) -> str | None:
     return "\n\n".join(texts) or None
 
 
+_CHECK_OUTPUT_HEADING = "Check output:"
+
+
+def _fix_check_text(project_dir: Path) -> str | None:
+    """Return the toolkit's raw ``fix.check`` fragment.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        The fragment text, or None if it is missing or the toolkit fails to
+        provide its fragments. An empty fragment is returned as "".
+    """
+    try:
+        fragments = load_toolkit(project_dir).toolkit.prompt_fragments()
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Could not load toolkit prompt fragments: %s", e)
+        return None
+    return fragments.get("fix.check")
+
+
+def _build_fix_prompt(fix_check: str, fix_text: str, check_instructions: str) -> str:
+    """Build the fix prompt from the fragment, the check output and instructions.
+
+    Args:
+        fix_check: The toolkit's ``fix.check`` fragment
+        fix_text: Fix text of the failing check
+        check_instructions: Filled ``check_instructions`` slot, or "" to omit
+
+    Returns:
+        The non-empty parts joined by a blank line.
+    """
+    parts = [fix_check, f"{_CHECK_OUTPUT_HEADING}\n{fix_text}", check_instructions]
+    return "\n\n".join(p for p in parts if p)
+
+
 def check_and_fix_mypy(
     project_dir: Path,
     step_num: int,
@@ -180,6 +216,22 @@ def check_and_fix_mypy(
             return True
 
         logger.info("Type errors found, attempting fixes...")
+
+        fix_check = _fix_check_text(project_dir)
+        if not fix_check:
+            logger.warning(
+                "No usable fix.check fragment from the toolkit - skipping fixes"
+            )
+            return False
+
+        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+        check_instructions = ""
+        if bash_grants_of(llm_permissions(project_dir, "claude")):
+            # Toolkits that check through Bash tell the LLM how to re-run checks
+            check_instructions = resolve_prompt_slots(
+                "[check_instructions]", project_dir, provider, bash_grants
+            ).get("check_instructions", "")
+
         identical_count = 0
 
         # Retry loop with smart retry logic
@@ -204,21 +256,11 @@ def check_and_fix_mypy(
             previous_outputs.append(mypy_result)
             mypy_attempt_counter += 1
 
-            # Get mypy fix prompt template
-            try:
-                mypy_prompt_template = get_prompt(
-                    str(PROMPTS_FILE_PATH), "Mypy Fix Prompt"
-                )
-                # Replace placeholder with actual mypy output
-                mypy_prompt = mypy_prompt_template.replace("[mypy_output]", mypy_result)
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                logger.error(f"Error loading mypy fix prompt: {e}")
-                return False
+            mypy_prompt = _build_fix_prompt(fix_check, mypy_result, check_instructions)
 
             # Call LLM for fixes
             try:
                 branch_name = get_branch_name_for_logging(str(project_dir))
-                bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
                 llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,

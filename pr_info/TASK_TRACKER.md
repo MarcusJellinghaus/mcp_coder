@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Implement fix loop uses the toolkit's `fix.check` — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: tests + `check_and_fix_mypy` uses `fix.check` fragment, Mypy Fix Prompt removed, `05-implementation.md` doc
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `check_and_fix_mypy` uses `fix.check` fragment, Mypy Fix Prompt removed, `05-implementation.md` doc
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Rebase — `[test_filter]` rename and allowlist from `llm_permissions` — [step_5.md](./steps/step_5.md)
 

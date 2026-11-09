@@ -36,14 +36,14 @@ Tier: automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MA
 
 - Updates `TASK_TRACKER.md` with implementation steps
 - Implements each step from the tracker
-- The LLM runs quality checks (pylint → pytest → mypy) after each step, as its prompt tells it to
+- The LLM runs the project's quality checks after each step, as its prompt tells it to
 - After the last step, mcp-coder runs its own mypy check and has the LLM fix what it reports; unresolved issues are logged and the run continues. This is on by default and can be turned off with `[tool.mcp-coder.implement] check_type_hints = false` in `pyproject.toml`
 - Formats code with the project's configured formatter
 - Commits changes with descriptive messages
 - Uses prompts ([prompts.md](../../../src/mcp_coder/prompts/prompts.md)):
   - [Implementation Prompt Template](../../../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
   - [Task Tracker Update](../../../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
-  - [Mypy Fix](../../../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
+  - Check fix: the toolkit's `fix.check` fragment (`prompt_fragments()`)
 
 **Alternative paths:**
 

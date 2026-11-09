@@ -162,31 +162,6 @@ Implement ONE step from the task tracker.
 - If something blocks you from verifying or completing a sub-task, write one line to `pr_info/.blocked.txt` saying what blocked you, and stop. That file is the ONLY way to report a problem. Writing notes, explanations or status paragraphs into a step file, a plan file or the task tracker is NOT a report and does NOT count as progress. Do not tick a check you did not see pass.
 ```
 
-### Mypy Type Fixes
-
-This prompt is used to fix mypy type errors when they are detected during code quality checks.
-
-#### Mypy Fix Prompt
-
-```
-Fix the mypy type errors shown in the output below.
-
-Focus only on resolving the type errors - do not make unnecessary changes to the code.
-
-For each error:
-1. Understand the type mismatch or missing annotation
-2. Add appropriate type hints or fix incorrect types
-3. Use proper typing imports (List, Dict, Optional, etc.) from typing module
-4. Ensure all function parameters and return types are properly annotated
-
-Keep changes minimal and focused on type correctness.
-
-Mypy output:
-[mypy_output]
-
-Expected output: Code changes that resolve all type errors while maintaining functionality.
-```
-
 ### Pull Request Summary
 
 This prompt is used to generate pull request titles and descriptions from git diff output.
