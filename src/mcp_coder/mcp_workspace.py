@@ -1,9 +1,12 @@
-"""Wrapper for mcp-workspace file listing functionality."""
+"""Wrapper for mcp-workspace file listing and gitignore utilities."""
 
 import logging
 from pathlib import Path
 
+from mcp_workspace.file_tools.directory_utils import is_path_gitignored
 from mcp_workspace.file_tools.directory_utils import list_files as _list_files
+
+__all__ = ["is_path_gitignored", "list_files"]
 
 # Logger for the external library (verbose at INFO level)
 _external_logger = logging.getLogger("mcp_workspace.file_tools.directory_utils")

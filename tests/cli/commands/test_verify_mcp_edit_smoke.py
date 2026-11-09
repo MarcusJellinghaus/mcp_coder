@@ -104,7 +104,7 @@ class TestMcpEditSmokeTest:
         tmp_path: Path,
     ) -> None:
         """Smoke test passes when prompt_llm writes B between A and C."""
-        test_file = tmp_path / ".mcp_coder_verify.md"
+        test_file = tmp_path / ".scratch" / "mcp_coder_verify.md"
 
         def fake_llm(*args: Any, **kwargs: Any) -> dict[str, Any]:
             test_file.write_text("A\nB\nC\n", encoding="utf-8")
@@ -118,6 +118,102 @@ class TestMcpEditSmokeTest:
 
         assert "[OK]" in result
         assert "edit verified" in result
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_prompt_uses_posix_scratch_path(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Prompt names the test file with forward slashes."""
+        mock_prompt_llm.return_value = {"text": "done"}
+
+        _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        prompt = mock_prompt_llm.call_args.args[0]
+        assert ".scratch/mcp_coder_verify.md" in prompt
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_keeps_existing_scratch_dir(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An existing .scratch/ and its other files survive the run."""
+        scratch_dir = tmp_path / ".scratch"
+        scratch_dir.mkdir()
+        other = scratch_dir / "other.txt"
+        other.write_text("keep", encoding="utf-8")
+        mock_prompt_llm.return_value = {"text": "done"}
+
+        _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert scratch_dir.exists()
+        assert other.exists()
+        assert not (scratch_dir / "mcp_coder_verify.md").exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_removes_scratch_dir_it_created(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A .scratch/ created by the smoke test is removed afterwards."""
+        mock_prompt_llm.return_value = {"text": "done"}
+
+        _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_keeps_created_scratch_dir_when_not_empty(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Files added to a freshly created .scratch/ during the run survive."""
+        scratch_dir = tmp_path / ".scratch"
+        test_file = scratch_dir / "mcp_coder_verify.md"
+        agent_file = scratch_dir / "agent.txt"
+
+        def fake_llm(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            agent_file.write_text("agent", encoding="utf-8")
+            test_file.write_text("A\nB\nC\n", encoding="utf-8")
+            return {"text": "done"}
+
+        mock_prompt_llm.side_effect = fake_llm
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert "edit verified" in result
+        assert agent_file.exists()
+        assert not test_file.exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_skipped_when_scratch_gitignored(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Smoke test is skipped, creating nothing, when .scratch/ is gitignored."""
+        (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert "[WARN]" in result
+        assert "skipped: .scratch/mcp_coder_verify.md is gitignored" in result
+        mock_prompt_llm.assert_not_called()
+        assert not (tmp_path / ".scratch").exists()
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_fail_displays_warning(
@@ -197,6 +293,75 @@ class TestMcpEditSmokeTest:
         assert exit_code == 0
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_gitignore_check_error_displays_warning(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An error from the gitignore check becomes a warning row."""
+        with patch(
+            f"{_VERIFY}.is_path_gitignored",
+            side_effect=OSError("gitignore unreadable"),
+        ):
+            result = _run_mcp_edit_smoke_test(
+                tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+            )
+
+        assert "[WARN]" in result
+        assert "edit not verified (gitignore unreadable)" in result
+        mock_prompt_llm.assert_not_called()
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch(f"{_VERIFY}.is_path_gitignored", side_effect=OSError("gitignore unreadable"))
+    @patch(f"{_VERIFY}.verify_config")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(
+        f"{_VERIFY}.resolve_mcp_config_path",
+        return_value="/fake/.mcp.json",
+    )
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_LC_VERIFY}.verify_langchain")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_gitignore_check_error_does_not_stop_verify(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        _mock_resolve_mcp: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
+        _mock_gitignored: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """verify completes and shows the smoke test row when the check raises."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_ok()
+        mock_verify_config.return_value = {
+            "entries": [],
+            "has_error": False,
+        }
+
+        exit_code = execute_verify(
+            _make_args(mcp_config=".mcp.json", project_dir=str(tmp_path))
+        )
+        output = capsys.readouterr().out
+
+        assert exit_code == 0
+        assert "MCP edit smoke test" in output
+        assert "edit not verified (gitignore unreadable)" in output
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_cleans_up_file(
         self,
         mock_prompt_llm: MagicMock,
@@ -209,7 +374,7 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert not (tmp_path / ".mcp_coder_verify.md").exists()
+        assert not (tmp_path / ".scratch" / "mcp_coder_verify.md").exists()
 
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
