@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shared placeholder resolver `mcp_coder.utils.env_placeholders`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `tests/utils/test_env_placeholders.py`, then `src/mcp_coder/utils/env_placeholders.py`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `tests/utils/test_env_placeholders.py`, then `src/mcp_coder/utils/env_placeholders.py`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: LangChain config loader uses the shared resolver
 See [step_2.md](./steps/step_2.md)
