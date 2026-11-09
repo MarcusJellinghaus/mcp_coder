@@ -26,7 +26,12 @@ from ...utils.pyproject_config import (
     get_implement_config,
     has_legacy_format_code_key,
 )
-from ...utils.toolkit_runner import load_toolkit, verify_toolkit
+from ...utils.toolkit_runner import (
+    DEFAULT_TOOLKIT,
+    load_toolkit,
+    load_toolkit_config,
+    verify_toolkit,
+)
 from .verify_formatting import (
     _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
@@ -401,12 +406,36 @@ _VERIFY_STATUS_SYMBOL: dict[str, str] = {
 }
 
 
+def _uses_mcp_tools_py(project_dir: Path) -> bool:
+    """Return True if the project's toolkit is mcp-tools-py.
+
+    An invalid config counts as False: the Toolkit row already reports it.
+    """
+    try:
+        return load_toolkit_config(project_dir).toolkit == DEFAULT_TOOLKIT
+    except ValueError:
+        return False
+
+
+def _formatting_enabled(project_dir: Path) -> bool:
+    """Return ``format_code``; an invalid value counts as enabled.
+
+    The format_code row already reports the invalid value.
+    """
+    try:
+        return get_format_code(project_dir).enabled
+    except ValueError:
+        return True
+
+
 def _toolkit_rows(
     project_dir: Path, symbols: dict[str, str], *, indent: int = 4
 ) -> bool:
     """Print the Toolkit row and one row per toolkit verify item for ``format``.
 
-    The toolkit's ``formatter`` item is skipped: the Formatter row covers it.
+    The ``format`` items are only checked when formatting is on and the
+    ``commit`` binding is non-empty. The toolkit's ``formatter`` item is
+    skipped: the Formatter row covers it.
 
     Args:
         project_dir: Path to the project directory.
@@ -419,7 +448,11 @@ def _toolkit_rows(
     """
     try:
         loaded = load_toolkit(project_dir)
-        items = verify_toolkit(loaded, project_dir, "format")
+        items = (
+            verify_toolkit(loaded, project_dir, "format")
+            if _formatting_enabled(project_dir) and loaded.config.bindings["commit"]
+            else []
+        )
     except ValueError as exc:
         print(_format_row("Toolkit", symbols["failure"], str(exc), indent=indent))
         return False
@@ -452,14 +485,17 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
     if not pyproject_exists:
         print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
         print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
-        ok = _formatter_row(project_dir, symbols, indent=2)
+        ok = not _uses_mcp_tools_py(project_dir) or _formatter_row(
+            project_dir, symbols, indent=2
+        )
         return _toolkit_rows(project_dir, symbols, indent=2) and ok
     print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
     print(_format_row("Language", symbols["success"], "Python (detected)", indent=2))
     print()
     print("  [Python]")
     ok = _format_code_row(project_dir, symbols)
-    ok = _formatter_row(project_dir, symbols) and ok
+    if _uses_mcp_tools_py(project_dir):
+        ok = _formatter_row(project_dir, symbols) and ok
     ok = _toolkit_rows(project_dir, symbols) and ok
     if has_legacy_format_code_key(project_dir):
         print(

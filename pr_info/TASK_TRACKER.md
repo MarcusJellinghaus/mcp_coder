@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 8: `mcp-coder verify` gating — [step_8.md](./steps/step_8.md)
-- [ ] Implementation: `_toolkit_rows` format gating, `_uses_mcp_tools_py`, Formatter row only for `mcp-tools-py`, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_toolkit_rows` format gating, `_uses_mcp_tools_py`, Formatter row only for `mcp-tools-py`, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Docs `docs/configuration/command-toolkit.md` — [step_9.md](./steps/step_9.md)
 - [ ] Implementation: write `command-toolkit.md`, link from `docs/README.md`
