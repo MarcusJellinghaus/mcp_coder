@@ -14,10 +14,6 @@ class TestProcessSingleTaskBashGrants:
         "mcp_coder.workflows.implement.task_processing._count_incomplete_tasks",
         return_value=0,
     )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.get_binding",
-        return_value=(),
-    )
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
     @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
@@ -41,7 +37,6 @@ class TestProcessSingleTaskBashGrants:
         _mock_run_formatters: MagicMock,
         _mock_commit: MagicMock,
         _mock_push: MagicMock,
-        _mock_get_binding: MagicMock,
         _mock_count: MagicMock,
     ) -> None:
         """Only the Bash entries reach prompt_llm."""

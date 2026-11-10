@@ -242,6 +242,17 @@ _._no_branch_issue_link
 # failure-comment builder never calls real git
 _._stub_branch_head
 
+# tests/workflows/implement/conftest.py - Autouse fixture stubbing the per-task checks
+_._stub_task_checks
+
+# tests/workflows/implement/test_core_workflow.py - Autouse fixture stubbing the final check
+_._stub_final_check
+
+# implement/test_check_loop_rescue.py, test_core_check_abort.py,
+# test_core_final_check.py and test_task_processing_checks.py - Fixture
+# registered via @pytest.fixture(name="mocks"), never requested by function name
+_._mocks_fixture
+
 # create_pr/test_failure_handling.py, test_create_pr_integration.py and
 # create_pr/test_workflow.py - Autouse fixtures stubbing post-creation polling
 # and the open-PR lookup so phase A runs without GitHub

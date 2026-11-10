@@ -92,6 +92,14 @@ class TestFailureLabels:
         assert FAILURE_LABELS["branch_moved"] == "ci_fix_needed"
         assert CATEGORY_DISPLAY["branch_moved"] == "Branch Moved"
 
+    def test_checks_exhausted_maps_to_implementing_failed(self) -> None:
+        """The capped check fix loop reuses the general failure label."""
+        assert FAILURE_LABELS["checks_exhausted"] == "implementing_failed"
+
+    def test_labels_and_display_share_keys(self) -> None:
+        """Every reason has both a label and a Category display."""
+        assert FAILURE_LABELS.keys() == CATEGORY_DISPLAY.keys()
+
 
 class TestAppendDetail:
     """Tests for append_detail."""
@@ -153,6 +161,18 @@ class TestCommentParts:
         fields, _section = _comment_parts("general", tmp_path)
 
         assert ("Progress", None) in fields
+
+    @patch(
+        "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+        return_value="",
+    )
+    def test_checks_exhausted_category(
+        self, _mock_diff: MagicMock, tmp_path: Path
+    ) -> None:
+        """Reason 'checks_exhausted' renders 'Checks Exhausted'."""
+        fields, _section = _comment_parts("checks_exhausted", tmp_path)
+
+        assert ("Category", "Checks Exhausted") in fields
 
     @patch(
         "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",

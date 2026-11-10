@@ -23,12 +23,12 @@ from mcp_coder.workflow_utils.task_tracker import (
     has_incomplete_work,
 )
 
+from .blocked import read_and_clear_blocked
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_FINALISATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
 )
-from .task_processing import read_and_clear_blocked
 
 logger = logging.getLogger(__name__)
 

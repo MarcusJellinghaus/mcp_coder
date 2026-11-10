@@ -16,7 +16,6 @@ from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
-from mcp_coder.utils.toolkit_runner import get_binding
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
     BRANCH_MOVED_NEXT_STEP,
@@ -36,6 +35,8 @@ from mcp_coder.workflow_utils.failure_handling import (
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
+from .blocked import read_and_clear_blocked
+from .check_loop import CheckOutcome, check_and_fix_mypy, rescue_commit
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
@@ -48,11 +49,7 @@ from .failure_reporting import (
 )
 from .finalisation import run_finalisation
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
-from .task_processing import (
-    check_and_fix_mypy,
-    process_task_with_retry,
-    read_and_clear_blocked,
-)
+from .task_processing import process_task_with_retry
 from .task_tracker_prep import (
     TrackerPrepError,
     log_progress_summary,
@@ -61,6 +58,28 @@ from .task_tracker_prep import (
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
+    """Map a non-clean final-check outcome to a failure reason and message.
+
+    Args:
+        checks: The final check's outcome; its status is not ``clean``.
+
+    Returns:
+        (failure reason, message) for the "Final mypy check" stage.
+    """
+    if checks.status == "cap":
+        # The detail carries the real turn count: the loop can cap early
+        return "checks_exhausted", checks.detail
+    if checks.status == "error":
+        return "general", checks.detail
+    if checks.status == "blocked":
+        logger.error("Implementation blocked: %s", checks.detail)
+        return "blocked", checks.detail
+    return checks.status, append_detail(
+        "LLM failure during final mypy check", checks.detail
+    )
 
 
 def run_implement_workflow(
@@ -120,6 +139,12 @@ def run_implement_workflow(
         post_issue_comments=post_issue_comments,
     )
 
+    def abort_checks(reason: str, *, stage: str, message: str) -> int:
+        # Every check-stage abort first commits and pushes the work in the
+        # tree, so it survives a discarded checkout. The original reason wins.
+        rescue = rescue_commit(project_dir, reason)
+        return fail(reason, stage=stage, message=f"{message} — rescue commit: {rescue}")
+
     def body() -> int:
         formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
         if formatter_err:
@@ -171,19 +196,21 @@ def run_implement_workflow(
                 if outcome.reason == "no_tasks":
                     # Legitimate completion - no more tasks
                     break
+                # A check-stage abort rescues the work in the tree first
+                task_fail = abort_checks if outcome.checks_failed else fail
                 if outcome.reason == "blocked":
                     # The agent reported it could not proceed - terminal, no retry.
                     # Logged unconditionally: comment posting can be off, and the
                     # reason text is the whole point of this exit.
                     logger.error("Implementation blocked: %s", outcome.detail)
-                    return fail(
+                    return task_fail(
                         "blocked",
                         stage="Task implementation",
                         message=outcome.detail,
                     )
                 if outcome.reason == "timeout":
                     # LLM timeout during task processing
-                    return fail(
+                    return task_fail(
                         "timeout",
                         stage="Task implementation",
                         message=append_detail(
@@ -192,7 +219,7 @@ def run_implement_workflow(
                     )
                 if outcome.reason == "mcp_unavailable":
                     # A required MCP server was unavailable during task processing
-                    return fail(
+                    return task_fail(
                         "mcp_unavailable",
                         stage="Task implementation",
                         message=append_detail(
@@ -228,7 +255,7 @@ def run_implement_workflow(
                     # Error occurred during task processing. A plain fallback,
                     # not append_detail: "(agent reported: ...)" is the wrong
                     # framing for e.g. an unreadable tracker.
-                    return fail(
+                    return task_fail(
                         "general",
                         stage="Task implementation",
                         message=outcome.detail or "Task processing failed",
@@ -246,93 +273,70 @@ def run_implement_workflow(
                 message=f"Stopped after {round_cap} rounds without completing all tasks",
             )
 
-        # Step 5: Run the final check over the implement_final binding
-        final_binding: tuple[str, ...] = ()
-        if progress.completed > 0 and implement_config.check_type_hints:
-            try:
-                final_binding = get_binding(project_dir, "implement_final")
-            except ValueError as e:
-                # LLM sessions can edit the config mid-run; treat as a failed check
-                logger.warning(f"Final mypy check failed: {e}")
-        if (
-            progress.completed > 0
-            and implement_config.check_type_hints
-            and final_binding
-        ):
-            logger.info("Running final mypy check after all tasks...")
-            env_vars = prepare_llm_environment(project_dir)
+        # Step 5: Run the final check over the implement_final binding - a gate
+        logger.info("Running final mypy check after all tasks...")
+        env_vars = prepare_llm_environment(project_dir)
 
-            # Use step number 0 for final mypy check conversation.
-            # check_and_fix_mypy no longer swallows the two typed LLM failures;
-            # categorize them here (the only live call site) into
-            # timeout / mcp_unavailable.
-            try:
-                try:
-                    mypy_clean = check_and_fix_mypy(
-                        project_dir,
-                        0,
-                        provider,
-                        env_vars,
-                        mcp_config,
-                        settings_file,
-                        entry="implement_final",
-                    )
-                except (LLMTimeoutError, McpServersUnavailableError) as exc:
-                    # Fallback keeps mypy happy; the reason is non-None for both types.
-                    reason = llm_failure_reason(exc) or "general"
-                    return fail(
-                        reason,
-                        stage="Final mypy check",
-                        message="LLM failure during final mypy check",
-                    )
-                if not mypy_clean:
-                    logger.warning(
-                        "Final mypy check found unresolved issues - continuing anyway"
-                    )
+        # Use step number 0 for final mypy check conversation
+        try:
+            checks = check_and_fix_mypy(
+                project_dir,
+                0,
+                provider,
+                env_vars,
+                mcp_config,
+                settings_file,
+                entry="implement_final",
+                check_type_hints=implement_config.check_type_hints,
+            )
+        finally:
+            # The fix turns run their own LLM sessions, so drop any marker
+            # left behind: it must never reach the commit below nor poison
+            # the next run at check_git_clean / prepare_task_tracker.
+            marker = read_and_clear_blocked(project_dir)
+        if checks.status == "clean" and marker:
+            checks = CheckOutcome("blocked", marker)
+        if checks.status != "clean":
+            reason, message = _final_check_failure(checks)
+            return abort_checks(reason, stage="Final mypy check", message=message)
 
-                # Format code after mypy fixes
-                if not run_formatters(project_dir):
-                    logger.error("Formatting failed after final mypy check")
-                    return fail(
-                        "general",
-                        stage="Post-implementation formatting",
-                        message="Formatting failed after final mypy check",
-                    )
-            finally:
-                # check_and_fix_mypy runs its own LLM turns, so drop any marker
-                # it wrote: before the staging below so it never reaches a
-                # commit, and on both early returns above so it cannot poison
-                # the next run at check_git_clean / prepare_task_tracker.
-                read_and_clear_blocked(project_dir)
+        # Format code after mypy fixes
+        if not run_formatters(project_dir):
+            logger.error("Formatting failed after final mypy check")
+            return fail(
+                "general",
+                stage="Post-implementation formatting",
+                message="Formatting failed after final mypy check",
+            )
 
-            # Commit mypy fixes if any changes were made.
-            status = get_full_status(project_dir)
-            all_changes = status["staged"] + status["modified"] + status["untracked"]
+        # Commit mypy fixes if any changes were made.
+        status = get_full_status(project_dir)
+        all_changes = status["staged"] + status["modified"] + status["untracked"]
 
-            if all_changes:
-                logger.info("Committing final mypy fixes...")
-                if not commit_changes(
-                    project_dir,
-                    provider,
-                    mcp_config=mcp_config,
-                    settings_file=settings_file,
-                ):
-                    logger.error("Failed to commit final mypy fixes")
-                    return fail(
-                        "general",
-                        stage="Post-implementation commit",
-                        message="Failed to commit final mypy fixes",
-                    )
+        if all_changes:
+            logger.info("Committing final mypy fixes...")
+            if not commit_changes(
+                project_dir,
+                provider,
+                mcp_config=mcp_config,
+                settings_file=settings_file,
+            ):
+                logger.error("Failed to commit final mypy fixes")
+                return fail(
+                    "general",
+                    stage="Post-implementation commit",
+                    message="Failed to commit final mypy fixes",
+                )
 
-                if not push_changes(project_dir):
-                    logger.error("Failed to push final mypy fixes")
-                    return fail(
-                        "general",
-                        stage="Post-implementation commit",
-                        message="Failed to push final mypy fixes",
-                    )
-            else:
-                logger.info("No changes from final mypy check - skipping commit")
+            if not push_changes(project_dir):
+                logger.error("Failed to push final mypy fixes")
+                return fail(
+                    "general",
+                    stage="Post-implementation commit",
+                    message="Failed to push final mypy fixes",
+                )
+        else:
+            logger.info("No changes from final mypy check - skipping commit")
 
         # Step 5.5: Run finalisation to complete any remaining tasks
         finalisation_success = run_finalisation(

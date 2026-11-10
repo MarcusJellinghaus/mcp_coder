@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -11,6 +12,7 @@ import pytest
 
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
+from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 from mcp_coder.workflows.implement.task_tracker_prep import (
@@ -27,6 +29,23 @@ _DELIBERATE_HANDLER = (
 )
 # - the SIGTERM / unexpected-exit safety net lives in run_guarded -> this handler
 _NET_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+
+
+@pytest.fixture(autouse=True)
+def _stub_final_check() -> Iterator[None]:
+    """Stub the final check stage, which runs even when no task was completed."""
+    with (
+        patch(
+            "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+            return_value=CheckOutcome("clean"),
+        ),
+        patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True),
+        patch(
+            "mcp_coder.workflows.implement.core.get_full_status",
+            return_value={"staged": [], "modified": [], "untracked": []},
+        ),
+    ):
+        yield
 
 
 # Reusable LLMResponseDict mock value
@@ -48,7 +67,15 @@ class TestIntegration:
         sys.platform.startswith("linux"),
         reason="Log capture behaves differently on Linux",
     )
-    @patch("mcp_coder.workflows.implement.core.get_binding", return_value=())
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_paths")
@@ -73,7 +100,9 @@ class TestIntegration:
         mock_commit: MagicMock,
         mock_get_progress: MagicMock,
         mock_process_task: MagicMock,
-        _mock_get_binding: MagicMock,
+        _mock_check_mypy: MagicMock,
+        _mock_run_formatters: MagicMock,
+        _mock_core_status: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test complete workflow execution from start to finish."""
@@ -169,57 +198,6 @@ class TestIntegration:
 
         # Test progress logging without data
         log_progress_summary(tmp_path)  # Should not raise exception
-
-    @patch(
-        "mcp_coder.workflows.implement.core.get_binding",
-        side_effect=ValueError("bad toolkit config"),
-    )
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
-    @patch(
-        "mcp_coder.workflows.implement.core.get_current_branch_name",
-        return_value="feature/test-branch",
-    )
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    def test_final_binding_error_logs_and_continues(
-        self,
-        _mock_check_git: MagicMock,
-        _mock_check_branch: MagicMock,
-        _mock_check_prereq: MagicMock,
-        _mock_prepare_tracker: MagicMock,
-        _mock_log_progress: MagicMock,
-        mock_process_task: MagicMock,
-        _mock_get_branch: MagicMock,
-        mock_check_mypy: MagicMock,
-        mock_run_finalisation: MagicMock,
-        _mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
-        _mock_get_binding: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """A config error at the final binding lookup is a failed check, not a crash."""
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
-        mock_process_task.side_effect = [
-            TaskOutcome(True, "completed"),
-            TaskOutcome(False, "no_tasks"),
-        ]
-
-        with caplog.at_level(logging.WARNING):
-            result = run_implement_workflow(Path("/test/project"), "claude")
-
-        assert result == 0
-        mock_check_mypy.assert_not_called()
-        mock_run_finalisation.assert_called_once()
-        assert "Final mypy check failed: bad toolkit config" in caplog.text
 
 
 class TestRunImplementWorkflowLabelTransitions:

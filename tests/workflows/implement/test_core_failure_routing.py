@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
@@ -437,7 +438,7 @@ class TestRoundCap:
             ),
             patch(
                 "mcp_coder.workflows.implement.core.check_and_fix_mypy",
-                return_value=True,
+                return_value=CheckOutcome("clean"),
             ),
             patch(
                 "mcp_coder.workflows.implement.core.run_formatters",

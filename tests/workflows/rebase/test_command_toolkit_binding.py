@@ -69,11 +69,18 @@ def test_run_formatters(project: Path) -> None:
     assert run_formatters(project) is True
 
 
-def test_implement_final_runs_check_quick(project: Path) -> None:
-    """``implement_final`` runs ``check@quick`` only."""
+def test_implement_final_runs_check_standard_and_test_quick(project: Path) -> None:
+    """``implement_final`` runs ``check@standard`` then ``test@quick``.
+
+    The config declares no ``test.quick`` and ``quick`` has no lower depth to
+    fall back to, so that request is an ``error`` result.
+    """
     results = run_binding(load_toolkit(project), project, "implement_final")
 
-    assert [(request, r.status) for request, r in results] == [("check@quick", "ok")]
+    assert [(request, r.status) for request, r in results] == [
+        ("check@standard", "findings"),
+        ("test@quick", "error"),
+    ]
 
 
 def test_run_all_checks_reports_keys_and_fix_texts(project: Path) -> None:

@@ -134,6 +134,36 @@ class TestBindings:
         assert get_binding(tmp_path, "commit") == ("format@apply",)
         assert get_binding(tmp_path, "rebase") == DEFAULT_BINDINGS["rebase"]
 
+    def test_implement_defaults(self, tmp_path: Path) -> None:
+        """The implement entries gate on check@quick, then check@standard + test@quick."""
+        config = load_toolkit_config(tmp_path)
+        assert config.bindings["implement_task"] == ("check@quick",)
+        assert config.bindings["implement_final"] == ("check@standard", "test@quick")
+
+    @pytest.mark.parametrize(
+        ("entry", "requests"),
+        [
+            pytest.param(
+                "implement_task", ("check@quick", "test@quick"), id="task-check-test"
+            ),
+            pytest.param(
+                "implement_final", ("test@quick", "check@full"), id="final-test-check"
+            ),
+            pytest.param("implement_task", (), id="task-opt-out"),
+        ],
+    )
+    def test_implement_entries_accept_check_and_test(
+        self, tmp_path: Path, entry: str, requests: tuple[str, ...]
+    ) -> None:
+        """Both implement entries accept check and test, and an empty opt-out."""
+        listed = ", ".join(f'"{r}"' for r in requests)
+        _write(
+            tmp_path,
+            "pyproject.toml",
+            f"[tool.mcp-coder.toolkit.bindings]\n{entry} = [{listed}]\n",
+        )
+        assert load_toolkit_config(tmp_path).bindings[entry] == requests
+
 
 class TestParamsAndSection:
     """params and the toolkit's own section."""
@@ -194,14 +224,14 @@ class TestParamsAndSection:
             id="empty-depth",
         ),
         pytest.param(
-            '[tool.mcp-coder.toolkit.bindings]\nimplement_task = ["check@quick"]',
-            "implement_task",
-            id="implement-task-non-empty",
+            '[tool.mcp-coder.toolkit.bindings]\nimplement_task = ["format@apply"]',
+            "check, test",
+            id="implement-task-format",
         ),
         pytest.param(
-            '[tool.mcp-coder.toolkit.bindings]\nimplement_final = ["test@quick"]',
-            "test@quick",
-            id="implement-final-test",
+            '[tool.mcp-coder.toolkit.bindings]\nimplement_final = ["format@check"]',
+            "check, test",
+            id="implement-final-format",
         ),
         pytest.param(
             '[tool.mcp-coder.toolkit.bindings]\nrebase = ["format@apply"]',

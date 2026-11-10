@@ -65,8 +65,21 @@ def test_entry_uses_resolved_depth(perm_project: Path) -> None:
     ]
 
 
+def test_implement_task_default_grants_check_quick(perm_project: Path) -> None:
+    """implement_task defaults to check@quick, so its grants apply."""
+    assert llm_permissions(perm_project, "claude", "implement_task") == [
+        "Bash(npm run lint)",
+        "mcp__tools__check",
+    ]
+
+
 def test_entry_with_no_requests(perm_project: Path) -> None:
-    """implement_task binds nothing, so no permissions."""
+    """An entry bound to nothing grants no permissions."""
+    (perm_project / "mcp-coder.toml").write_text(
+        '[tool.mcp-coder.toolkit]\ntoolkit = "perm"\n'
+        "[tool.mcp-coder.toolkit.bindings]\nimplement_task = []\n",
+        encoding="utf-8",
+    )
     assert not llm_permissions(perm_project, "claude", "implement_task")
 
 
