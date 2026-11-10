@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Exact title / cmdline matching on name boundaries — [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: tests + `_contains_bounded`, bounded `_title_binds` and `_cmdline_scan`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `_contains_bounded`, bounded `_title_binds` and `_cmdline_scan`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Build the workspace file with `json.dumps` — [step_8.md](./steps/step_8.md)
 

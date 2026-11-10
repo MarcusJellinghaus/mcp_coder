@@ -13,6 +13,7 @@ PID, computing the raw signals plus ``directory_empty`` / ``within_grace`` /
 """
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -322,6 +323,21 @@ def capture_detection_snapshot() -> DetectionSnapshot:
     )
 
 
+_NAME_CHAR = "a-z0-9_-"
+
+
+def _contains_bounded(haystack: str, needle: str) -> bool:
+    """Whether ``needle`` occurs in ``haystack`` not preceded/followed by a name char.
+
+    Both arguments must already be lowercased. Any occurrence counts.
+
+    Returns:
+        ``True`` when some occurrence of ``needle`` is bounded on both sides.
+    """
+    pattern = rf"(?<![{_NAME_CHAR}]){re.escape(needle)}(?![{_NAME_CHAR}])"
+    return re.search(pattern, haystack) is not None
+
+
 def _title_binds(
     snapshot: DetectionSnapshot,
     issue_number: int | None,
@@ -331,11 +347,16 @@ def _title_binds(
 
     Reads window titles from the frozen snapshot and matches the ``[#N``
     bracket + repo name. A workspace window has the format
-    ``[#N stage] title - repo_name - Visual Studio Code``; requiring the
-    ``[#N`` bracket avoids false positives from tools that show bare issue
-    numbers (e.g. ``#458 - mcp_coder``). Title-positive is authoritative; it is
-    intentionally independent of cmdline/PID so a restored window (no folder in
-    cmdline) still reports ``title_match=True``.
+    ``[#N stage] title - repo_name``; the repo name ends the string (there is
+    no ``- Visual Studio Code`` suffix). Requiring the ``[#N`` bracket avoids
+    false positives from tools that show bare issue numbers (e.g.
+    ``#458 - mcp_coder``). Two boundary rules keep another session's window
+    from binding: ``[#N`` must not be followed by a digit (``[#1342`` does not
+    bind #134), and the repo name must not be preceded or followed by a name
+    character (``mcp_coder_utils`` does not bind ``mcp_coder``).
+    Title-positive is authoritative; it is intentionally independent of
+    cmdline/PID so a restored window (no folder in cmdline) still reports
+    ``title_match=True``.
 
     Returns:
         ``True`` when a snapshot window title binds to this issue + repo,
@@ -347,9 +368,9 @@ def _title_binds(
         return False
 
     repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
-    issue_pattern = f"[#{issue_number}"
+    issue_re = re.compile(re.escape(f"[#{issue_number}") + r"(?!\d)")
     for _pid, title in snapshot.window_titles:
-        if issue_pattern in title and repo_name in title.lower():
+        if issue_re.search(title) and _contains_bounded(title.lower(), repo_name):
             return True
     return False
 
@@ -367,7 +388,9 @@ def _cmdline_scan(
     folder_name = Path(folder_path).name.lower()
     for proc in snapshot.processes:
         cmdline_lower = proc.get("cmdline_lower", "")
-        if folder_str in cmdline_lower or folder_name in cmdline_lower:
+        if _contains_bounded(cmdline_lower, folder_str) or _contains_bounded(
+            cmdline_lower, folder_name
+        ):
             return True, proc.get("pid")
     return False, None
 
