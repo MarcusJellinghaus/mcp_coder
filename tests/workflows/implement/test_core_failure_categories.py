@@ -7,6 +7,7 @@ Split out of test_core.py, which sits close to the CI file-size gate
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
@@ -55,8 +56,7 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """A final-mypy LLMTimeoutError is categorized to LLM_TIMEOUT (was swallowed)."""
-        from mcp_coder.llm.interface import LLMTimeoutError
+        """A final-check timeout outcome is categorized to LLM_TIMEOUT."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
         mock_get_config.return_value = ImplementConfig(check_type_hints=True)
@@ -68,7 +68,7 @@ class TestRunImplementWorkflowFailureCategories:
             TaskOutcome(True, "completed"),
             TaskOutcome(False, "no_tasks"),
         ]
-        mock_check_mypy.side_effect = LLMTimeoutError("timed out")
+        mock_check_mypy.return_value = CheckOutcome("timeout")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -119,10 +119,7 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """A final-mypy McpServersUnavailableError is categorized to MCP_UNAVAILABLE."""
-        from mcp_coder.llm.providers.claude.claude_code_cli import (
-            McpServersUnavailableError,
-        )
+        """A final-check mcp_unavailable outcome is categorized to MCP_UNAVAILABLE."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
         mock_get_config.return_value = ImplementConfig(check_type_hints=True)
@@ -134,10 +131,7 @@ class TestRunImplementWorkflowFailureCategories:
             TaskOutcome(True, "completed"),
             TaskOutcome(False, "no_tasks"),
         ]
-        mock_check_mypy.side_effect = McpServersUnavailableError(
-            "MCP servers unavailable",
-            {"mcp-tools-py": "failed"},
-        )
+        mock_check_mypy.return_value = CheckOutcome("mcp_unavailable")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -156,7 +150,10 @@ class TestRunImplementWorkflowFailureCategories:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -220,7 +217,10 @@ class TestRunImplementWorkflowFailureCategories:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -289,7 +289,10 @@ class TestRunImplementWorkflowFailureCategories:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )

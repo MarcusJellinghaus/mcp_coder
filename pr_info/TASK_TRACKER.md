@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Both callers on the new loop; delete the old one — [step_4.md](./steps/step_4.md)
-- [ ] Implementation: conftest autouse fixture, `test_task_processing_checks.py`, `test_core_final_check.py`; switch `task_processing.py` / `core.py` / `__init__.py`; delete old loop and `test_task_processing_mypy.py`; update existing tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: conftest autouse fixture, `test_task_processing_checks.py`, `test_core_final_check.py`; switch `task_processing.py` / `core.py` / `__init__.py`; delete old loop and `test_task_processing_mypy.py`; update existing tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Rescue commit and the abort rule — [step_5.md](./steps/step_5.md)
 - [ ] Implementation: tests in `test_check_loop_rescue.py` / `test_core_check_abort.py`, then `rescue_commit`, `TaskOutcome.checks_failed`, `abort_checks` in `core.py`; patch `rescue_commit` in existing core tests

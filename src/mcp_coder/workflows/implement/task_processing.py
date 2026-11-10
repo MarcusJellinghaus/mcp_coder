@@ -17,18 +17,8 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.prompt_slots import (
-    fill_prompt,
-    resolve_prompt_slots,
-    toolkit_declares_bash_grants,
-)
-from mcp_coder.utils.toolkit_runner import (
-    bash_grants_of,
-    get_binding,
-    llm_permissions,
-    load_toolkit,
-    run_binding,
-)
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
     push_changes,
@@ -41,7 +31,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 from .blocked import read_and_clear_blocked
-from .check_loop import _build_fix_prompt
+from .check_loop import CheckOutcome, check_and_fix_mypy
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
@@ -107,218 +97,6 @@ def _count_incomplete_tasks(project_dir: Path) -> int:
     )
 
 
-def _run_check(project_dir: Path, entry: str) -> str | None:
-    """Run the requests bound to a workflow entry and return their fix text.
-
-    Args:
-        project_dir: Path to the project directory
-        entry: Binding entry name (e.g. 'implement_task', 'implement_final')
-
-    Returns:
-        The fix text of all results with findings, joined by a blank line, or
-        None if every result is ok or skipped.
-
-    Raises:
-        RuntimeError: If the toolkit fails to load or any request errors.
-    """
-    try:
-        results = run_binding(load_toolkit(project_dir), project_dir, entry)
-    except Exception as e:
-        raise RuntimeError(f"Failed to run checks: {e}") from e
-
-    errors = [f"{req}: {res.summary}" for req, res in results if res.status == "error"]
-    if errors:
-        raise RuntimeError("Failed to run checks: " + "; ".join(errors))
-    for req, res in results:
-        if res.status == "skipped":
-            logger.info("%s skipped: %s", req, res.summary)
-    texts = [
-        res.fix_text or res.summary for _, res in results if res.status == "findings"
-    ]
-    return "\n\n".join(texts) or None
-
-
-def _fix_check_text(project_dir: Path) -> str | None:
-    """Return the toolkit's raw ``fix.check`` fragment.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        The fragment text, or None if it is missing or the toolkit fails to
-        provide its fragments. An empty fragment is returned as "".
-    """
-    try:
-        fragments = load_toolkit(project_dir).toolkit.prompt_fragments()
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.warning("Could not load toolkit prompt fragments: %s", e)
-        return None
-    return fragments.get("fix.check")
-
-
-def check_and_fix_mypy(
-    project_dir: Path,
-    step_num: int,
-    provider: str,
-    env_vars: dict[str, str] | None = None,
-    mcp_config: str | None = None,
-    settings_file: str | None = None,
-    entry: str = "implement_final",
-) -> bool:
-    """Run mypy check and attempt fixes if issues found. Returns True if clean.
-
-    Args:
-        project_dir: Path to the project directory
-        step_num: Step number for conversation naming
-        provider: LLM provider (e.g., 'claude')
-        env_vars: Optional environment variables for the subprocess
-        mcp_config: Optional path to MCP configuration file
-        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        entry: Toolkit binding entry whose requests are run as the check.
-
-    Returns:
-        True if mypy check passes (no type errors), False if errors remain after fix attempts.
-
-    Raises:
-        LLMTimeoutError: If the fix-up LLM call hits its inactivity timeout.
-        McpServersUnavailableError: If a required MCP server is unavailable
-            during the fix-up LLM call. Both propagate (are NOT swallowed to a
-            False result) so the caller can categorize them.
-    """
-    logger.info("Running mypy type checking...")
-
-    max_identical_attempts = 3
-    previous_outputs = []
-    mypy_attempt_counter = 0
-
-    try:
-        # Initial check through the toolkit binding
-        mypy_result = _run_check(project_dir, entry)
-
-        if mypy_result is None:
-            logger.info("Mypy check passed - no type errors found")
-            return True
-
-        logger.info("Type errors found, attempting fixes...")
-
-        fix_check = _fix_check_text(project_dir)
-        if not fix_check:
-            logger.warning(
-                "No usable fix.check fragment from the toolkit - skipping fixes"
-            )
-            return False
-
-        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
-        check_instructions = ""
-        if toolkit_declares_bash_grants(project_dir):
-            # Toolkits that check through Bash tell the LLM how to re-run checks
-            check_instructions = resolve_prompt_slots(
-                "[check_instructions]", project_dir, provider, bash_grants
-            ).get("check_instructions", "")
-
-        identical_count = 0
-
-        # Retry loop with smart retry logic
-        while identical_count < max_identical_attempts:
-            # Check if current mypy output is identical to a previous one
-            if mypy_result in previous_outputs:
-                identical_count += 1
-                logger.info(
-                    f"Identical mypy feedback detected (attempt {identical_count}/{max_identical_attempts})"
-                )
-
-                if identical_count >= max_identical_attempts:
-                    logger.info(
-                        "Maximum identical attempts reached - stopping mypy fixes"
-                    )
-                    break
-            else:
-                # New output, reset counter
-                identical_count = 0
-
-            # Add current output to history
-            previous_outputs.append(mypy_result)
-            mypy_attempt_counter += 1
-
-            mypy_prompt = _build_fix_prompt(fix_check, mypy_result, check_instructions)
-
-            # Call LLM for fixes
-            try:
-                branch_name = get_branch_name_for_logging(str(project_dir))
-                llm_response = prompt_llm(
-                    mypy_prompt,
-                    provider=provider,
-                    # Tool-using site (mypy-fix): inactivity budget, not wall-clock.
-                    timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
-                    env_vars=env_vars,
-                    project_dir=str(project_dir),
-                    mcp_config=mcp_config,
-                    settings_file=settings_file,
-                    branch_name=branch_name,
-                    bash_grants=bash_grants,
-                )
-                fix_response = llm_response["text"]
-
-                if not fix_response or not fix_response.strip():
-                    logger.error("LLM returned empty response for mypy fixes")
-                    return False
-
-                try:
-                    store_session(
-                        response_data=llm_response,
-                        prompt=mypy_prompt,
-                        store_path=str(
-                            project_dir / ".mcp-coder" / "implement_sessions"
-                        ),
-                        step_name=f"step_{step_num}_mypy_{mypy_attempt_counter}",
-                        branch_name=branch_name,
-                    )
-                except Exception as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                    logger.warning("Failed to store implement session: %s", store_err)
-
-                logger.info(
-                    f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})"
-                )
-
-            except (LLMTimeoutError, McpServersUnavailableError):
-                # Do NOT swallow the two typed LLM failures into a False result
-                # (the pre-existing mypy-fix timeout hole). Re-raise so the only
-                # live caller — the final-mypy call in core.py — can categorize
-                # them into llm_timeout / mcp_unavailable.
-                raise
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                logger.error(
-                    f"Error getting mypy fixes from LLM on attempt {mypy_attempt_counter}: {e}"
-                )
-                return False
-
-            # Re-run mypy check to see if issues were resolved
-            try:
-                mypy_result = _run_check(project_dir, entry)
-
-                if mypy_result is None:
-                    logger.info("Mypy check passed after fixes")
-                    return True
-
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                logger.error(
-                    f"Error re-running mypy check on attempt {mypy_attempt_counter}: {e}"
-                )
-                return False
-
-        # If we get here, we couldn't fix all issues
-        logger.info("Could not resolve all mypy type errors")
-        return False
-
-    except (LLMTimeoutError, McpServersUnavailableError):
-        # Let the two typed LLM failures propagate to the caller for
-        # categorization rather than collapsing them to a False result.
-        raise
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error during mypy check and fix: {e}")
-        return False
-
-
 def _cleanup_commit_message_file(project_dir: Path) -> None:
     """Remove stale commit message file from previous failed runs."""
     commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
@@ -344,7 +122,8 @@ def process_single_task(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         attempt: 1-based attempt number; appends retry reminder when > 1
-        check_type_hints: If True, run mypy type checking after implementation
+        check_type_hints: If False, the implement_task binding's check@*
+            requests are dropped; its other requests still run
         previous_reason: Reason the previous attempt returned; selects which
             retry reminder is appended when attempt > 1
 
@@ -355,12 +134,14 @@ def process_single_task(
           | 'blocked' | 'error' | 'timeout' | 'mcp_unavailable'. The two LLM
           failures (inactivity timeout, MCP servers unavailable) are
           categorized here into their reason strings so the orchestrator can
-          map them to a failure label. 'no_progress' means files changed (and
-          were committed) but the incomplete-task count did not decrease.
+          map them to a failure label; they, 'blocked' and 'error' can also
+          come from the check stage. Checks still reporting findings at the
+          fix-turn cap do not fail the task. 'no_progress' means files changed
+          (and were committed) but the incomplete-task count did not decrease.
         - detail: free-text explanation; carries the blocked marker text for
           the 'blocked', 'timeout' and 'mcp_unavailable' reasons, the task
-          name for 'no_progress', and the tracker fault for an unreadable
-          tracker ('error'), else empty.
+          name for 'no_progress', the tracker fault for an unreadable
+          tracker ('error') and the check error ('error'), else empty.
     """
     # Cleanup stale files from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -508,22 +289,9 @@ Please implement this task step by step."""
         logger.error(f"Error checking file changes: {e}")
         return TaskOutcome(False, "error")
 
-    # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if not check_type_hints:
-        logger.info("Skipping mypy check (check_type_hints disabled)")
-    else:
-        binding: tuple[str, ...] | None
-        try:
-            binding = get_binding(project_dir, "implement_task")
-        except ValueError as e:
-            # LLM sessions can edit the config mid-run; treat as a failed check
-            logger.warning(
-                f"Mypy check failed or found unresolved issues - continuing anyway: {e}"
-            )
-            binding = None
-        if binding == ():
-            logger.info("Skipping mypy check (will run after all tasks complete)")
-        elif binding and not check_and_fix_mypy(
+    # Step 7: Run the implement_task checks and their fix loop
+    try:
+        checks = check_and_fix_mypy(
             project_dir,
             step_num,
             provider,
@@ -531,10 +299,20 @@ Please implement this task step by step."""
             mcp_config,
             settings_file,
             entry="implement_task",
-        ):
-            logger.warning(
-                "Mypy check failed or found unresolved issues - continuing anyway"
-            )
+            check_type_hints=check_type_hints,
+        )
+    finally:
+        # Safety net: the fix turns clear their own marker, but none may
+        # survive into the commit below
+        marker = read_and_clear_blocked(project_dir)
+    if checks.status in ("clean", "cap") and marker:
+        checks = CheckOutcome("blocked", marker)
+    if checks.status == "cap":
+        logger.warning(
+            "Per-task checks still report findings - committing and continuing"
+        )
+    elif checks.status != "clean":
+        return TaskOutcome(False, checks.status, checks.detail)
 
     # Step 8: Run formatters
     if not run_formatters(project_dir):

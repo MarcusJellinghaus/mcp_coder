@@ -10,19 +10,18 @@ from mcp_coder.workflow_steps.commit import (
     run_formatters,
 )
 
+from .check_loop import CheckOutcome, check_and_fix_mypy
 from .core import run_implement_workflow
 from .prerequisites import (
     check_git_clean,
     check_main_branch,
     check_prerequisites,
 )
-from .task_processing import (
-    check_and_fix_mypy,
-    process_single_task,
-)
+from .task_processing import process_single_task
 from .task_tracker_prep import log_progress_summary, prepare_task_tracker
 
 __all__ = [
+    "CheckOutcome",
     "check_git_clean",
     "check_main_branch",
     "check_prerequisites",

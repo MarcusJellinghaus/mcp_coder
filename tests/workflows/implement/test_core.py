@@ -3,6 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 from mcp_coder.workflows.implement.task_tracker_prep import TrackerPrepError
@@ -18,7 +19,10 @@ class TestRunImplementWorkflow:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -275,7 +279,10 @@ class TestRunImplementWorkflow:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -327,7 +334,15 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -341,7 +356,7 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_run_implement_workflow_skips_final_mypy_when_disabled(
+    def test_run_implement_workflow_forwards_check_type_hints_false(
         self,
         mock_check_git: MagicMock,
         mock_check_branch: MagicMock,
@@ -352,11 +367,13 @@ class TestRunImplementWorkflow:
         mock_get_branch: MagicMock,
         mock_prepare_env: MagicMock,
         mock_check_mypy: MagicMock,
+        _mock_run_formatters: MagicMock,
+        _mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
         mock_get_config: MagicMock,
     ) -> None:
-        """Test that check_type_hints=False skips final mypy in Step 5."""
+        """check_type_hints=False still runs the final check, as its filter."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
         mock_get_config.return_value = ImplementConfig(check_type_hints=False)
@@ -372,7 +389,8 @@ class TestRunImplementWorkflow:
         result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 0
-        mock_check_mypy.assert_not_called()
+        mock_check_mypy.assert_called_once()
+        assert mock_check_mypy.call_args.kwargs["check_type_hints"] is False
 
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
@@ -382,7 +400,10 @@ class TestRunImplementWorkflow:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -396,7 +417,9 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
+    @patch(
+        "mcp_coder.workflows.implement.core.read_and_clear_blocked", return_value=None
+    )
     def test_final_mypy_clears_marker_and_formats(
         self,
         mock_read_blocked: MagicMock,
@@ -451,7 +474,10 @@ class TestRunImplementWorkflow:
         "mcp_coder.workflows.implement.core.get_full_status",
         return_value={"staged": [], "modified": [], "untracked": []},
     )
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -465,7 +491,9 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
+    @patch(
+        "mcp_coder.workflows.implement.core.read_and_clear_blocked", return_value=None
+    )
     def test_format_code_false_skips_formatter(
         self,
         _mock_read_blocked: MagicMock,
