@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -28,6 +29,23 @@ _DELIBERATE_HANDLER = (
 )
 # - the SIGTERM / unexpected-exit safety net lives in run_guarded -> this handler
 _NET_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+
+
+@pytest.fixture(autouse=True)
+def _stub_final_check() -> Iterator[None]:
+    """Stub the final check stage, which runs even when no task was completed."""
+    with (
+        patch(
+            "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+            return_value=CheckOutcome("clean"),
+        ),
+        patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True),
+        patch(
+            "mcp_coder.workflows.implement.core.get_full_status",
+            return_value={"staged": [], "modified": [], "untracked": []},
+        ),
+    ):
+        yield
 
 
 # Reusable LLMResponseDict mock value

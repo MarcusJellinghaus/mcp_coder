@@ -276,70 +276,69 @@ def run_implement_workflow(
             )
 
         # Step 5: Run the final check over the implement_final binding - a gate
-        if progress.completed > 0:
-            logger.info("Running final mypy check after all tasks...")
-            env_vars = prepare_llm_environment(project_dir)
+        logger.info("Running final mypy check after all tasks...")
+        env_vars = prepare_llm_environment(project_dir)
 
-            # Use step number 0 for final mypy check conversation
-            try:
-                checks = check_and_fix_mypy(
-                    project_dir,
-                    0,
-                    provider,
-                    env_vars,
-                    mcp_config,
-                    settings_file,
-                    entry="implement_final",
-                    check_type_hints=implement_config.check_type_hints,
-                )
-            finally:
-                # The fix turns run their own LLM sessions, so drop any marker
-                # left behind: it must never reach the commit below nor poison
-                # the next run at check_git_clean / prepare_task_tracker.
-                marker = read_and_clear_blocked(project_dir)
-            if checks.status == "clean" and marker:
-                checks = CheckOutcome("blocked", marker)
-            if checks.status != "clean":
-                reason, message = _final_check_failure(checks)
-                return abort_checks(reason, stage="Final mypy check", message=message)
+        # Use step number 0 for final mypy check conversation
+        try:
+            checks = check_and_fix_mypy(
+                project_dir,
+                0,
+                provider,
+                env_vars,
+                mcp_config,
+                settings_file,
+                entry="implement_final",
+                check_type_hints=implement_config.check_type_hints,
+            )
+        finally:
+            # The fix turns run their own LLM sessions, so drop any marker
+            # left behind: it must never reach the commit below nor poison
+            # the next run at check_git_clean / prepare_task_tracker.
+            marker = read_and_clear_blocked(project_dir)
+        if checks.status == "clean" and marker:
+            checks = CheckOutcome("blocked", marker)
+        if checks.status != "clean":
+            reason, message = _final_check_failure(checks)
+            return abort_checks(reason, stage="Final mypy check", message=message)
 
-            # Format code after mypy fixes
-            if not run_formatters(project_dir):
-                logger.error("Formatting failed after final mypy check")
+        # Format code after mypy fixes
+        if not run_formatters(project_dir):
+            logger.error("Formatting failed after final mypy check")
+            return fail(
+                "general",
+                stage="Post-implementation formatting",
+                message="Formatting failed after final mypy check",
+            )
+
+        # Commit mypy fixes if any changes were made.
+        status = get_full_status(project_dir)
+        all_changes = status["staged"] + status["modified"] + status["untracked"]
+
+        if all_changes:
+            logger.info("Committing final mypy fixes...")
+            if not commit_changes(
+                project_dir,
+                provider,
+                mcp_config=mcp_config,
+                settings_file=settings_file,
+            ):
+                logger.error("Failed to commit final mypy fixes")
                 return fail(
                     "general",
-                    stage="Post-implementation formatting",
-                    message="Formatting failed after final mypy check",
+                    stage="Post-implementation commit",
+                    message="Failed to commit final mypy fixes",
                 )
 
-            # Commit mypy fixes if any changes were made.
-            status = get_full_status(project_dir)
-            all_changes = status["staged"] + status["modified"] + status["untracked"]
-
-            if all_changes:
-                logger.info("Committing final mypy fixes...")
-                if not commit_changes(
-                    project_dir,
-                    provider,
-                    mcp_config=mcp_config,
-                    settings_file=settings_file,
-                ):
-                    logger.error("Failed to commit final mypy fixes")
-                    return fail(
-                        "general",
-                        stage="Post-implementation commit",
-                        message="Failed to commit final mypy fixes",
-                    )
-
-                if not push_changes(project_dir):
-                    logger.error("Failed to push final mypy fixes")
-                    return fail(
-                        "general",
-                        stage="Post-implementation commit",
-                        message="Failed to push final mypy fixes",
-                    )
-            else:
-                logger.info("No changes from final mypy check - skipping commit")
+            if not push_changes(project_dir):
+                logger.error("Failed to push final mypy fixes")
+                return fail(
+                    "general",
+                    stage="Post-implementation commit",
+                    message="Failed to push final mypy fixes",
+                )
+        else:
+            logger.info("No changes from final mypy check - skipping commit")
 
         # Step 5.5: Run finalisation to complete any remaining tasks
         finalisation_success = run_finalisation(

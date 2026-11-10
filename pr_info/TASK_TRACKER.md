@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Run the final check on a re-run with all tasks ticked — [step_6.md](./steps/step_6.md)
-- [ ] Implementation: tests in `test_core_final_check.py`, patch `no_tasks` core tests, remove `progress.completed > 0` gate in `core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_core_final_check.py`, patch `no_tasks` core tests, remove `progress.completed > 0` gate in `core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: New default bindings, binding validation and the test budget — [step_7.md](./steps/step_7.md)
 - [ ] Implementation: update toolkit tests, then `DEFAULT_BINDINGS` / `_ALLOWED_ACTIONS` in `toolkit_runner.py` and `pytest-timeout = 1800` in `pyproject.toml`

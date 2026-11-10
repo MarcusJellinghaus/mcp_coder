@@ -29,6 +29,7 @@ class _Mocks:
     fail: MagicMock
     formatters: MagicMock
     finalisation: MagicMock
+    process: MagicMock
 
 
 @pytest.fixture(name="mocks")
@@ -53,7 +54,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
                 TaskOutcome(True, "completed"),
                 TaskOutcome(False, "no_tasks"),
             ],
-        ),
+        ) as process,
         patch(f"{_CORE}.prepare_llm_environment", return_value={}),
         patch(
             f"{_CORE}.check_and_fix_mypy", return_value=CheckOutcome("clean")
@@ -69,7 +70,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
         patch(f"{_CORE}.check_and_fix_ci", return_value=True),
         patch(f"{_CORE}._fail", return_value=1) as fail,
     ):
-        yield _Mocks(check, config, fail, formatters, finalisation)
+        yield _Mocks(check, config, fail, formatters, finalisation, process)
 
 
 def _failure(mocks: _Mocks) -> tuple[str, str, str]:
@@ -166,3 +167,31 @@ class TestFinalCheckGate:
 
         mocks.check.assert_called_once()
         assert mocks.check.call_args.kwargs["check_type_hints"] is check_type_hints
+
+
+class TestFinalCheckWithoutCompletedTasks:
+    """A re-run that finds every task ticked still runs the final check."""
+
+    def test_runs_final_check(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """no_tasks on the first round still calls the implement_final check."""
+        mocks.process.side_effect = None
+        mocks.process.return_value = TaskOutcome(False, "no_tasks")
+
+        assert run_implement_workflow(tmp_path, "claude") == 0
+
+        mocks.check.assert_called_once()
+        assert mocks.check.call_args.kwargs["entry"] == "implement_final"
+        mocks.fail.assert_not_called()
+
+    def test_cap_is_checks_exhausted(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """Findings at the cap fail the re-run as checks_exhausted."""
+        mocks.process.side_effect = None
+        mocks.process.return_value = TaskOutcome(False, "no_tasks")
+        mocks.check.return_value = CheckOutcome("cap", "fix.check: 2 left")
+
+        assert run_implement_workflow(tmp_path, "claude") == 1
+
+        reason, stage, _message = _failure(mocks)
+        assert reason == "checks_exhausted"
+        assert stage == _STAGE
+        mocks.finalisation.assert_not_called()

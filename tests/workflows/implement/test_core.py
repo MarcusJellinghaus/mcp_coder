@@ -212,6 +212,15 @@ class TestRunImplementWorkflow:
         assert result == 1
         mock_process_task.assert_called_once()
 
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -226,6 +235,9 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker: MagicMock,
         mock_log_progress: MagicMock,
         mock_process_task: MagicMock,
+        mock_check_mypy: MagicMock,
+        _mock_run_formatters: MagicMock,
+        _mock_get_status: MagicMock,
     ) -> None:
         """Test run_implement_workflow when no tasks exist initially."""
         mock_check_git.return_value = True
@@ -238,7 +250,12 @@ class TestRunImplementWorkflow:
 
         assert result == 0  # Should succeed with no tasks
         mock_process_task.assert_called_once()
+        mock_check_mypy.assert_called_once()
 
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        return_value=CheckOutcome("clean"),
+    )
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
@@ -255,6 +272,7 @@ class TestRunImplementWorkflow:
         mock_log_progress: MagicMock,
         mock_process_task: MagicMock,
         mock_get_config: MagicMock,
+        _mock_check_mypy: MagicMock,
     ) -> None:
         """Test that get_implement_config is called with project_dir."""
         mock_check_git.return_value = True
