@@ -4,7 +4,7 @@
 
 On Windows the stored `vscode_pid` is either the `cmd.exe` wrapper from `launch_process("code …", shell=True)` or, after the PID refresh in `apply_assessments`, VSCode's single shared main `Code.exe`. Neither tracks one session's window. The main process keeps its original command line, so the session it was cold-started for has `pid_alive=True` and `cmdline_match=True` forever. `assess_liveness` checks title → pid → cmdline, so `rule=pid` wins over a correct `title_match=False`. With the folder gone the result is a permanent `INVESTIGATE_ZOMBIE` (seen for #1342).
 
-Full analysis, decisions and accepted risks: GitHub issue #1407. This plan implements that issue; where they differ, the issue wins.
+Full analysis, decisions and accepted risks: GitHub issue #1407. This plan implements that issue; where they differ, the issue wins — with one deliberate exception: for the workspace file (Step 8) the plan replaces the issue's "JSON-escape each value after truncation" approach with building a dict and writing it with `json.dumps`, and deletes `WORKSPACE_FILE_TEMPLATE`. This removes the escaping problem entirely. Do not revert to the issue's escape-after-truncation approach.
 
 ## Architectural / design changes
 
@@ -35,6 +35,7 @@ The detect → assess → decide → render/apply pipeline is unchanged. Changes
 
 **Apply / render**
 - `cleanup._retry_to_be_deleted` calls the same `guard_reason` before `safe_delete_folder`.
+- A guard-converted `RESTART` → `SKIP` reaches `cleanup_stale_sessions`' SKIP branch (prints `[WARN] Skipping (just went inactive, confirming next run)`, counted in `skipped`). Intended; `get_stale_sessions` is unchanged.
 - `status` shows `Running (zombie: <rule>)`.
 - `restart_closed_sessions` records `restarted_at` through `update_session_pid(..., restarted_at=...)`.
 - `create_workspace_file` builds a dict and writes `json.dumps` (no string template, so no escaping problem).
@@ -90,8 +91,8 @@ No new source modules.
 1. Delete legacy detection code (pure deletion).
 2. Remove the PID refresh.
 3. Restart grace (`restarted_at`).
-4. Title authoritative: enum flag, new signals, `NO_WINDOW`, DEBUG dump.
-5. Guards: `prior_last_active`, `guard_reason` in `decide` and the retry loop, docs.
+4. Guards: `LivenessRule.NO_WINDOW` (inert until Step 5), `prior_last_active`, `guard_reason` in `decide` and the retry loop, docs. Lands before Step 5 so no commit can delete a `NO_WINDOW` or unconfirmed session.
+5. Title authoritative: enum flag, new signals, `assess_liveness` produces `NO_WINDOW`, DEBUG dump.
 6. Zombie visibility: reason, status display, restart warning, docs.
 7. Exact matching (negative boundaries).
 8. Workspace file via `json.dumps`.

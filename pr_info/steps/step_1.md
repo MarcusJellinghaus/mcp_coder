@@ -36,7 +36,7 @@ Search `src/` (`mcp__mcp-workspace__search_files`) for `is_session_active`, `ses
    - folder missing → inactive
    - unparsable `started_at` → age `inf`
 
-   Port any that are missing into those files (pin `HAS_WIN32GUI`). Do **not** port the "title miss after grace → inactive" scenarios; Step 4 adds them under the new rule.
+   Port any that are missing into those files (pin `HAS_WIN32GUI`). Do **not** port the "title miss after grace → inactive" scenarios; Step 5 adds them under the new rule.
 2. Delete `tests/workflows/vscodeclaude/test_sessions_active_fallback.py` and `tests/workflows/vscodeclaude/test_sessions_active_grace.py`.
 3. `test_detection_probes.py`: move `test_get_vscode_window_titles_returns_pid_title_tuples` out of class `TestWindowTitleMatching` (module level, or its own small class), then delete `TestWindowTitleMatching`. Keep the `check_vscode_running` and `_get_vscode_processes` tests. Remove imports that become unused.
 4. `test_sessions.py`: remove the `session_has_artifacts` import and its test class.

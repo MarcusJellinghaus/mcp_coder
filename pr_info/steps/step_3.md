@@ -6,7 +6,7 @@
 
 ## Rationale
 
-`restart_closed_sessions` does not reset `started_at`, so a restarted session is never within grace. Once the title becomes authoritative (Step 4), the not-yet-drawn window would count as an authoritative miss. `started_at` keeps its meaning (original launch).
+`restart_closed_sessions` does not reset `started_at`, so a restarted session is never within grace. Once the title becomes authoritative (Step 5), the not-yet-drawn window would count as an authoritative miss. `started_at` keeps its meaning (original launch).
 
 ## WHERE / WHAT
 

@@ -1,128 +1,132 @@
-# Step 4 — Window title authoritative on Windows after grace
+# Step 4 — Guards against acting on a fresh or `NO_WINDOW` "inactive"
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and this file (`pr_info/steps/step_4.md`), then implement Step 4 only:
-> - window-enumeration success flag
-> - `window_count` and `title_authoritative` signals
-> - `LivenessRule.NO_WINDOW`
-> - the new `assess_liveness` order
-> - the DEBUG title dump on an authoritative miss
+> - add `LivenessRule.NO_WINDOW` (not yet produced by `assess_liveness`; Step 5 does that)
+> - add `Transition.prior_last_active`
+> - add the pure helper `guard_reason`
+> - apply it in `decide` (via `_decide_unguarded`) and in `cleanup._retry_to_be_deleted`
+> - update the docs
 >
-> Write the tests first, then the implementation. Run the checks from the summary, then make one commit.
+> Write the tests first, then the implementation. Run the checks from the summary plus `run_lint_imports_check` and `run_tach_check`, then make one commit.
+
+## Rationale
+
+The guards land before the title becomes authoritative (Step 5), so no commit can `DELETE` a `NO_WINDOW` session or an unconfirmed `NO_MATCH` one. The `NO_WINDOW` override is inert until Step 5 makes `assess_liveness` return that rule; the confirmation guard is live from this step on all platforms.
 
 ## WHERE / WHAT
 
-**`src/mcp_coder/workflows/vscodeclaude/detection.py`**
-
-`_get_vscode_window_titles(refresh: bool = False) -> tuple[list[tuple[int, str]], bool]` returns `(titles, ok)`:
-
-| Case | Return |
-|---|---|
-| no win32gui | `([], False)` |
-| cache hit | `(cache, True)` |
-| `EnumWindows` raises | `([], False)` (not cached, as today) |
-| success | `(entries, True)` |
-
-Docstring: drop "so callers can bind a title match to the specific VSCode instance …". Keep that the PID is the owning process.
-
-`DetectionSnapshot` gains `window_enum_ok: bool`. `capture_detection_snapshot` unpacks `window_titles, window_enum_ok = _get_vscode_window_titles(refresh=True)`.
-
-`gather_signals` additions:
-```python
-window_count = len(snapshot.window_titles)
-title_authoritative = bool(
-    HAS_WIN32GUI
-    and snapshot.window_enum_ok
-    and session.get("repo")
-    and not (snapshot.pids and window_count == 0)
-)
-if title_authoritative and not title_match:
-    logger.debug("Title miss for #%s; VSCode windows: %s",
-                 session["issue_number"], list(snapshot.window_titles))
-```
-Both values are passed to `DetectionSignals`.
-
-Wording:
-- `LAUNCH_GRACE_SECONDS` comment: beyond grace, the title check is authoritative on Windows when win32gui is available, window enumeration succeeded, the session has a repo, and at least one VSCode window was seen while `Code.exe` runs.
-- Module docstring and `gather_signals` docstring: replace "seven raw signals" with "the raw signals". List `window_count` / `title_authoritative` next to `directory_empty` / `within_grace` as values computed here.
-
 **`src/mcp_coder/workflows/vscodeclaude/types.py`**
 - `LivenessRule.NO_WINDOW = "no_window"`.
-- `DetectionSignals`: add `window_count: int` and `title_authoritative: bool`, with no defaults.
-- `_flatten()["signals"]`: add both keys.
+- `Transition`: add `prior_last_active: bool | None`, with no default.
+- `_flatten()["transition"]`: add `"prior_last_active"`.
 
 **`src/mcp_coder/workflows/vscodeclaude/assessment.py`**
-- `assess_liveness`: new order (see ALGORITHM). Rewrite the docstring: title-positive always wins; past grace with an authoritative title a miss is decisive (`NO_WINDOW` when only VSCode's shared main process still references the folder); otherwise pid → cmdline → folder fallback; no folder-gone short-circuit before the title/pid checks.
-- `_log_assessment`: add `window_count=%s title_authoritative=%s` to the DEBUG signals line.
+- `assess_transition`: `return Transition(flipped_to_inactive=flipped, prior_last_active=prior_last_active)`.
+- Rename the current body of `decide` to `_decide_unguarded(...)` with the same signature, unchanged.
+- New public pure helper:
 
-## ALGORITHM (`assess_liveness`)
+  ```python
+  NO_WINDOW_REASON = (
+      "no window, but VSCode main process still references folder"
+      " — close all VSCode windows to release it"
+  )
+  CONFIRMING_REASON = "just went inactive, confirming next run"
+
+  def guard_reason(
+      verdict: LivenessVerdict, transition: Transition, action: SessionAction
+  ) -> str | None:
+      """Reason to hold back a DELETE/RESTART, or None if it may proceed."""
+  ```
+
+- New `decide` (same signature as today):
+
+  ```python
+  def decide(verdict, issue_state, transition, git_status, directory_empty) -> Decision:
+      decision = _decide_unguarded(verdict, issue_state, transition, git_status, directory_empty)
+      if decision.action not in (SessionAction.DELETE, SessionAction.RESTART):
+          return decision
+      reason = guard_reason(verdict, transition, decision.action)
+      if reason is None:
+          return decision
+      return Decision(action=SessionAction.SKIP, reason=reason, destructive=False)
+  ```
+
+  - Existing SKIP reasons (Dirty, unverified git status) keep precedence automatically: those branches never return DELETE or RESTART.
+  - `DELETE` is still produced only in `_decide_unguarded`.
+  - Docstrings for `decide` / `_decide_unguarded` state this.
+
+**`src/mcp_coder/workflows/vscodeclaude/cleanup.py`** (`_retry_to_be_deleted`)
+- After the "folder gone → drop entry" branch, before `safe_delete_folder`:
+
+  ```python
+  if assessment is not None:
+      reason = guard_reason(assessment.verdict, assessment.transition, SessionAction.DELETE)
+      if reason is not None:
+          logger.info("Sparing .to_be_deleted entry %s (%s); leaving it queued.", folder_name, reason)
+          continue
+  ```
+
+- Import `guard_reason` from `.assessment`. `assessment` does not import `cleanup`, so there is no cycle.
+- If `run_lint_imports_check` or `run_tach_check` rejects the `cleanup → assessment` import, move `guard_reason` and the two reason constants into `types.py` instead and import them from there in both modules.
+- Docstring: mention that queued entries are spared while their verdict is `NO_WINDOW` or not yet confirmed inactive. Entries without an assessment keep today's behaviour.
+
+**Cleanup output for guard-converted restarts (intended).** `get_stale_sessions` (`cleanup.py:63`) drops only `RESTART` decisions. An eligible session whose `RESTART` the confirmation guard turned into `SKIP` therefore reaches `cleanup_stale_sessions`' SKIP branch: it logs/prints `[WARN] Skipping (just went inactive, confirming next run): <folder>` and is counted in `result["skipped"]`. This is intended — cleanup reports every inactive session it did not act on this run, and the line tells the user why. `get_stale_sessions` is not changed. Document it in the `cleanup_stale_sessions` docstring's `SKIP` bullet ("dirty / unverified non-empty / not yet confirmed inactive / no window").
+
+**`docs/coordinator-vscodeclaude.md`** ("Session States" / "Automatic behavior", ~line 135)
+- Closed sessions are restarted or deleted one `launch` run after they first go inactive. The first run shows `!! just went inactive, confirming next run` (and cleanup prints a `Skipping` line for it).
+
+## ALGORITHM (`guard_reason`)
 
 ```
-if s.title_match:                                  return active(TITLE)
-if s.title_authoritative and not s.within_grace:
-    if not s.folder_exists:                        return inactive(NO_ARTIFACTS)
-    if s.pid_alive or s.cmdline_match:             return inactive(NO_WINDOW)
-    return inactive(NO_MATCH)
-if s.pid_alive:                                    return active(PID)
-if s.cmdline_match:                                return active(CMDLINE)
-return inactive(NO_ARTIFACTS if not s.folder_exists else NO_MATCH)
-```
-
-`NO_WINDOW` is still unguarded in this step. Step 5 adds the delete/restart guards. The steps are committed together in one PR, so no build with Step 4 alone is ever released.
-
-## DATA
-
-```python
-@dataclass(frozen=True)
-class DetectionSnapshot:
-    processes: tuple[dict[str, Any], ...]
-    window_titles: tuple[tuple[int, str], ...]
-    pids: frozenset[int]
-    window_enum_ok: bool
-    captured_at: datetime
+if action == DELETE and verdict.rule == NO_WINDOW:  return NO_WINDOW_REASON     # override guard
+if transition.prior_last_active is not False:      return CONFIRMING_REASON    # confirmation guard
+return None
 ```
 
 ## Tests (write first)
 
-**`conftest.py`**
-- `make_signals` gains `window_count: int = 0` and `title_authoritative: bool = False`.
-- `_build_assessment`'s `DetectionSignals(...)` gets `window_count=0, title_authoritative=False`.
+**Fixtures (`conftest.py`)**
+- `NO_FLIP = Transition(flipped_to_inactive=False, prior_last_active=False)`. Prior `False` = confirmed inactive, so tests that expect DELETE/RESTART keep their meaning.
+- Add `make_transition(prior: bool | None) -> Transition`, deriving `flipped_to_inactive` as `assess_transition` does for an inactive verdict.
+- `make_assessment` / `make_sample_assessment`: pass `prior_last_active=False`.
+- `_build_assessment`: add parameter `prior_last_active: bool | None = False` and pass it to `assess_session`. This keeps `test_status_display_delete_actions.py` / `test_status_display_assessment_consumer.py` meaningful.
 
-**Constructors** — add the new fields to every direct `DetectionSignals(...)` / `DetectionSnapshot(...)` call:
-- `test_audit.py`, `test_cleanup.py`, `test_closed_issues_integration.py`, `test_status_display_scenario.py`, `test_detection.py` (snapshot helper ~line 66), `test_workspace_untrusted.py`
-- plus any other hit from `search_files`.
+**Constructors** — add `prior_last_active=` to every remaining `Transition(...)`:
+- `test_audit.py`, `test_cleanup.py` (`_assessment` helper: `False`), `test_closed_issues_integration.py`, `test_status_display_scenario.py`, `test_types.py`.
 
-**Fakes** — make every fake of `_get_vscode_window_titles` return `(titles, True)`:
-- `test_detection.py` ~line 315, `test_detection_probes.py`.
+**`test_assessment_orchestration.py`**
+- `test_apply_records_destructive_delete_removed_by_cleanup` and `test_locked_folder_retry_recurs_across_runs` use prior `None`. Set the stored session's `last_active=False` (or pass `prior_last_active=False`) so they still expect DELETE.
 
-**`test_assessment_layers.py`** — one parametrized `assess_liveness` matrix:
+**`test_assessment_layers.py`** — parametrized `decide` guard matrix. `NO_WINDOW` verdicts are built directly (`LivenessVerdict(active=False, rule=LivenessRule.NO_WINDOW)`):
 
-| `title_authoritative` | `within_grace` | other signals | expected |
-|---|---|---|---|
-| True | False | pid alive, folder exists | inactive `NO_WINDOW` |
-| True | False | cmdline match, folder exists | inactive `NO_WINDOW` |
-| True | False | pid alive, folder missing | inactive `NO_ARTIFACTS` |
-| True | False | nothing | inactive `NO_MATCH` |
-| True | True | pid alive | active `PID` |
-| True | True | cmdline match | active `CMDLINE` |
-| False | False | pid alive / cmdline match | active `PID` / `CMDLINE` (unchanged) |
-| True | False | title match | active `TITLE` |
+| verdict rule | issue | git | prior | expected |
+|---|---|---|---|---|
+| NO_MATCH | ineligible | Clean | False | DELETE |
+| NO_MATCH | ineligible | Clean | True / None | SKIP, `CONFIRMING_REASON` |
+| NO_WINDOW | ineligible | Clean | False | SKIP, `NO_WINDOW_REASON` |
+| NO_MATCH | eligible | Clean | False | RESTART |
+| NO_MATCH | eligible | Clean | True / None | SKIP, `CONFIRMING_REASON` |
+| NO_WINDOW | eligible | Clean | False | RESTART |
+| NO_WINDOW | eligible | Clean | None | SKIP, `CONFIRMING_REASON` |
+| NO_MATCH / NO_WINDOW | any | Dirty | None | SKIP, `"dirty"` |
+| NO_ARTIFACTS | any | Missing | None | REMOVE_MISSING |
 
-**`test_detection.py`** — `gather_signals`, monkeypatching `HAS_WIN32GUI` in `detection`:
-- `title_authoritative` is False for each of:
-  - `window_enum_ok=False`
-  - `HAS_WIN32GUI=False`
-  - session without `repo`
-  - `pids={1}` with no window titles
-- True with win32gui, enum ok, repo and at least one title.
-- `window_count == len(window_titles)`.
-- DEBUG title dump: `caplog` at DEBUG on the `detection` logger. An authoritative miss logs the issue number and a title from the snapshot; a title match does not.
-- `capture_detection_snapshot` / `_get_vscode_window_titles`: patch `HAS_WIN32GUI=True` and a fake `win32gui` whose `EnumWindows` raises → `([], False)` and `snapshot.window_enum_ok is False`. Without win32gui → `ok` False.
+- Plus `assess_transition` sets `prior_last_active` for `True`, `False` and `None`.
+- The existing destructive-invariant test must still pass unchanged (it uses `NO_FLIP`).
+
+**`test_cleanup_retry.py`**
+- A queued, present folder whose assessment has rule `NO_WINDOW` (prior `False`) → `safe_delete_folder` not called; entry still in `.to_be_deleted`.
+- Same with rule `NO_MATCH` and prior `None` → not deleted, stays queued.
+- `NO_MATCH` with prior `False` → deleted (the existing `test_cleanup_retry_inactive_assessment_retries_delete` covers this once its helper uses prior `False`).
+
+**`test_cleanup.py`**
+- `cleanup_stale_sessions` with one eligible, inactive `NO_MATCH` session at prior `None` (decision `SKIP`, `CONFIRMING_REASON`): it is in `result["skipped"]`, not deleted, and the printed output contains `Skipping (just went inactive, confirming next run)`.
 
 **`test_audit.py` / `test_explain.py`**
-- `window_count` and `title_authoritative` appear in the audit record `signals` block and in `to_explain()` output.
+- `prior_last_active` appears in the `transition` block.
 
 ## Commit
 
-`feat(vscodeclaude): make window title authoritative on Windows after grace`
+`feat(vscodeclaude): guard delete/restart on unconfirmed or no-window inactivity`
