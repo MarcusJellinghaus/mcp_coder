@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Launch grace also covers restarts (`restarted_at`) — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests + `restarted_at` field, `update_session_pid(restarted_at=)`, age from later timestamp
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `restarted_at` field, `update_session_pid(restarted_at=)`, age from later timestamp
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Guards against acting on fresh or `NO_WINDOW` inactivity — [step_4.md](./steps/step_4.md)
 

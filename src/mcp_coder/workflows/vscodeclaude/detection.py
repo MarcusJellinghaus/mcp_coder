@@ -368,18 +368,35 @@ def _cmdline_scan(
     return False, None
 
 
-def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
-    """Age of the session in seconds, or ``inf`` if ``started_at`` is unusable.
+def _age_since(timestamp: str | None, now: datetime) -> float:
+    """Seconds from an ISO 8601 ``timestamp`` to ``now``, or ``inf`` if unusable.
 
     Returns:
-        Seconds since ``started_at``, or ``float("inf")`` when it is missing or
-        unparseable.
+        Elapsed seconds, or ``float("inf")`` when ``timestamp`` is missing,
+        unparseable, or cannot be subtracted (naive vs. aware).
     """
-    started_at_str = session.get("started_at", "")
+    if timestamp is None:
+        return float("inf")
     try:
-        return (now - datetime.fromisoformat(started_at_str)).total_seconds()
+        return (now - datetime.fromisoformat(timestamp)).total_seconds()
     except (ValueError, TypeError):
         return float("inf")
+
+
+def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
+    """Age of the session since its later of ``started_at`` / ``restarted_at``.
+
+    Taking the smaller age (rather than comparing datetimes) tolerates mixed
+    naive/aware timestamps. An absent or unparseable timestamp is ignored.
+
+    Returns:
+        Seconds since the most recent launch, or ``float("inf")`` when neither
+        timestamp is usable.
+    """
+    return min(
+        _age_since(session.get("started_at"), now),
+        _age_since(session.get("restarted_at"), now),
+    )
 
 
 def gather_signals(

@@ -2,6 +2,7 @@
 
 import logging
 from collections import defaultdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import NamedTuple
 
@@ -443,7 +444,11 @@ def restart_closed_sessions(
             # Relaunch VSCode
             try:
                 new_pid = launch_vscode(workspace_file, folder_path)
-                update_session_pid(session["folder"], new_pid)
+                update_session_pid(
+                    session["folder"],
+                    new_pid,
+                    restarted_at=datetime.now(UTC).isoformat(),
+                )
                 logger.debug(
                     "Restarted VSCode for issue #%d (PID: %d)",
                     session["issue_number"],

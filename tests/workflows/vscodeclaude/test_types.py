@@ -45,11 +45,13 @@ class TestTypeHints:
             "vscode_pid",
             "vscode_pid_create_time",
             "started_at",
+            "restarted_at",
             "is_intervention",
             "last_active",
             "last_active_rule",
         }
         assert set(annotations.keys()) == expected_fields
+        assert VSCodeClaudeSession.__optional_keys__ == frozenset({"restarted_at"})
 
     def test_vscodeclaude_session_store_type_structure(self) -> None:
         """VSCodeClaudeSessionStore has all required fields."""

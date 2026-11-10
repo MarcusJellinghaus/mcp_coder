@@ -1,6 +1,7 @@
 """Tests for restart closed sessions branch handling."""
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +76,22 @@ class TestRestartClosedSessionsBranchHandling:
             lambda *_args: 9999,
         )
 
+        # Spy on update_session_pid, delegating to the real implementation
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            update_session_pid as real_update_pid,
+        )
+
+        update_pid_calls: list[dict[str, Any]] = []
+
+        def spy_update_pid(folder: str, pid: int, **kwargs: Any) -> None:
+            update_pid_calls.append({"folder": folder, "pid": pid, **kwargs})
+            real_update_pid(folder, pid, **kwargs)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_restart.update_session_pid",
+            spy_update_pid,
+        )
+
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_123"
         working_folder.mkdir()
@@ -115,6 +132,12 @@ class TestRestartClosedSessionsBranchHandling:
         assert len(prepare_calls) == 1
         assert prepare_calls[0]["status"] == "status-01:created"
         assert prepare_calls[0]["issue"] == 123
+
+        # Restart records restarted_at as an aware UTC ISO timestamp
+        assert len(update_pid_calls) == 1
+        assert update_pid_calls[0]["pid"] == 9999
+        restarted_at = datetime.fromisoformat(update_pid_calls[0]["restarted_at"])
+        assert restarted_at.utcoffset() == timedelta(0)
 
     def test_restart_skips_status_04_without_branch(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any

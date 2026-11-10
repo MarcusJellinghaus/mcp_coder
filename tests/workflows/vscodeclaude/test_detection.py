@@ -414,6 +414,90 @@ class TestGatherSignalsGrace:
         assert signals.age_seconds == float("inf")
 
 
+class TestGatherSignalsRestartGrace:
+    """Age and grace run from the later of started_at and restarted_at."""
+
+    def test_recent_restart_is_within_grace(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Old started_at + restarted_at 10 s ago -> age ~10 s, within grace."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(hours=2)).isoformat()
+        )
+        session["restarted_at"] = (now - timedelta(seconds=10)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(10.0)
+        assert signals.within_grace is True
+
+    def test_no_restarted_at_uses_started_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without restarted_at, age comes from started_at."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(seconds=600)).isoformat()
+        )
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(600.0)
+        assert signals.within_grace is False
+
+    def test_unparseable_restarted_at_uses_started_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A bad restarted_at is ignored."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(seconds=600)).isoformat()
+        )
+        session["restarted_at"] = "not-a-date"
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(600.0)
+        assert signals.within_grace is False
+
+    def test_unparseable_started_at_with_recent_restart(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A valid restarted_at wins when started_at is unparseable."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(str(tmp_path), started_at="not-a-date")
+        session["restarted_at"] = (now - timedelta(seconds=5)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(5.0)
+        assert signals.within_grace is True
+
+    def test_naive_started_at_with_aware_restarted_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Naive started_at + aware restarted_at -> no error, age from restart."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(str(tmp_path), started_at="2026-06-26T00:00:00")
+        session["restarted_at"] = (now - timedelta(seconds=10)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(10.0)
+        assert signals.within_grace is True
+
+
 class TestCaptureDetectionSnapshot:
     """capture_detection_snapshot refreshes all three caches once and freezes."""
 

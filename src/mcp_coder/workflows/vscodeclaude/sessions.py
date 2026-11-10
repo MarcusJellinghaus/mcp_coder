@@ -182,7 +182,9 @@ def remove_session(folder: str) -> bool:
     return False
 
 
-def update_session_pid(folder: str, pid: int) -> None:
+def update_session_pid(
+    folder: str, pid: int, *, restarted_at: str | None = None
+) -> None:
     """Atomically writes both vscode_pid and vscode_pid_create_time.
 
     Captures ``psutil.Process(pid).create_time()`` and stores it alongside
@@ -192,6 +194,8 @@ def update_session_pid(folder: str, pid: int) -> None:
     Args:
         folder: Session folder path
         pid: New VSCode process ID
+        restarted_at: ISO 8601 UTC restart time; when given, stored as
+            ``restarted_at`` in the same save. Omitted -> key untouched.
     """
     create_time = get_pid_create_time(pid)
     store = load_sessions()
@@ -199,6 +203,8 @@ def update_session_pid(folder: str, pid: int) -> None:
         if session["folder"] == folder:
             session["vscode_pid"] = pid
             session["vscode_pid_create_time"] = create_time
+            if restarted_at is not None:
+                session["restarted_at"] = restarted_at
             break
     save_sessions(store)
 

@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict, dataclass, fields
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 
 class VSCodeClaudeSession(TypedDict):
@@ -17,6 +17,7 @@ class VSCodeClaudeSession(TypedDict):
     vscode_pid: int | None
     vscode_pid_create_time: float | None  # Unix epoch seconds from psutil
     started_at: str  # ISO 8601
+    restarted_at: NotRequired[str]  # ISO 8601 UTC, set on each restart
     is_intervention: bool
     # Persisted liveness baseline ("never observed" until first apply() run).
     last_active: bool | None
