@@ -151,6 +151,7 @@ Sessions can be in different states, shown in the `status` command:
 - **Dirty sessions** require manual intervention (commit or discard changes)
 - **Restart and delete wait one run**: a closed or stale session is restarted or deleted one `launch` run after it first goes inactive. On the first run it shows `!! just went inactive, confirming next run`, and cleanup prints a `Skipping` line for it
 - **Window closed, folder still referenced (Windows)**: VSCode's shared main process keeps the command line it was started with, so a session whose window is closed can still be referenced by it. Such a session shows `Closed (no_window)`. It is never deleted, only restarted if eligible. To clear it, close all VSCode windows
+- **Zombie sessions**: a live session whose folder is missing shows `Running (zombie: <rule>)`. With `title` it means the window is still open; close it
 
 ### Generated Files
 

@@ -59,7 +59,7 @@ class TestZombieSessionDisplay:
         # Zombie row appears
         assert "#188" in captured.out
         # Three column literals required by step_5.md
-        assert "Running (zombie)" in captured.out
+        assert "Running (zombie: title)" in captured.out
         assert "Missing" in captured.out
         assert "-> Investigate zombie" in captured.out
         # (Closed) prefix on Status column is preserved on the zombie row
@@ -102,7 +102,7 @@ class TestZombieSessionDisplay:
         captured = capsys.readouterr()
         # Row must NOT appear - nothing to show, nothing to clean up
         assert "#777" not in captured.out
-        assert "Running (zombie)" not in captured.out
+        assert "zombie" not in captured.out
         assert "-> Investigate zombie" not in captured.out
 
     def test_live_session_with_existing_folder_not_marked_as_zombie(
@@ -143,5 +143,5 @@ class TestZombieSessionDisplay:
         # Live session appears with plain "Running" qualifier - not zombie
         assert "#949" in captured.out
         assert "Running" in captured.out
-        assert "(zombie)" not in captured.out
+        assert "zombie" not in captured.out
         assert "-> Investigate zombie" not in captured.out

@@ -324,6 +324,21 @@ class TestDecide:
         assert decision.action == SessionAction.INVESTIGATE_ZOMBIE
         assert decision.destructive is False
 
+    @pytest.mark.parametrize(
+        "rule,reason",
+        [
+            (LivenessRule.TITLE, "folder missing, window still open"),
+            (LivenessRule.PID, "folder missing, process alive"),
+            (LivenessRule.CMDLINE, "folder missing, process alive"),
+        ],
+    )
+    def test_zombie_reason_names_signal(self, rule: LivenessRule, reason: str) -> None:
+        decision = decide(
+            make_active(rule), make_eligible_state(), NO_FLIP, "Missing", False
+        )
+        assert decision.action == SessionAction.INVESTIGATE_ZOMBIE
+        assert decision.reason == reason
+
     def test_remove_missing_inactive_folder_missing(self) -> None:
         decision = decide(
             make_inactive(), make_stale_state(), NO_FLIP, "Missing", False

@@ -334,8 +334,9 @@ def display_status_table(
         is_running = assessment.verdict.active
         folder_exists = assessment.signals.folder_exists
 
-        # Skip closed issues with missing folder UNLESS a process still claims
-        # the slot (zombie state - surface it for diagnosis).
+        # Skip closed issues with missing folder UNLESS the session is still live
+        # (zombie state: an open window or a live process for a missing folder -
+        # surface it for diagnosis).
         if not is_open and not is_running and not folder_exists:
             logger.debug(
                 "Skipping closed issue #%d with missing folder",
@@ -370,7 +371,7 @@ def display_status_table(
 
         # VSCode column: enrich with the winning liveness rule.
         if decided_action == SessionAction.INVESTIGATE_ZOMBIE:
-            vscode_status = "Running (zombie)"
+            vscode_status = f"Running (zombie: {assessment.verdict.rule.value})"
         elif is_running:
             vscode_status = f"Running ({assessment.verdict.rule.value})"
         else:

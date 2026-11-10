@@ -271,15 +271,15 @@ def restart_closed_sessions(
                 continue
 
             # Skip active sessions. KEEP_ACTIVE and the zombie INVESTIGATE_ZOMBIE
-            # both report verdict.active; a zombie (process alive, folder gone) is
-            # kept tracked and warned, never restarted (it self-resolves to
-            # REMOVE_MISSING once the process exits).
+            # both report verdict.active; a zombie (window or process still live,
+            # folder gone) is kept tracked and warned, never restarted.
             if assessment.verdict.active:
                 if assessment.decision.action == SessionAction.INVESTIGATE_ZOMBIE:
                     logger.warning(
-                        "Zombie session for issue #%d: process alive but folder "
-                        "missing; keeping tracked, not restarting",
+                        "Zombie session for issue #%d: %s; keeping tracked, "
+                        "not restarting",
                         session["issue_number"],
+                        assessment.decision.reason,
                     )
                 continue
 

@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -211,7 +212,7 @@ class TestRestartClosedSessionsLifecycle:
     def test_restart_closed_sessions_skips_zombie(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
     ) -> None:
-        """Zombie (process alive, folder gone) is kept tracked, warned, not restarted."""
+        """Zombie (session live, folder gone) is kept tracked, warned, not restarted."""
         import logging
 
         sessions_file = tmp_path / "sessions.json"
@@ -233,19 +234,23 @@ class TestRestartClosedSessionsLifecycle:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
+        assessment = make_assessment(
+            folder, active=True, action=SessionAction.INVESTIGATE_ZOMBIE
+        )
+        assessment = dataclasses.replace(
+            assessment,
+            decision=dataclasses.replace(
+                assessment.decision, reason="folder missing, window still open"
+            ),
+        )
         with caplog.at_level(logging.WARNING):
-            restarted = restart_closed_sessions(
-                assessments={
-                    folder: make_assessment(
-                        folder,
-                        active=True,
-                        action=SessionAction.INVESTIGATE_ZOMBIE,
-                    )
-                }
-            )
+            restarted = restart_closed_sessions(assessments={folder: assessment})
 
-        # Not restarted, warning logged, session retained.
+        # Not restarted, warning names the signal keeping it alive, session retained.
         assert restarted == []
-        assert "Zombie session for issue #123" in caplog.text
+        assert (
+            "Zombie session for issue #123: folder missing, window still open"
+            in caplog.text
+        )
         loaded = load_sessions()
         assert len(loaded["sessions"]) == 1

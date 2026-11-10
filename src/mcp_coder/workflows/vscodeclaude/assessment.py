@@ -246,9 +246,14 @@ def _decide_unguarded(
         a human reason, and the ``destructive`` flag.
     """
     if verdict.active and git_status == "Missing":
+        alive = (
+            "window still open"
+            if verdict.rule == LivenessRule.TITLE
+            else "process alive"
+        )
         return Decision(
             action=SessionAction.INVESTIGATE_ZOMBIE,
-            reason="folder missing, process alive",
+            reason=f"folder missing, {alive}",
             destructive=False,
         )
     if verdict.active:

@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Zombie visibility — [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: tests + zombie reason naming the signal, `Running (zombie: <rule>)`, restart warning, docs
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + zombie reason naming the signal, `Running (zombie: <rule>)`, restart warning, docs
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Exact title / cmdline matching on name boundaries — [step_7.md](./steps/step_7.md)
 
