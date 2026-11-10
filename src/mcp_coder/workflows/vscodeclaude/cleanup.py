@@ -134,8 +134,7 @@ def _retry_to_be_deleted(
     ``.to_be_deleted`` is keyed by folder NAME; ``assessments`` is keyed by folder
     PATH, so each entry is resolved under ``workspace_base`` to look up its
     assessment. A live folder (assessment ``verdict.active``) is spared and left in
-    the queue — replacing the cmdline-only ``is_vscode_open_for_folder`` check and
-    closing the second #38 door.
+    the queue — the assessment, not a cmdline-only check, decides liveness.
     """
     to_delete = load_to_be_deleted(workspace_base)
     for folder_name in list(to_delete):

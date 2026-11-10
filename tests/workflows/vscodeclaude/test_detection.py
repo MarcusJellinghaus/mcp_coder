@@ -18,12 +18,17 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude.assessment import assess_liveness
 from mcp_coder.workflows.vscodeclaude.detection import (
     DetectionSnapshot,
     capture_detection_snapshot,
     gather_signals,
 )
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    LivenessRule,
+    LivenessVerdict,
+    VSCodeClaudeSession,
+)
 
 DETECTION = "mcp_coder.workflows.vscodeclaude.detection"
 
@@ -157,6 +162,125 @@ class TestGatherSignalsTitle:
         signals = gather_signals(_session(folder, issue_number=38), snapshot)
 
         assert signals.title_match is False
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "[#38 code-review] Fix - different_repo - Visual Studio Code",
+            "#38 Fix the thing - mcp_coder - Visual Studio Code",
+            "mcp_coder - Visual Studio Code",
+        ],
+        ids=["wrong_repo", "no_bracket_prefix", "main_repo_window"],
+    )
+    def test_title_without_bracketed_issue_and_repo_no_bind(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, title: str
+    ) -> None:
+        """Both the ``[#N`` bracket and the repo name must be in the title."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((100, title),))
+
+        signals = gather_signals(_session(folder), snapshot)
+
+        assert signals.title_match is False
+
+    def test_title_repo_name_case_insensitive(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The repo name from ``owner/repo`` matches the title case-insensitively."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=(
+                (100, "[#38 review] Title - MCP_CODER - Visual Studio Code"),
+            ),
+        )
+
+        signals = gather_signals(_session(folder), snapshot)
+
+        assert signals.title_match is True
+
+
+class TestGatherSignalsToVerdict:
+    """End-to-end ``gather_signals`` -> ``assess_liveness`` on the Windows path."""
+
+    def test_title_match_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A bound window title -> ACTIVE(TITLE)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=(
+                (100, "[#38 code-review] Fix - mcp_coder - Visual Studio Code"),
+            ),
+        )
+
+        verdict = assess_liveness(gather_signals(_session(folder), snapshot))
+
+        assert verdict == LivenessVerdict(active=True, rule=LivenessRule.TITLE)
+
+    def test_within_grace_title_miss_pid_alive_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Within grace, title miss + live stored PID -> ACTIVE(PID)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, True)
+        now = datetime.now(UTC)
+        session = _session(
+            folder,
+            vscode_pid=28036,
+            started_at=(now - timedelta(seconds=5)).isoformat(),
+        )
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.within_grace is True
+        assert assess_liveness(signals) == LivenessVerdict(
+            active=True, rule=LivenessRule.PID
+        )
+
+    def test_within_grace_title_miss_cmdline_match_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Within grace, title miss + dead PID + cmdline match -> ACTIVE(CMDLINE)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            folder,
+            vscode_pid=28036,
+            started_at=(now - timedelta(seconds=5)).isoformat(),
+        )
+        snapshot = _snapshot(
+            processes=({"pid": 54321, "cmdline_lower": f"code.exe {folder.lower()}"},),
+            captured_at=now,
+        )
+
+        signals = gather_signals(session, snapshot)
+
+        assert signals.within_grace is True
+        assert signals.found_pid == 54321
+        assert assess_liveness(signals) == LivenessVerdict(
+            active=True, rule=LivenessRule.CMDLINE
+        )
+
+    def test_folder_missing_all_miss_is_inactive(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing folder with no title/pid/cmdline -> INACTIVE(NO_ARTIFACTS)."""
+        folder = str(tmp_path / "gone")
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+
+        verdict = assess_liveness(gather_signals(_session(folder), _snapshot()))
+
+        assert verdict == LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS)
 
 
 class TestGatherSignalsIndependence:

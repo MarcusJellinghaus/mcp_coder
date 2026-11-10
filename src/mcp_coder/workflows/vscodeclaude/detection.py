@@ -159,8 +159,7 @@ def clear_vscode_process_cache() -> None:
 
 # Cache for VSCode window titles (Windows only).
 # Each entry is (pid, title) where pid is the PID of the process that owns
-# the window. Storing the PID is what lets is_vscode_window_open_for_folder
-# bind a title match to the specific VSCode that has the folder open.
+# the window.
 _vscode_window_cache: list[tuple[int, str]] | None = None
 
 
@@ -264,121 +263,6 @@ def clear_vscode_window_cache() -> None:
     _vscode_pids_cache = None
 
 
-def is_vscode_window_open_for_folder(
-    folder_path: str,
-    issue_number: int | None = None,
-    repo: str | None = None,
-) -> bool:
-    """Check if VSCode has a window open for the folder (Windows only).
-
-    For vscodeclaude sessions with issue numbers, only matches windows with
-    the issue number pattern (e.g., '[#219 ...'). This prevents false positives
-    from matching the main repo window instead of the issue workspace window.
-
-    The title's owning PID must also belong to a VSCode process whose cmdline
-    references ``folder_path``. This eliminates cross-process title-leak where
-    an unrelated VSCode window's title happens to contain the issue number and
-    repo name.
-
-    Args:
-        folder_path: Full path to the workspace folder
-        issue_number: Optional issue number (required for reliable matching)
-        repo: Optional repo full name 'owner/repo' (used with issue_number)
-
-    Returns:
-        True if a VSCode window matching the session is found
-    """
-    if not HAS_WIN32GUI:
-        return False
-
-    titles = _get_vscode_window_titles()
-    folder_str = str(folder_path).lower()
-    folder_name = Path(folder_path).name.lower()
-
-    # For vscodeclaude sessions: Only match if issue number is in window title
-    # Workspace windows have format: "[#N stage] title - repo - Visual Studio Code"
-    # This prevents matching the main repo window ("repo - Visual Studio Code")
-    if issue_number is not None and repo:
-        repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
-        # Require "[#N" bracket prefix to match vscodeclaude workspace title format:
-        # "[#N stage_short] title - repo_name"
-        # This avoids false positives from GitHub extension or other tools
-        # that may show issue numbers without the bracket (e.g. "#458 - mcp_coder")
-        issue_pattern = f"[#{issue_number}"
-
-        # Bind the title match to the VSCode process that actually has the
-        # folder open: only accept a title from a PID whose cmdline references
-        # the folder.
-        matching_pids = {
-            proc["pid"]
-            for proc in _get_vscode_processes()
-            if folder_str in proc.get("cmdline_lower", "")
-            or folder_name in proc.get("cmdline_lower", "")
-        }
-
-        for pid, title in titles:
-            if pid not in matching_pids:
-                continue
-            title_lower = title.lower()
-            # Both issue number (with bracket) AND repo name must be present
-            if issue_pattern in title and repo_name in title_lower:
-                logger.debug(
-                    "Found VSCode window for issue #%d (%s): %s",
-                    issue_number,
-                    repo_name,
-                    title,
-                )
-                return True
-
-    logger.debug(
-        "No VSCode window found for folder: %s (issue=#%s, repo=%s)",
-        folder_name,
-        issue_number,
-        repo,
-    )
-    return False
-
-
-def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
-    """Check if any VSCode process has the folder open.
-
-    More reliable than PID-based check on Windows where the launcher
-    process exits immediately after spawning VSCode.
-
-    Uses cached process list for performance - call clear_vscode_process_cache()
-    at the start of batch operations to refresh.
-
-    Args:
-        folder_path: Full path to the workspace folder
-
-    Returns:
-        Tuple of (is_open, pid) where:
-        - is_open: True if VSCode has this folder open
-        - pid: The VSCode process PID if found, None otherwise
-    """
-    folder_str = str(folder_path).lower()
-    # Also check for workspace file pattern
-    folder_name = Path(folder_path).name.lower()
-
-    for proc_info in _get_vscode_processes():
-        cmdline_lower = proc_info.get("cmdline_lower", "")
-        # Check if folder path or folder name appears in command line
-        if folder_str in cmdline_lower or folder_name in cmdline_lower:
-            logger.debug(
-                "Found VSCode with folder %s (pid=%s)",
-                folder_name,
-                proc_info.get("pid"),
-            )
-            return True, proc_info.get("pid")
-
-    logger.debug(
-        "No VSCode process found for folder: %s (checked %d processes)",
-        folder_name,
-        len(_get_vscode_processes()),
-    )
-    return False, None
-
-
 def get_pid_create_time(pid: int) -> float | None:
     """Return a process's ``create_time`` for identity matching, or None.
 
@@ -441,9 +325,8 @@ def _title_binds(
 ) -> bool:
     """Whether a VSCode window title binds to this session's issue + repo.
 
-    Ports the ``[#N`` bracket + repo-name matching from
-    ``is_vscode_window_open_for_folder``, reading window titles from the frozen
-    snapshot. A workspace window has the format
+    Reads window titles from the frozen snapshot and matches the ``[#N``
+    bracket + repo name. A workspace window has the format
     ``[#N stage] title - repo_name - Visual Studio Code``; requiring the
     ``[#N`` bracket avoids false positives from tools that show bare issue
     numbers (e.g. ``#458 - mcp_coder``). Title-positive is authoritative; it is

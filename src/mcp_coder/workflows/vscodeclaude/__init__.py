@@ -284,8 +284,6 @@ from .detection import (
     clear_vscode_process_cache,
     clear_vscode_window_cache,
     gather_signals,
-    is_vscode_open_for_folder,
-    is_vscode_window_open_for_folder,
 )
 
 # Helpers (re-exported for backward compatibility)
@@ -417,8 +415,6 @@ __all__ = [
     "check_vscode_running",
     "clear_vscode_process_cache",
     "clear_vscode_window_cache",
-    "is_vscode_open_for_folder",
-    "is_vscode_window_open_for_folder",
     "get_session_for_issue",
     "add_session",
     "remove_session",

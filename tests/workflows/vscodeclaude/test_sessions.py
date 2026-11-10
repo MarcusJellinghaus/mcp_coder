@@ -14,7 +14,6 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     load_sessions,
     remove_session,
     save_sessions,
-    session_has_artifacts,
     update_session_pid,
     update_session_status,
 )
@@ -352,45 +351,6 @@ class TestSessionManagement:
         assert sessions_file.exists()
         loaded = json.loads(sessions_file.read_text(encoding="utf-8"))
         assert "sessions" in loaded
-
-
-class TestSessionHasArtifacts:
-    """Tests for session_has_artifacts function."""
-
-    def test_returns_true_when_folder_exists(self, tmp_path: Path) -> None:
-        """Returns True when the session folder exists."""
-        folder = tmp_path / "mcp_coder_123"
-        folder.mkdir()
-        assert session_has_artifacts(str(folder)) is True
-
-    def test_returns_false_when_only_workspace_file_exists(
-        self, tmp_path: Path
-    ) -> None:
-        """Returns False when folder is gone but workspace file lingers (orphan).
-
-        The workspace file is a launcher pointing at the folder; without the
-        folder it points at nothing. Treating the orphan as a live artifact
-        was the bug that produced false-active sessions and blocked cleanup.
-        """
-        folder = tmp_path / "mcp_coder_123"
-        # Don't create the folder, but create the workspace file
-        workspace = tmp_path / "mcp_coder_123.code-workspace"
-        workspace.write_text("{}")
-        assert session_has_artifacts(str(folder)) is False
-
-    def test_returns_false_when_neither_exists(self, tmp_path: Path) -> None:
-        """Returns False when neither folder nor workspace file exists (zombie session)."""
-        folder = tmp_path / "mcp_coder_123"
-        # Neither folder nor workspace file created
-        assert session_has_artifacts(str(folder)) is False
-
-    def test_returns_true_when_both_exist(self, tmp_path: Path) -> None:
-        """Returns True when both folder and workspace file exist."""
-        folder = tmp_path / "mcp_coder_123"
-        folder.mkdir()
-        workspace = tmp_path / "mcp_coder_123.code-workspace"
-        workspace.write_text("{}")
-        assert session_has_artifacts(str(folder)) is True
 
 
 class TestUpdateSessionStatus:

@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Delete unused legacy liveness detection code — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: port missing scenarios, delete legacy functions/tests/re-exports, fix comments
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: port missing scenarios, delete legacy functions/tests/re-exports, fix comments
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Remove the PID refresh — [step_2.md](./steps/step_2.md)
 

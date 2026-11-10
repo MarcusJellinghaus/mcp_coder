@@ -1,6 +1,6 @@
 """Session management for vscodeclaude feature.
 
-Handles JSON file I/O for session tracking and VSCode process checking.
+Handles JSON file I/O for session tracking.
 """
 
 import json
@@ -12,14 +12,7 @@ from typing import Any, cast
 
 from ...utils.user_app_data import get_user_app_data_dir
 from .config import sanitize_folder_name
-from .detection import (
-    HAS_WIN32GUI,
-    LAUNCH_GRACE_SECONDS,
-    check_vscode_running,
-    get_pid_create_time,
-    is_vscode_open_for_folder,
-    is_vscode_window_open_for_folder,
-)
+from .detection import get_pid_create_time
 from .helpers import load_to_be_deleted
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
 
@@ -186,135 +179,6 @@ def remove_session(folder: str) -> bool:
     if len(store["sessions"]) < original_count:
         save_sessions(store)
         return True
-    return False
-
-
-def session_has_artifacts(folder: str) -> bool:
-    """Check if the session working folder still exists on disk.
-
-    A session's only meaningful artifact is its working folder. The
-    `.code-workspace` file is a launcher that points at the folder; without
-    the folder it points at nothing. If the folder is gone, any still-running
-    VSCode process is a zombie for this session and any lingering workspace
-    file is an orphan to be cleaned up.
-
-    Args:
-        folder: Full path to the session's working folder
-
-    Returns:
-        True if the folder exists.
-    """
-    return Path(folder).exists()
-
-
-def is_session_active(session: VSCodeClaudeSession) -> bool:
-    """Check if a session's VSCode is currently running.
-
-    Single entry point for all VSCode detection logic. Callers should always
-    use this instead of assembling individual checks themselves.
-
-    Detection chain:
-
-    1. Pre-condition: session artifacts exist (folder on disk).
-    2. On Windows with issue_num + repo:
-       - Once the session is older than ``LAUNCH_GRACE_SECONDS``, the
-         window-title check is authoritative: a positive match returns True,
-         a negative match returns False (no PID/cmdline fallback).
-       - Within the grace window, the title check is skipped to cover
-         VSCode cold-start and extension-install delays; the PID + cmdline
-         fallback chain runs instead.
-    3. Fallback chain (used on non-Windows, when ``issue_num``/``repo`` are
-       missing, or within the launch grace window):
-       a. Stored PID still alive (with create_time identity match) -> active.
-       b. Cmdline match on folder -> active (and refresh the stored PID if
-          the found PID differs from the stored one, so subsequent calls hit
-          the fast PID path).
-       c. Otherwise -> inactive.
-
-    Side effect: on cmdline match where the found PID differs from the
-    stored ``vscode_pid``, calls ``update_session_pid(folder, found_pid)``,
-    which writes ``sessions.json``.
-
-    Subscript access on ``vscode_pid_create_time`` is safe: ``load_sessions``
-    backfills the key on read and ``build_session`` initializes it on create.
-
-    Args:
-        session: Session to check
-
-    Returns:
-        True if any evidence of a live VSCode session for this folder.
-    """
-    folder = session.get("folder", "")
-    issue_num = session.get("issue_number")
-    repo = session.get("repo")
-    if not session_has_artifacts(folder):
-        logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
-        return False
-
-    if HAS_WIN32GUI and issue_num is not None and repo is not None:
-        started_at_str = session.get("started_at", "")
-        try:
-            age = (
-                datetime.now(UTC) - datetime.fromisoformat(started_at_str)
-            ).total_seconds()
-        except (ValueError, TypeError):
-            age = float("inf")
-
-        if age >= LAUNCH_GRACE_SECONDS:
-            if is_vscode_window_open_for_folder(
-                folder,
-                issue_number=issue_num,
-                repo=repo,
-            ):
-                logger.info(
-                    "is_session_active #%s: active (window-title match)", issue_num
-                )
-                return True
-            logger.info(
-                "is_session_active #%s: inactive (no title match, age=%.0fs)",
-                issue_num,
-                age,
-            )
-            return False
-        logger.debug(
-            "is_session_active #%s: within launch grace (age=%.0fs), using fallback chain",
-            issue_num,
-            age,
-        )
-
-    stored_pid = session.get("vscode_pid")
-    stored_create_time = session["vscode_pid_create_time"]
-
-    if check_vscode_running(stored_pid, stored_create_time):
-        logger.info(
-            "is_session_active #%s: active (PID %s alive)",
-            issue_num,
-            stored_pid,
-        )
-        return True
-
-    is_open, found_pid = is_vscode_open_for_folder(folder)
-    if is_open:
-        if found_pid is not None and found_pid != stored_pid:
-            logger.debug(
-                "is_session_active #%s: refreshing stored PID %s -> %s",
-                issue_num,
-                stored_pid,
-                found_pid,
-            )
-            update_session_pid(folder, found_pid)
-        logger.info(
-            "is_session_active #%s: active (cmdline match PID=%s)",
-            issue_num,
-            found_pid,
-        )
-        return True
-
-    logger.info(
-        "is_session_active #%s: inactive (PID %s gone / no cmdline match)",
-        issue_num,
-        stored_pid,
-    )
     return False
 
 
