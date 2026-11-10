@@ -45,11 +45,13 @@ class TestTypeHints:
             "vscode_pid",
             "vscode_pid_create_time",
             "started_at",
+            "restarted_at",
             "is_intervention",
             "last_active",
             "last_active_rule",
         }
         assert set(annotations.keys()) == expected_fields
+        assert VSCodeClaudeSession.__optional_keys__ == frozenset({"restarted_at"})
 
     def test_vscodeclaude_session_store_type_structure(self) -> None:
         """VSCodeClaudeSessionStore has all required fields."""
@@ -183,7 +185,7 @@ class TestAssessmentFrozen:
             state.is_open = False  # type: ignore[misc]
 
     def test_transition_frozen(self) -> None:
-        transition = Transition(flipped_to_inactive=False)
+        transition = Transition(flipped_to_inactive=False, prior_last_active=False)
         with pytest.raises(dataclasses.FrozenInstanceError):
             transition.flipped_to_inactive = True  # type: ignore[misc]
 

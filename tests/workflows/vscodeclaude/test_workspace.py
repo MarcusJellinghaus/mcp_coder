@@ -318,6 +318,25 @@ class TestWorkspaceSetup:
         # Title should be truncated with ...
         assert "..." in content["settings"]["window.title"]
 
+    def test_create_workspace_file_escapes_quotes_and_backslashes(
+        self, tmp_path: Path, mock_vscodeclaude_config: None
+    ) -> None:
+        """Quotes and backslashes in the title still produce valid JSON."""
+        workspace_path = create_workspace_file(
+            workspace_base=str(tmp_path),
+            folder_name="mcp-coder_123",
+            issue_number=123,
+            issue_title='Fix "quoted" C:\\path title',
+            status="status-07:code-review",
+            repo_name="mcp-coder",
+        )
+
+        content = json.loads(workspace_path.read_text(encoding="utf-8"))
+        window_title = content["settings"]["window.title"]
+        assert '"quoted"' in window_title
+        assert "C:\\path" in window_title
+        assert content["folders"][0]["path"] == "./mcp-coder_123"
+
     def test_create_startup_script_windows(
         self,
         tmp_path: Path,

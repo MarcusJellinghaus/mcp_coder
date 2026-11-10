@@ -13,72 +13,27 @@ detection helpers, so no real VSCode is required. The key behaviours under test:
   the result into immutable tuples.
 """
 
+import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude.assessment import assess_liveness
 from mcp_coder.workflows.vscodeclaude.detection import (
-    DetectionSnapshot,
     capture_detection_snapshot,
+    clear_vscode_window_cache,
     gather_signals,
 )
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
-
-DETECTION = "mcp_coder.workflows.vscodeclaude.detection"
-
-
-def _session(
-    folder: str,
-    *,
-    issue_number: int = 38,
-    repo: str = "owner/mcp_coder",
-    vscode_pid: int | None = None,
-    vscode_pid_create_time: float | None = None,
-    started_at: str | None = None,
-) -> VSCodeClaudeSession:
-    """Build a session dict with sensible defaults for detection tests."""
-    if started_at is None:
-        # Default well outside the launch grace window.
-        started_at = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
-    return {
-        "folder": folder,
-        "repo": repo,
-        "issue_number": issue_number,
-        "status": "status-07:code-review",
-        "vscode_pid": vscode_pid,
-        "vscode_pid_create_time": vscode_pid_create_time,
-        "started_at": started_at,
-        "is_intervention": False,
-        "last_active": None,
-        "last_active_rule": None,
-    }
-
-
-def _snapshot(
-    *,
-    processes: tuple[dict[str, object], ...] = (),
-    window_titles: tuple[tuple[int, str], ...] = (),
-    pids: frozenset[int] = frozenset(),
-    captured_at: datetime | None = None,
-) -> DetectionSnapshot:
-    """Build a DetectionSnapshot with empty defaults."""
-    return DetectionSnapshot(
-        processes=processes,
-        window_titles=window_titles,
-        pids=pids,
-        captured_at=captured_at or datetime.now(UTC),
-    )
-
-
-def _force_windows(monkeypatch: pytest.MonkeyPatch, enabled: bool = True) -> None:
-    """Force the HAS_WIN32GUI flag as seen by the detection module."""
-    monkeypatch.setattr(f"{DETECTION}.HAS_WIN32GUI", enabled)
-
-
-def _stub_pid_alive(monkeypatch: pytest.MonkeyPatch, alive: bool) -> None:
-    """Stub check_vscode_running in the detection module."""
-    monkeypatch.setattr(f"{DETECTION}.check_vscode_running", lambda *_: alive)
+from mcp_coder.workflows.vscodeclaude.types import LivenessRule, LivenessVerdict
+from tests.workflows.vscodeclaude._detection_helpers import (
+    DETECTION,
+    _force_windows,
+    _session,
+    _snapshot,
+    _stub_pid_alive,
+)
 
 
 class TestGatherSignalsTitle:
@@ -157,6 +112,125 @@ class TestGatherSignalsTitle:
         signals = gather_signals(_session(folder, issue_number=38), snapshot)
 
         assert signals.title_match is False
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "[#38 code-review] Fix - different_repo - Visual Studio Code",
+            "#38 Fix the thing - mcp_coder - Visual Studio Code",
+            "mcp_coder - Visual Studio Code",
+        ],
+        ids=["wrong_repo", "no_bracket_prefix", "main_repo_window"],
+    )
+    def test_title_without_bracketed_issue_and_repo_no_bind(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, title: str
+    ) -> None:
+        """Both the ``[#N`` bracket and the repo name must be in the title."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((100, title),))
+
+        signals = gather_signals(_session(folder), snapshot)
+
+        assert signals.title_match is False
+
+    def test_title_repo_name_case_insensitive(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The repo name from ``owner/repo`` matches the title case-insensitively."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=(
+                (100, "[#38 review] Title - MCP_CODER - Visual Studio Code"),
+            ),
+        )
+
+        signals = gather_signals(_session(folder), snapshot)
+
+        assert signals.title_match is True
+
+
+class TestGatherSignalsToVerdict:
+    """End-to-end ``gather_signals`` -> ``assess_liveness`` on the Windows path."""
+
+    def test_title_match_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A bound window title -> ACTIVE(TITLE)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=(
+                (100, "[#38 code-review] Fix - mcp_coder - Visual Studio Code"),
+            ),
+        )
+
+        verdict = assess_liveness(gather_signals(_session(folder), snapshot))
+
+        assert verdict == LivenessVerdict(active=True, rule=LivenessRule.TITLE)
+
+    def test_within_grace_title_miss_pid_alive_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Within grace, title miss + live stored PID -> ACTIVE(PID)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, True)
+        now = datetime.now(UTC)
+        session = _session(
+            folder,
+            vscode_pid=28036,
+            started_at=(now - timedelta(seconds=5)).isoformat(),
+        )
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.within_grace is True
+        assert assess_liveness(signals) == LivenessVerdict(
+            active=True, rule=LivenessRule.PID
+        )
+
+    def test_within_grace_title_miss_cmdline_match_is_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Within grace, title miss + dead PID + cmdline match -> ACTIVE(CMDLINE)."""
+        folder = str(tmp_path)
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            folder,
+            vscode_pid=28036,
+            started_at=(now - timedelta(seconds=5)).isoformat(),
+        )
+        snapshot = _snapshot(
+            processes=({"pid": 54321, "cmdline_lower": f"code.exe {folder.lower()}"},),
+            captured_at=now,
+        )
+
+        signals = gather_signals(session, snapshot)
+
+        assert signals.within_grace is True
+        assert signals.found_pid == 54321
+        assert assess_liveness(signals) == LivenessVerdict(
+            active=True, rule=LivenessRule.CMDLINE
+        )
+
+    def test_folder_missing_all_miss_is_inactive(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing folder with no title/pid/cmdline -> INACTIVE(NO_ARTIFACTS)."""
+        folder = str(tmp_path / "gone")
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+
+        verdict = assess_liveness(gather_signals(_session(folder), _snapshot()))
+
+        assert verdict == LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS)
 
 
 class TestGatherSignalsIndependence:
@@ -290,6 +364,90 @@ class TestGatherSignalsGrace:
         assert signals.age_seconds == float("inf")
 
 
+class TestGatherSignalsRestartGrace:
+    """Age and grace run from the later of started_at and restarted_at."""
+
+    def test_recent_restart_is_within_grace(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Old started_at + restarted_at 10 s ago -> age ~10 s, within grace."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(hours=2)).isoformat()
+        )
+        session["restarted_at"] = (now - timedelta(seconds=10)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(10.0)
+        assert signals.within_grace is True
+
+    def test_no_restarted_at_uses_started_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without restarted_at, age comes from started_at."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(seconds=600)).isoformat()
+        )
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(600.0)
+        assert signals.within_grace is False
+
+    def test_unparseable_restarted_at_uses_started_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A bad restarted_at is ignored."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(
+            str(tmp_path), started_at=(now - timedelta(seconds=600)).isoformat()
+        )
+        session["restarted_at"] = "not-a-date"
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(600.0)
+        assert signals.within_grace is False
+
+    def test_unparseable_started_at_with_recent_restart(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A valid restarted_at wins when started_at is unparseable."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(str(tmp_path), started_at="not-a-date")
+        session["restarted_at"] = (now - timedelta(seconds=5)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(5.0)
+        assert signals.within_grace is True
+
+    def test_naive_started_at_with_aware_restarted_at(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Naive started_at + aware restarted_at -> no error, age from restart."""
+        _force_windows(monkeypatch, enabled=False)
+        _stub_pid_alive(monkeypatch, False)
+        now = datetime.now(UTC)
+        session = _session(str(tmp_path), started_at="2026-06-26T00:00:00")
+        session["restarted_at"] = (now - timedelta(seconds=10)).isoformat()
+
+        signals = gather_signals(session, _snapshot(captured_at=now))
+
+        assert signals.age_seconds == pytest.approx(10.0)
+        assert signals.within_grace is True
+
+
 class TestCaptureDetectionSnapshot:
     """capture_detection_snapshot refreshes all three caches once and freezes."""
 
@@ -303,9 +461,9 @@ class TestCaptureDetectionSnapshot:
             calls.append(f"processes:{refresh}")
             return [{"pid": 1, "cmdline_lower": "code.exe foo"}]
 
-        def fake_titles(refresh: bool = False) -> list[tuple[int, str]]:
+        def fake_titles(refresh: bool = False) -> tuple[list[tuple[int, str]], bool]:
             calls.append(f"titles:{refresh}")
-            return [(1, "[#38 x] foo")]
+            return [(1, "[#38 x] foo")], True
 
         def fake_pids() -> set[int]:
             calls.append("pids")
@@ -323,4 +481,135 @@ class TestCaptureDetectionSnapshot:
         assert isinstance(snapshot.pids, frozenset)
         assert snapshot.pids == frozenset({1, 2})
         assert snapshot.window_titles == ((1, "[#38 x] foo"),)
+        assert snapshot.window_enum_ok is True
         assert isinstance(snapshot.captured_at, datetime)
+
+    def test_enum_failure_sets_window_enum_ok_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """EnumWindows raising -> snapshot.window_enum_ok is False."""
+        _force_windows(monkeypatch)
+        fake_win32gui = MagicMock()
+        fake_win32gui.EnumWindows.side_effect = RuntimeError("boom")
+        monkeypatch.setattr(f"{DETECTION}.win32gui", fake_win32gui, raising=False)
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_processes", lambda **_: [])
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_pids", lambda: {1})
+
+        snapshot = capture_detection_snapshot()
+        clear_vscode_window_cache()
+
+        assert snapshot.window_titles == ()
+        assert snapshot.window_enum_ok is False
+
+    def test_without_win32gui_window_enum_ok_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No win32gui -> snapshot.window_enum_ok is False."""
+        _force_windows(monkeypatch, enabled=False)
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_processes", lambda **_: [])
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_pids", set)
+
+        snapshot = capture_detection_snapshot()
+
+        assert snapshot.window_enum_ok is False
+
+
+_TITLE_38 = "[#38 code-review] Fix - mcp_coder - Visual Studio Code"
+_OTHER_TITLE = "[#99 code-review] Other - mcp_coder - Visual Studio Code"
+
+
+class TestGatherSignalsTitleAuthoritative:
+    """window_count and title_authoritative computed at the IO boundary."""
+
+    @pytest.mark.parametrize(
+        ("has_win32gui", "window_enum_ok", "repo", "pids", "titles"),
+        [
+            (True, False, "owner/mcp_coder", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (False, True, "owner/mcp_coder", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (True, True, "", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (True, True, "owner/mcp_coder", frozenset({1}), ()),
+        ],
+        ids=["enum_failed", "no_win32gui", "no_repo", "code_running_no_windows"],
+    )
+    def test_not_authoritative(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        has_win32gui: bool,
+        window_enum_ok: bool,
+        repo: str,
+        pids: frozenset[int],
+        titles: tuple[tuple[int, str], ...],
+    ) -> None:
+        """Any missing precondition -> title_authoritative False."""
+        _force_windows(monkeypatch, enabled=has_win32gui)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=titles, pids=pids, window_enum_ok=window_enum_ok
+        )
+
+        signals = gather_signals(_session(str(tmp_path), repo=repo), snapshot)
+
+        assert signals.title_authoritative is False
+
+    def test_authoritative(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """win32gui + enum ok + repo + at least one window -> authoritative."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        titles = ((1, _OTHER_TITLE), (2, "mcp_coder - Visual Studio Code"))
+        snapshot = _snapshot(window_titles=titles, pids=frozenset({1, 2}))
+
+        signals = gather_signals(_session(str(tmp_path)), snapshot)
+
+        assert signals.title_authoritative is True
+        assert signals.window_count == len(titles)
+
+    def test_authoritative_miss_logs_window_titles(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """An authoritative miss dumps the snapshot's titles at DEBUG."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((1, _OTHER_TITLE),), pids=frozenset({1}))
+
+        with caplog.at_level(logging.DEBUG, logger=DETECTION):
+            gather_signals(_session(str(tmp_path)), snapshot)
+
+        messages = [r.getMessage() for r in caplog.records]
+        dumps = [m for m in messages if "Title miss" in m]
+        assert len(dumps) == 1
+        assert "#38" in dumps[0]
+        assert _OTHER_TITLE in dumps[0]
+
+    def test_title_match_does_not_log_window_titles(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A title match does not dump the window titles."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((1, _TITLE_38),), pids=frozenset({1}))
+
+        with caplog.at_level(logging.DEBUG, logger=DETECTION):
+            gather_signals(_session(str(tmp_path)), snapshot)
+
+        assert not [r for r in caplog.records if "Title miss" in r.getMessage()]
+
+    def test_authoritative_miss_past_grace_with_live_pid_is_no_window(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """#1342 shape: past grace, title miss, live shared PID -> NO_WINDOW."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, True)
+        snapshot = _snapshot(window_titles=((1, _OTHER_TITLE),), pids=frozenset({1}))
+
+        verdict = assess_liveness(gather_signals(_session(str(tmp_path)), snapshot))
+
+        assert verdict == LivenessVerdict(active=False, rule=LivenessRule.NO_WINDOW)

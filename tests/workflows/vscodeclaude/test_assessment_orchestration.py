@@ -1,8 +1,8 @@
 """Tests for the assessment orchestration (build / apply / audit / logging).
 
 ``build_assessments`` is the READ-ONLY builder (snapshot once, no disk writes);
-``apply_assessments`` is the single mutation point (PID refresh + last_active
-advance + one atomic save, plus one audit run-block when write_audit=True).
+``apply_assessments`` is the single mutation point (last_active advance + one
+atomic save, plus one audit run-block when write_audit=True).
 """
 
 from unittest.mock import Mock, patch
@@ -25,7 +25,6 @@ _IGNORE = "mcp_coder.workflows.vscodeclaude.assessment.get_ignore_labels"
 _USERNAME = "mcp_coder.workflows.vscodeclaude.assessment.get_github_username"
 _LOAD = "mcp_coder.workflows.vscodeclaude.assessment.load_sessions"
 _SAVE = "mcp_coder.workflows.vscodeclaude.assessment.save_sessions"
-_CREATE_TIME = "mcp_coder.workflows.vscodeclaude.assessment.get_pid_create_time"
 _AUDIT_PATH = "mcp_coder.workflows.vscodeclaude.audit.get_audit_file_path"
 
 
@@ -133,25 +132,24 @@ class TestBuildAssessments:
 
 
 class TestApplyAssessments:
-    """Apply-only mutation point: PID refresh + last_active advance, single save."""
+    """Apply-only mutation point: last_active advance, single save."""
 
-    @patch(_CREATE_TIME, return_value=123.5)
     @patch(_SAVE)
     @patch(_LOAD)
-    def test_apply_advances_last_active_and_refreshes_pid_once(
+    def test_apply_never_changes_vscode_pid(
         self,
         mock_load: Mock,
         mock_save: Mock,
-        mock_ct: Mock,
     ) -> None:
-        """An active session refreshes the stale PID and advances last_active."""
+        """An active cmdline-found PID never overwrites the stored vscode_pid."""
         session = make_session_at("C:/work/a", 1)
-        session["vscode_pid"] = 100
+        session["vscode_pid"] = 111
+        session["vscode_pid_create_time"] = 1.0
         mock_load.return_value = {"sessions": [session], "last_updated": ""}
 
         assessment = assess_session(
             folder="C:/work/a",
-            signals=make_signals(title_match=True, found_pid=200),
+            signals=make_signals(title_match=True, found_pid=222),
             issue_facts=make_issue_facts(),
             git_status="Clean",
             directory_empty=False,
@@ -160,23 +158,19 @@ class TestApplyAssessments:
 
         apply_assessments({"C:/work/a": assessment}, [session], write_audit=False)
 
-        saved_store = mock_save.call_args[0][0]
-        saved = saved_store["sessions"][0]
-        assert saved["vscode_pid"] == 200
-        assert saved["vscode_pid_create_time"] == 123.5
+        saved = mock_save.call_args[0][0]["sessions"][0]
+        assert saved["vscode_pid"] == 111
+        assert saved["vscode_pid_create_time"] == 1.0
         assert saved["last_active"] is True
         assert saved["last_active_rule"] == "title"
-        mock_ct.assert_called_once_with(200)
         mock_save.assert_called_once()
 
-    @patch(_CREATE_TIME)
     @patch(_SAVE)
     @patch(_LOAD)
-    def test_apply_inactive_skips_pid_refresh(
+    def test_apply_inactive_advances_last_active_false(
         self,
         mock_load: Mock,
         mock_save: Mock,
-        mock_ct: Mock,
     ) -> None:
         """An inactive session advances last_active to False without touching PID."""
         session = make_session_at("C:/work/a", 1)
@@ -198,21 +192,18 @@ class TestApplyAssessments:
         assert saved["vscode_pid"] == 100  # unchanged
         assert saved["last_active"] is False
         assert saved["last_active_rule"] == "no_match"
-        mock_ct.assert_not_called()
         mock_save.assert_called_once()
 
 
 class TestApplyAssessmentsAudit:
     """apply_assessments writes ONE run-block per invocation when write_audit=True."""
 
-    @patch(_CREATE_TIME)
     @patch(_SAVE)
     @patch(_LOAD)
     def test_apply_records_destructive_delete_removed_by_cleanup(
         self,
         mock_load: Mock,
         mock_save: Mock,
-        mock_ct: Mock,
         tmp_path: object,
         monkeypatch: object,
     ) -> None:
@@ -248,7 +239,7 @@ class TestApplyAssessmentsAudit:
             directory_empty=False,
             prior_last_active=None,
         )
-        # #38-shaped: inactive + stale + clean -> destructive DELETE.
+        # #38-shaped: confirmed inactive + stale + clean -> destructive DELETE.
         deleting = assess_session(
             folder="C:/work/b",
             signals=make_signals(folder_exists=True),
@@ -257,7 +248,7 @@ class TestApplyAssessmentsAudit:
             ),
             git_status="Clean",
             directory_empty=False,
-            prior_last_active=None,
+            prior_last_active=False,
         )
 
         # Full build-time set (both sessions) threaded through, even though the
@@ -283,14 +274,12 @@ class TestApplyAssessmentsAudit:
         # The survivor (still in the store) advances its last_active as before.
         assert mock_save.call_args[0][0]["sessions"][0]["last_active"] is True
 
-    @patch(_CREATE_TIME)
     @patch(_SAVE)
     @patch(_LOAD)
     def test_status_path_writes_no_audit_record(
         self,
         mock_load: Mock,
         mock_save: Mock,
-        mock_ct: Mock,
         tmp_path: object,
         monkeypatch: object,
     ) -> None:
@@ -316,14 +305,12 @@ class TestApplyAssessmentsAudit:
 
         assert not audit_file.exists()
 
-    @patch(_CREATE_TIME)
     @patch(_SAVE)
     @patch(_LOAD)
     def test_locked_folder_retry_recurs_across_runs(
         self,
         mock_load: Mock,
         mock_save: Mock,
-        mock_ct: Mock,
         tmp_path: object,
         monkeypatch: object,
     ) -> None:
@@ -345,7 +332,7 @@ class TestApplyAssessmentsAudit:
             ),
             git_status="Clean",
             directory_empty=False,
-            prior_last_active=None,
+            prior_last_active=False,
         )
 
         apply_assessments({"C:/work/b": deleting}, [session], write_audit=True)

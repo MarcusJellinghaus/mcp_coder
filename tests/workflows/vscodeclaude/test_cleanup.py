@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.utils.folder_deletion import DeletionResult
+from mcp_coder.workflows.vscodeclaude.assessment import CONFIRMING_REASON, decide
 from mcp_coder.workflows.vscodeclaude.cleanup import (
     cleanup_stale_sessions,
     delete_session_folder,
@@ -55,11 +56,14 @@ def _assessment(
     active: bool = False,
     action: SessionAction = SessionAction.DELETE,
     reason: str = "stale",
+    rule: LivenessRule | None = None,
+    prior_last_active: bool | None = False,
 ) -> SessionAssessment:
     """Build a minimal :class:`SessionAssessment` for cleanup consumer tests.
 
-    Cleanup only reads ``verdict.active`` and ``decision.{action,reason}``; the
-    remaining typed sub-results are filled with neutral defaults.
+    Cleanup reads ``verdict``, ``transition`` (retry-loop guard) and
+    ``decision.{action,reason}``; the remaining typed sub-results are filled
+    with neutral defaults. ``prior_last_active=False`` = confirmed inactive.
     """
     signals = DetectionSignals(
         folder_exists=True,
@@ -70,8 +74,11 @@ def _assessment(
         age_seconds=0.0,
         within_grace=False,
         directory_empty=False,
+        window_count=0,
+        title_authoritative=False,
     )
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    if rule is None:
+        rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
     return SessionAssessment(
         folder=str(folder),
         signals=signals,
@@ -83,14 +90,14 @@ def _assessment(
             is_unassigned=False,
             is_eligible=False,
         ),
-        transition=Transition(flipped_to_inactive=False),
+        transition=Transition(
+            flipped_to_inactive=False, prior_last_active=prior_last_active
+        ),
         decision=Decision(
             action=action,
             reason=reason,
             destructive=action == SessionAction.DELETE,
         ),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 
@@ -162,6 +169,55 @@ class TestCleanup:
 
         assert folder.exists()
         assert str(folder) in result.get("skipped", [])
+
+    def test_cleanup_stale_sessions_reports_unconfirmed_restart_as_skipped(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """An eligible session that just went inactive is skipped and reported."""
+        folder = tmp_path / "fresh_inactive"
+        folder.mkdir()
+        session = _session(folder, issue_number=321)
+        sessions_file = tmp_path / "sessions.json"
+        _patch_sessions_file(monkeypatch, sessions_file, [session])
+
+        verdict = LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH)
+        transition = Transition(flipped_to_inactive=False, prior_last_active=None)
+        issue_state = IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        )
+        decision = decide(verdict, issue_state, transition, "Clean", False)
+        assert decision == Decision(
+            action=SessionAction.SKIP, reason=CONFIRMING_REASON, destructive=False
+        )
+        assessment = SessionAssessment(
+            folder=str(folder),
+            signals=_assessment(folder).signals,
+            verdict=verdict,
+            issue_state=issue_state,
+            transition=transition,
+            decision=decision,
+            git_status="Clean",
+        )
+
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path),
+            assessments={str(folder): assessment},
+            dry_run=False,
+        )
+
+        assert folder.exists()
+        assert result == {"deleted": [], "skipped": [str(folder)]}
+        assert (
+            "Skipping (just went inactive, confirming next run)"
+            in capsys.readouterr().out
+        )
 
     def test_cleanup_stale_sessions_deletes_clean(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

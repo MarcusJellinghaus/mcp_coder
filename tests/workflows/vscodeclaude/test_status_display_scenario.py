@@ -107,6 +107,8 @@ class TestScenarioACrossModule:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=True,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS),
                 issue_state=IssueState(
@@ -116,14 +118,14 @@ class TestScenarioACrossModule:
                     is_unassigned=False,
                     is_eligible=False,
                 ),
-                transition=Transition(flipped_to_inactive=False),
+                transition=Transition(
+                    flipped_to_inactive=False, prior_last_active=False
+                ),
                 decision=Decision(
                     action=SessionAction.REMOVE_MISSING,
                     reason="folder missing",
                     destructive=False,
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
         }
 

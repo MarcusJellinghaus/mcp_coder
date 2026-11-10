@@ -13,6 +13,7 @@ from ...utils.folder_deletion import (
     DeletionFailureReason,
     safe_delete_folder,
 )
+from .assessment import guard_reason
 from .helpers import (
     add_to_be_deleted,
     load_to_be_deleted,
@@ -134,8 +135,10 @@ def _retry_to_be_deleted(
     ``.to_be_deleted`` is keyed by folder NAME; ``assessments`` is keyed by folder
     PATH, so each entry is resolved under ``workspace_base`` to look up its
     assessment. A live folder (assessment ``verdict.active``) is spared and left in
-    the queue — replacing the cmdline-only ``is_vscode_open_for_folder`` check and
-    closing the second #38 door.
+    the queue — the assessment, not a cmdline-only check, decides liveness.
+    Entries are also spared while their verdict is ``NO_WINDOW`` or not yet
+    confirmed inactive (:func:`guard_reason`). Entries without an assessment
+    are retried as before.
     """
     to_delete = load_to_be_deleted(workspace_base)
     for folder_name in list(to_delete):
@@ -157,7 +160,20 @@ def _retry_to_be_deleted(
             logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
             continue
 
-        # Inactive assessment OR no assessment, folder still present -> retry.
+        # Inactive but NO_WINDOW or not yet confirmed -> spare; leave it queued.
+        if assessment is not None:
+            reason = guard_reason(
+                assessment.verdict, assessment.transition, SessionAction.DELETE
+            )
+            if reason is not None:
+                logger.info(
+                    "Sparing .to_be_deleted entry %s (%s); leaving it queued.",
+                    folder_name,
+                    reason,
+                )
+                continue
+
+        # Confirmed inactive assessment OR no assessment, folder present -> retry.
         deletion = safe_delete_folder(folder_path)
         if deletion.success:
             remove_from_to_be_deleted(workspace_base, folder_name)
@@ -184,7 +200,9 @@ def cleanup_stale_sessions(
     ``decide``); cleanup never re-checks git status to gate a destructive delete:
     - ``DELETE``: delete folder, then workspace file, then session record.
     - ``REMOVE_MISSING``: remove session + orphan workspace file (folder gone).
-    - ``SKIP``: report ``a.decision.reason`` (dirty / unverified non-empty).
+    - ``SKIP``: report ``a.decision.reason`` (dirty / unverified non-empty /
+      not yet confirmed inactive / no window). A guard-converted ``RESTART``
+      lands here too, so every inactive session not acted on is reported.
 
     Retry logic: on non-dry-run, retries ``.to_be_deleted`` entries first,
     consuming the assessment map (live folders are spared, never deleted).

@@ -1,17 +1,24 @@
 """Tests for the pure assessment layers and serializer.
 
 Full rule matrix, no Windows — the #38 de-risker. The liveness rule order is
-the contract: title -> pid -> cmdline -> folder-existence. PID is a
-tie-breaker, not a gate. The decide layer owns the full git-status safety
-matrix and is the ONLY place a destructive DELETE can be produced.
+the contract: a title match always wins; past grace with an authoritative
+title a miss is decisive (NO_WINDOW when only pid/cmdline still reference the
+folder); otherwise pid -> cmdline -> folder-existence. The decide layer owns
+the full git-status safety matrix and is the ONLY place a destructive DELETE
+can be produced.
 """
 
+import pytest
+
 from mcp_coder.workflows.vscodeclaude.assessment import (
+    CONFIRMING_REASON,
+    NO_WINDOW_REASON,
     assess_issue_state,
     assess_liveness,
     assess_session,
     assess_transition,
     decide,
+    guard_reason,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
     Decision,
@@ -31,6 +38,7 @@ from tests.workflows.vscodeclaude.conftest import (
     make_session,
     make_signals,
     make_stale_state,
+    make_transition,
 )
 
 
@@ -52,7 +60,7 @@ class TestAssessLiveness:
         assert verdict == LivenessVerdict(active=True, rule=LivenessRule.CMDLINE)
 
     def test_pid_alive_only(self) -> None:
-        """PID alive (title + cmdline miss) yields ACTIVE via PID tie-breaker."""
+        """PID alive (title not authoritative, cmdline miss) yields ACTIVE(PID)."""
         verdict = assess_liveness(
             make_signals(title_match=False, pid_alive=True, cmdline_match=False)
         )
@@ -91,6 +99,58 @@ class TestAssessLiveness:
         """The verdict is a LivenessVerdict instance."""
         verdict = assess_liveness(make_signals(title_match=True))
         assert isinstance(verdict, LivenessVerdict)
+
+    @pytest.mark.parametrize(
+        ("authoritative", "within_grace", "signals", "expected"),
+        [
+            (True, False, {"pid_alive": True}, (False, LivenessRule.NO_WINDOW)),
+            (True, False, {"cmdline_match": True}, (False, LivenessRule.NO_WINDOW)),
+            (
+                True,
+                False,
+                {"pid_alive": True, "folder_exists": False},
+                (False, LivenessRule.NO_ARTIFACTS),
+            ),
+            (True, False, {}, (False, LivenessRule.NO_MATCH)),
+            (True, True, {"pid_alive": True}, (True, LivenessRule.PID)),
+            (True, True, {"cmdline_match": True}, (True, LivenessRule.CMDLINE)),
+            (False, False, {"pid_alive": True}, (True, LivenessRule.PID)),
+            (False, False, {"cmdline_match": True}, (True, LivenessRule.CMDLINE)),
+            (
+                True,
+                False,
+                {"title_match": True, "pid_alive": True},
+                (True, LivenessRule.TITLE),
+            ),
+        ],
+        ids=[
+            "auth_past_grace_pid_is_no_window",
+            "auth_past_grace_cmdline_is_no_window",
+            "auth_past_grace_folder_missing_is_no_artifacts",
+            "auth_past_grace_nothing_is_no_match",
+            "auth_within_grace_pid_active",
+            "auth_within_grace_cmdline_active",
+            "not_auth_pid_active",
+            "not_auth_cmdline_active",
+            "auth_past_grace_title_match_active",
+        ],
+    )
+    def test_title_authoritative_matrix(
+        self,
+        authoritative: bool,
+        within_grace: bool,
+        signals: dict[str, bool],
+        expected: tuple[bool, LivenessRule],
+    ) -> None:
+        """Past grace an authoritative title miss is decisive; else fallback."""
+        verdict = assess_liveness(
+            make_signals(
+                title_authoritative=authoritative,
+                within_grace=within_grace,
+                **signals,
+            )
+        )
+        assert verdict == LivenessVerdict(active=expected[0], rule=expected[1])
 
 
 class TestAssessIssueState:
@@ -152,6 +212,103 @@ class TestAssessTransition:
         transition = assess_transition(None, make_inactive())
         assert transition.flipped_to_inactive is False
 
+    @pytest.mark.parametrize("prior", [True, False, None])
+    def test_carries_prior_last_active(self, prior: bool | None) -> None:
+        transition = assess_transition(prior, make_inactive())
+        assert transition.prior_last_active is prior
+        assert transition == make_transition(prior)
+
+
+_NO_WINDOW = make_inactive(LivenessRule.NO_WINDOW)
+
+
+class TestDecideGuards:
+    """Override (NO_WINDOW) and confirmation guards on DELETE/RESTART."""
+
+    @pytest.mark.parametrize(
+        ("verdict", "eligible", "git_status", "prior", "action", "reason"),
+        [
+            (make_inactive(), False, "Clean", False, SessionAction.DELETE, None),
+            (
+                make_inactive(),
+                False,
+                "Clean",
+                True,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (
+                make_inactive(),
+                False,
+                "Clean",
+                None,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (_NO_WINDOW, False, "Clean", False, SessionAction.SKIP, NO_WINDOW_REASON),
+            (make_inactive(), True, "Clean", False, SessionAction.RESTART, None),
+            (
+                make_inactive(),
+                True,
+                "Clean",
+                True,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (
+                make_inactive(),
+                True,
+                "Clean",
+                None,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (_NO_WINDOW, True, "Clean", False, SessionAction.RESTART, None),
+            (_NO_WINDOW, True, "Clean", None, SessionAction.SKIP, CONFIRMING_REASON),
+            (make_inactive(), True, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (make_inactive(), False, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (_NO_WINDOW, True, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (_NO_WINDOW, False, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (
+                make_inactive(LivenessRule.NO_ARTIFACTS),
+                True,
+                "Missing",
+                None,
+                SessionAction.REMOVE_MISSING,
+                None,
+            ),
+            (
+                make_inactive(LivenessRule.NO_ARTIFACTS),
+                False,
+                "Missing",
+                None,
+                SessionAction.REMOVE_MISSING,
+                None,
+            ),
+        ],
+    )
+    def test_guard_matrix(
+        self,
+        verdict: LivenessVerdict,
+        eligible: bool,
+        git_status: str,
+        prior: bool | None,
+        action: SessionAction,
+        reason: str | None,
+    ) -> None:
+        state = make_eligible_state() if eligible else make_stale_state()
+        decision = decide(verdict, state, make_transition(prior), git_status, False)
+        assert decision.action == action
+        assert decision.destructive is (action == SessionAction.DELETE)
+        if reason is not None:
+            assert decision.reason == reason
+
+    def test_guard_reason_allows_confirmed_no_match_delete(self) -> None:
+        assert (
+            guard_reason(make_inactive(), make_transition(False), SessionAction.DELETE)
+            is None
+        )
+
 
 class TestDecide:
     """The full git-status safety matrix + zombie/keep/restart actions."""
@@ -166,6 +323,21 @@ class TestDecide:
         )
         assert decision.action == SessionAction.INVESTIGATE_ZOMBIE
         assert decision.destructive is False
+
+    @pytest.mark.parametrize(
+        "rule,reason",
+        [
+            (LivenessRule.TITLE, "folder missing, window still open"),
+            (LivenessRule.PID, "folder missing, process alive"),
+            (LivenessRule.CMDLINE, "folder missing, process alive"),
+        ],
+    )
+    def test_zombie_reason_names_signal(self, rule: LivenessRule, reason: str) -> None:
+        decision = decide(
+            make_active(rule), make_eligible_state(), NO_FLIP, "Missing", False
+        )
+        assert decision.action == SessionAction.INVESTIGATE_ZOMBIE
+        assert decision.reason == reason
 
     def test_remove_missing_inactive_folder_missing(self) -> None:
         decision = decide(
@@ -274,32 +446,6 @@ class TestAssessSession:
             prior_last_active=None,
         )
         assert assessment.transition.flipped_to_inactive is False
-
-    def test_pid_needs_refresh_on_active_cmdline_match(self) -> None:
-        signals = make_signals(cmdline_match=True, found_pid=4321)
-        assessment = assess_session(
-            folder="C:/work/issue-42",
-            signals=signals,
-            issue_facts=make_issue_facts(),
-            git_status="Clean",
-            directory_empty=False,
-            prior_last_active=None,
-        )
-        assert assessment.verdict.active is True
-        assert assessment.pid_needs_refresh is True
-        assert assessment.found_pid == 4321
-
-    def test_no_pid_refresh_when_inactive(self) -> None:
-        signals = make_signals(found_pid=None)
-        assessment = assess_session(
-            folder="C:/work/issue-42",
-            signals=signals,
-            issue_facts=make_issue_facts(),
-            git_status="Clean",
-            directory_empty=False,
-            prior_last_active=None,
-        )
-        assert assessment.pid_needs_refresh is False
 
     def test_embeds_all_four_sub_results(self) -> None:
         assessment = assess_session(

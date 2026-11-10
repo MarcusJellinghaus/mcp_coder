@@ -14,8 +14,8 @@ This module therefore only holds:
   (`BANNER_TEMPLATE`, `UNTRUSTED_BANNER_TEMPLATE`, `INTERVENTION_WARNING`),
 - the fixed prompt for review-only sessions on an untrusted issue body
   (`UNTRUSTED_REVIEW_PROMPT`),
-- the static VSCode workspace / tasks files and the status-file banner
-  (`WORKSPACE_FILE_TEMPLATE`, `TASKS_JSON_TEMPLATE`, `STATUS_FILE_TEMPLATE`,
+- the static VSCode tasks file and the status-file banner
+  (`TASKS_JSON_TEMPLATE`, `STATUS_FILE_TEMPLATE`,
   `UNTRUSTED_STATUS_FILE_TEMPLATE`, `INTERVENTION_LINE`),
 - and the `GITIGNORE_ENTRY` for the auto-generated session files.
 
@@ -100,20 +100,6 @@ LAUNCHER_POSIX = (
     '|| read -r -p "Session failed (Enter to close)..."\n'
 )
 
-
-# VSCode workspace file template
-WORKSPACE_FILE_TEMPLATE = """{{
-    "folders": [
-        {{
-            "path": "{folder_path}"
-        }}
-    ],
-    "settings": {{
-        "window.title": "[#{issue_number} {stage_short}] {title_short} - {repo_name}",
-        "task.allowAutomaticTasks": "on"
-    }}
-}}
-"""
 
 # VSCode tasks.json template
 TASKS_JSON_TEMPLATE = """{{

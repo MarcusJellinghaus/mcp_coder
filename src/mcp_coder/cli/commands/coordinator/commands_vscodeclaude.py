@@ -284,9 +284,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 session["vscode_pid"],
             )
 
-        # Apply the assessment (PID refresh + last_active advance) in one atomic
-        # write. This is the single mutation point of the pipeline; status never
-        # calls it (it is write-free). ``sessions_list`` is the build-time set
+        # Apply the assessment (last_active advance) in one atomic write. This
+        # is the single mutation point of the pipeline; status never calls it
+        # (it is write-free). ``sessions_list`` is the build-time set
         # (captured before cleanup/restart removed any), so the audit trail still
         # records the destructive deletes that cleanup persisted out of the store.
         apply_assessments(assessments, sessions_list, write_audit=True)
@@ -485,9 +485,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
 
         # Build the assessment for every session once at command entry. Status is
-        # WRITE-FREE: it never calls apply_assessments, so no PID refresh or
-        # last_active advance happens here. The display consumes the assessments
-        # directly now, so the legacy active_set shim is no longer built here.
+        # WRITE-FREE: it never calls apply_assessments, so no last_active
+        # advance happens here. The display consumes the assessments directly
+        # now, so the legacy active_set shim is no longer built here.
         assessments = build_assessments(sessions, cached_issues_by_repo)
 
         # --explain: on-demand transparency. Render the already-built assessments

@@ -199,6 +199,96 @@ class TestCreateTimeIdentityVerification:
         assert reloaded["sessions"][0]["vscode_pid"] == 200
         assert reloaded["sessions"][0]["vscode_pid_create_time"] is None
 
+    def test_update_session_pid_writes_restarted_at_in_same_save(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """restarted_at kwarg is persisted with the PID in a single save."""
+        from mcp_coder.workflows.vscodeclaude import sessions as sessions_module
+        from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSessionStore
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        session = {
+            "folder": "/test/folder",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 100,
+            "vscode_pid_create_time": 500.0,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        mock_process = MagicMock()
+        mock_process.create_time.return_value = 999.0
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        real_save = sessions_module.save_sessions
+        save_calls: list[VSCodeClaudeSessionStore] = []
+
+        def counting_save(saved: VSCodeClaudeSessionStore) -> None:
+            save_calls.append(saved)
+            real_save(saved)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.save_sessions", counting_save
+        )
+
+        update_session_pid(
+            "/test/folder", 200, restarted_at="2026-11-10T12:00:00+00:00"
+        )
+
+        assert len(save_calls) == 1
+        reloaded = load_sessions()
+        assert reloaded["sessions"][0]["vscode_pid"] == 200
+        assert reloaded["sessions"][0]["vscode_pid_create_time"] == 999.0
+        assert reloaded["sessions"][0]["restarted_at"] == "2026-11-10T12:00:00+00:00"
+
+    def test_update_session_pid_without_restarted_at_writes_no_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without the kwarg, no restarted_at key is written."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        session = {
+            "folder": "/test/folder",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 100,
+            "vscode_pid_create_time": 500.0,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        mock_process = MagicMock()
+        mock_process.create_time.return_value = 999.0
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        update_session_pid("/test/folder", 200)
+
+        reloaded = load_sessions()
+        assert reloaded["sessions"][0]["vscode_pid"] == 200
+        assert "restarted_at" not in reloaded["sessions"][0]
+
     def test_build_session_defaults_create_time_to_none(self) -> None:
         """build_session always sets vscode_pid_create_time to None."""
         from mcp_coder.workflows.vscodeclaude.helpers import build_session

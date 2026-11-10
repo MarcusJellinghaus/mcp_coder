@@ -8,7 +8,7 @@ from mcp_coder.workflows.vscodeclaude.cleanup import (
     cleanup_stale_sessions,
     delete_session_folder,
 )
-from mcp_coder.workflows.vscodeclaude.types import SessionAction
+from mcp_coder.workflows.vscodeclaude.types import LivenessRule, SessionAction
 from tests.workflows.vscodeclaude.test_cleanup import (
     _assessment,
     _patch_sessions_file,
@@ -182,6 +182,64 @@ class TestSoftDeleteAndRetry:
 
         assert safe_delete_calls == [folder]
         assert load_to_be_deleted(str(tmp_path)) == set()
+
+    @pytest.mark.parametrize(
+        ("rule", "prior"),
+        [
+            (LivenessRule.NO_WINDOW, False),
+            (LivenessRule.NO_MATCH, None),
+        ],
+        ids=["no_window", "unconfirmed"],
+    )
+    def test_cleanup_retry_guarded_assessment_spares_folder(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        rule: LivenessRule,
+        prior: bool | None,
+    ) -> None:
+        """NO_WINDOW or not-yet-confirmed inactive -> not deleted, stays queued."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder_name = "guarded-session"
+        folder = tmp_path / folder_name
+        folder.mkdir()
+        (tmp_path / TO_BE_DELETED_FILENAME).write_text(f"{folder_name}\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda assessments: [],
+        )
+
+        safe_delete_calls: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_calls.append(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+
+        assessments = {
+            str(folder): _assessment(
+                folder,
+                action=SessionAction.SKIP,
+                rule=rule,
+                prior_last_active=prior,
+            )
+        }
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), assessments=assessments, dry_run=False
+        )
+
+        assert safe_delete_calls == []
+        assert folder.exists()
+        assert load_to_be_deleted(str(tmp_path)) == {folder_name}
 
     def test_delete_session_folder_lock_veto(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

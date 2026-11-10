@@ -68,6 +68,8 @@ def _assessment(
         age_seconds=120.0,
         within_grace=False,
         directory_empty=False,
+        window_count=2,
+        title_authoritative=True,
     )
     return SessionAssessment(
         folder=folder,
@@ -81,10 +83,8 @@ def _assessment(
             is_eligible=False,
             stale_target="status-05:bot-pickup",
         ),
-        transition=Transition(flipped_to_inactive=False),
+        transition=Transition(flipped_to_inactive=False, prior_last_active=False),
         decision=Decision(action=action, reason=reason, destructive=destructive),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 
@@ -185,3 +185,17 @@ class TestAssessmentToRecord:
         assert record["decision"]["destructive"] is True
         assert record["repo"] == "owner/repo"
         assert record["issue_number"] == 38
+
+    def test_record_carries_prior_last_active(self) -> None:
+        """The transition block records the prior ``last_active`` baseline."""
+        record = assessment_to_record(_assessment(), _session())
+        assert record["transition"] == {
+            "flipped_to_inactive": False,
+            "prior_last_active": False,
+        }
+
+    def test_record_carries_window_signals(self) -> None:
+        """The signals block records ``window_count`` and ``title_authoritative``."""
+        record = assessment_to_record(_assessment(), _session())
+        assert record["signals"]["window_count"] == 2
+        assert record["signals"]["title_authoritative"] is True

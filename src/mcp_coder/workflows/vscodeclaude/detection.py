@@ -8,11 +8,12 @@ The whole point of :class:`DetectionSnapshot` is R4 (no age-skew): all three
 module caches (processes, window titles, PIDs) are populated in immediate
 succession so no signal ages relative to another. ``gather_signals`` then reads
 only the frozen snapshot + the session dict + ``Path`` existence + the stored
-PID, computing the seven raw signals plus ``directory_empty`` / ``within_grace``
-as plain bools.
+PID, computing the raw signals plus ``directory_empty`` / ``within_grace`` /
+``window_count`` / ``title_authoritative`` as plain values.
 """
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,7 +42,9 @@ VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
 # Seconds after launch during which a negative window-title check is not
 # trusted (covers VSCode cold-start and extension reinstall delays). Beyond
-# this window the title check is authoritative on Windows.
+# this window the title check is authoritative on Windows when win32gui is
+# available, window enumeration succeeded, the session has a repo, and at
+# least one VSCode window was seen while Code.exe runs.
 LAUNCH_GRACE_SECONDS = 60.0
 
 
@@ -159,8 +162,7 @@ def clear_vscode_process_cache() -> None:
 
 # Cache for VSCode window titles (Windows only).
 # Each entry is (pid, title) where pid is the PID of the process that owns
-# the window. Storing the PID is what lets is_vscode_window_open_for_folder
-# bind a title match to the specific VSCode that has the folder open.
+# the window.
 _vscode_window_cache: list[tuple[int, str]] | None = None
 
 
@@ -191,31 +193,31 @@ def _get_vscode_pids() -> set[int]:
     return pids
 
 
-def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
-    """Return list of (pid, title) pairs for visible VSCode windows.
+def _get_vscode_window_titles(
+    refresh: bool = False,
+) -> tuple[list[tuple[int, str]], bool]:
+    """Return (pid, title) pairs for visible VSCode windows plus a success flag.
 
     Uses win32gui to enumerate windows owned by Code.exe processes.
     This catches all VSCode windows including integrated terminals
-    that don't have "Visual Studio Code" in the title.
-
-    The PID is the owning process so callers can bind a title match to
-    the specific VSCode instance that has the folder open, eliminating
-    cross-process title-leak false positives.
+    that don't have "Visual Studio Code" in the title. The PID is the
+    process that owns the window.
 
     Args:
         refresh: Force refresh of cached titles
 
     Returns:
-        List of (pid, title) tuples for visible VSCode-owned windows,
-        or empty list on non-Windows.
+        ``(titles, ok)``: the (pid, title) tuples for visible VSCode-owned
+        windows, and whether enumeration succeeded. ``([], False)`` without
+        win32gui or when ``EnumWindows`` fails (failures are not cached).
     """
     global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
 
     if not HAS_WIN32GUI:
-        return []
+        return [], False
 
     if _vscode_window_cache is not None and not refresh:
-        return _vscode_window_cache
+        return _vscode_window_cache, True
 
     # Refresh PID cache when refreshing window cache
     if refresh:
@@ -250,11 +252,11 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
         win32gui.EnumWindows(enum_callback, None)
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to enumerate windows: %s", e)
-        return []
+        return [], False
 
     _vscode_window_cache = entries
     logger.debug("Found %d VSCode windows: %s", len(entries), entries)
-    return entries
+    return entries, True
 
 
 def clear_vscode_window_cache() -> None:
@@ -262,121 +264,6 @@ def clear_vscode_window_cache() -> None:
     global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
     _vscode_window_cache = None
     _vscode_pids_cache = None
-
-
-def is_vscode_window_open_for_folder(
-    folder_path: str,
-    issue_number: int | None = None,
-    repo: str | None = None,
-) -> bool:
-    """Check if VSCode has a window open for the folder (Windows only).
-
-    For vscodeclaude sessions with issue numbers, only matches windows with
-    the issue number pattern (e.g., '[#219 ...'). This prevents false positives
-    from matching the main repo window instead of the issue workspace window.
-
-    The title's owning PID must also belong to a VSCode process whose cmdline
-    references ``folder_path``. This eliminates cross-process title-leak where
-    an unrelated VSCode window's title happens to contain the issue number and
-    repo name.
-
-    Args:
-        folder_path: Full path to the workspace folder
-        issue_number: Optional issue number (required for reliable matching)
-        repo: Optional repo full name 'owner/repo' (used with issue_number)
-
-    Returns:
-        True if a VSCode window matching the session is found
-    """
-    if not HAS_WIN32GUI:
-        return False
-
-    titles = _get_vscode_window_titles()
-    folder_str = str(folder_path).lower()
-    folder_name = Path(folder_path).name.lower()
-
-    # For vscodeclaude sessions: Only match if issue number is in window title
-    # Workspace windows have format: "[#N stage] title - repo - Visual Studio Code"
-    # This prevents matching the main repo window ("repo - Visual Studio Code")
-    if issue_number is not None and repo:
-        repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
-        # Require "[#N" bracket prefix to match vscodeclaude workspace title format:
-        # "[#N stage_short] title - repo_name"
-        # This avoids false positives from GitHub extension or other tools
-        # that may show issue numbers without the bracket (e.g. "#458 - mcp_coder")
-        issue_pattern = f"[#{issue_number}"
-
-        # Bind the title match to the VSCode process that actually has the
-        # folder open: only accept a title from a PID whose cmdline references
-        # the folder.
-        matching_pids = {
-            proc["pid"]
-            for proc in _get_vscode_processes()
-            if folder_str in proc.get("cmdline_lower", "")
-            or folder_name in proc.get("cmdline_lower", "")
-        }
-
-        for pid, title in titles:
-            if pid not in matching_pids:
-                continue
-            title_lower = title.lower()
-            # Both issue number (with bracket) AND repo name must be present
-            if issue_pattern in title and repo_name in title_lower:
-                logger.debug(
-                    "Found VSCode window for issue #%d (%s): %s",
-                    issue_number,
-                    repo_name,
-                    title,
-                )
-                return True
-
-    logger.debug(
-        "No VSCode window found for folder: %s (issue=#%s, repo=%s)",
-        folder_name,
-        issue_number,
-        repo,
-    )
-    return False
-
-
-def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
-    """Check if any VSCode process has the folder open.
-
-    More reliable than PID-based check on Windows where the launcher
-    process exits immediately after spawning VSCode.
-
-    Uses cached process list for performance - call clear_vscode_process_cache()
-    at the start of batch operations to refresh.
-
-    Args:
-        folder_path: Full path to the workspace folder
-
-    Returns:
-        Tuple of (is_open, pid) where:
-        - is_open: True if VSCode has this folder open
-        - pid: The VSCode process PID if found, None otherwise
-    """
-    folder_str = str(folder_path).lower()
-    # Also check for workspace file pattern
-    folder_name = Path(folder_path).name.lower()
-
-    for proc_info in _get_vscode_processes():
-        cmdline_lower = proc_info.get("cmdline_lower", "")
-        # Check if folder path or folder name appears in command line
-        if folder_str in cmdline_lower or folder_name in cmdline_lower:
-            logger.debug(
-                "Found VSCode with folder %s (pid=%s)",
-                folder_name,
-                proc_info.get("pid"),
-            )
-            return True, proc_info.get("pid")
-
-    logger.debug(
-        "No VSCode process found for folder: %s (checked %d processes)",
-        folder_name,
-        len(_get_vscode_processes()),
-    )
-    return False, None
 
 
 def get_pid_create_time(pid: int) -> float | None:
@@ -410,6 +297,7 @@ class DetectionSnapshot:
     processes: tuple[dict[str, Any], ...]  # each: pid + cmdline_lower
     window_titles: tuple[tuple[int, str], ...]  # (owning_pid, title)
     pids: frozenset[int]
+    window_enum_ok: bool
     captured_at: datetime
 
 
@@ -424,14 +312,30 @@ def capture_detection_snapshot() -> DetectionSnapshot:
         A frozen :class:`DetectionSnapshot` over the just-refreshed caches.
     """
     processes = _get_vscode_processes(refresh=True)
-    window_titles = _get_vscode_window_titles(refresh=True)
+    window_titles, window_enum_ok = _get_vscode_window_titles(refresh=True)
     pids = _get_vscode_pids()
     return DetectionSnapshot(
         processes=tuple(processes),
         window_titles=tuple(window_titles),
         pids=frozenset(pids),
+        window_enum_ok=window_enum_ok,
         captured_at=datetime.now(UTC),
     )
+
+
+_NAME_CHAR = "a-z0-9_-"
+
+
+def _contains_bounded(haystack: str, needle: str) -> bool:
+    """Whether ``needle`` occurs in ``haystack`` not preceded/followed by a name char.
+
+    Both arguments must already be lowercased. Any occurrence counts.
+
+    Returns:
+        ``True`` when some occurrence of ``needle`` is bounded on both sides.
+    """
+    pattern = rf"(?<![{_NAME_CHAR}]){re.escape(needle)}(?![{_NAME_CHAR}])"
+    return re.search(pattern, haystack) is not None
 
 
 def _title_binds(
@@ -441,14 +345,18 @@ def _title_binds(
 ) -> bool:
     """Whether a VSCode window title binds to this session's issue + repo.
 
-    Ports the ``[#N`` bracket + repo-name matching from
-    ``is_vscode_window_open_for_folder``, reading window titles from the frozen
-    snapshot. A workspace window has the format
-    ``[#N stage] title - repo_name - Visual Studio Code``; requiring the
-    ``[#N`` bracket avoids false positives from tools that show bare issue
-    numbers (e.g. ``#458 - mcp_coder``). Title-positive is authoritative; it is
-    intentionally independent of cmdline/PID so a restored window (no folder in
-    cmdline) still reports ``title_match=True``.
+    Reads window titles from the frozen snapshot and matches the ``[#N``
+    bracket + repo name. A workspace window has the format
+    ``[#N stage] title - repo_name``; the repo name ends the string (there is
+    no ``- Visual Studio Code`` suffix). Requiring the ``[#N`` bracket avoids
+    false positives from tools that show bare issue numbers (e.g.
+    ``#458 - mcp_coder``). Two boundary rules keep another session's window
+    from binding: ``[#N`` must not be followed by a digit (``[#1342`` does not
+    bind #134), and the repo name must not be preceded or followed by a name
+    character (``mcp_coder_utils`` does not bind ``mcp_coder``).
+    Title-positive is authoritative; it is intentionally independent of
+    cmdline/PID so a restored window (no folder in cmdline) still reports
+    ``title_match=True``.
 
     Returns:
         ``True`` when a snapshot window title binds to this issue + repo,
@@ -460,9 +368,9 @@ def _title_binds(
         return False
 
     repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
-    issue_pattern = f"[#{issue_number}"
+    issue_re = re.compile(re.escape(f"[#{issue_number}") + r"(?!\d)")
     for _pid, title in snapshot.window_titles:
-        if issue_pattern in title and repo_name in title.lower():
+        if issue_re.search(title) and _contains_bounded(title.lower(), repo_name):
             return True
     return False
 
@@ -480,40 +388,62 @@ def _cmdline_scan(
     folder_name = Path(folder_path).name.lower()
     for proc in snapshot.processes:
         cmdline_lower = proc.get("cmdline_lower", "")
-        if folder_str in cmdline_lower or folder_name in cmdline_lower:
+        if _contains_bounded(cmdline_lower, folder_str) or _contains_bounded(
+            cmdline_lower, folder_name
+        ):
             return True, proc.get("pid")
     return False, None
 
 
-def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
-    """Age of the session in seconds, or ``inf`` if ``started_at`` is unusable.
+def _age_since(timestamp: str | None, now: datetime) -> float:
+    """Seconds from an ISO 8601 ``timestamp`` to ``now``, or ``inf`` if unusable.
 
     Returns:
-        Seconds since ``started_at``, or ``float("inf")`` when it is missing or
-        unparseable.
+        Elapsed seconds, or ``float("inf")`` when ``timestamp`` is missing,
+        unparseable, or cannot be subtracted (naive vs. aware).
     """
-    started_at_str = session.get("started_at", "")
+    if timestamp is None:
+        return float("inf")
     try:
-        return (now - datetime.fromisoformat(started_at_str)).total_seconds()
+        return (now - datetime.fromisoformat(timestamp)).total_seconds()
     except (ValueError, TypeError):
         return float("inf")
+
+
+def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
+    """Age of the session since its later of ``started_at`` / ``restarted_at``.
+
+    Taking the smaller age (rather than comparing datetimes) tolerates mixed
+    naive/aware timestamps. An absent or unparseable timestamp is ignored.
+
+    Returns:
+        Seconds since the most recent launch, or ``float("inf")`` when neither
+        timestamp is usable.
+    """
+    return min(
+        _age_since(session.get("started_at"), now),
+        _age_since(session.get("restarted_at"), now),
+    )
 
 
 def gather_signals(
     session: VSCodeClaudeSession, snapshot: DetectionSnapshot
 ) -> DetectionSignals:
-    """Compute the seven raw signals for one session from the frozen snapshot.
+    """Compute the raw signals for one session from the frozen snapshot.
 
     This is the IO/Windows boundary: it reads only the snapshot, the session
     dict, ``Path`` existence, and the stored PID. ``folder_exists`` and
     ``pid_alive`` are gathered INDEPENDENTLY (R6) — there is no folder-gone
     short-circuit, so a live process for a deleted folder stays reachable as a
-    zombie precursor. ``directory_empty`` and ``within_grace`` are computed
-    here as plain bools so the downstream ``types``/``decide`` stay pure.
+    zombie precursor. ``directory_empty``, ``within_grace``, ``window_count``
+    and ``title_authoritative`` are computed here as plain values so the
+    downstream ``types``/``decide`` stay pure. An authoritative title miss
+    logs the snapshot's window titles at DEBUG.
 
     Returns:
-        A frozen :class:`DetectionSignals` with the seven raw signals plus
-        ``directory_empty`` and ``within_grace``.
+        A frozen :class:`DetectionSignals` with the raw signals plus
+        ``directory_empty``, ``within_grace``, ``window_count`` and
+        ``title_authoritative``.
     """
     folder = session["folder"]
     folder_path = Path(folder)
@@ -529,6 +459,20 @@ def gather_signals(
     age_seconds = _session_age_seconds(session, snapshot.captured_at)
     within_grace = age_seconds < LAUNCH_GRACE_SECONDS
 
+    window_count = len(snapshot.window_titles)
+    title_authoritative = bool(
+        HAS_WIN32GUI
+        and snapshot.window_enum_ok
+        and session.get("repo")
+        and not (snapshot.pids and window_count == 0)
+    )
+    if title_authoritative and not title_match:
+        logger.debug(
+            "Title miss for #%s; VSCode windows: %s",
+            session["issue_number"],
+            list(snapshot.window_titles),
+        )
+
     return DetectionSignals(
         folder_exists=folder_exists,
         title_match=title_match,
@@ -538,4 +482,6 @@ def gather_signals(
         age_seconds=age_seconds,
         within_grace=within_grace,
         directory_empty=directory_empty,
+        window_count=window_count,
+        title_authoritative=title_authoritative,
     )

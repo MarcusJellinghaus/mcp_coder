@@ -230,6 +230,8 @@ class TestClosedIssueIntegration:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=False,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
                 issue_state=IssueState(
@@ -239,12 +241,12 @@ class TestClosedIssueIntegration:
                     is_unassigned=False,
                     is_eligible=False,
                 ),
-                transition=Transition(flipped_to_inactive=False),
+                transition=Transition(
+                    flipped_to_inactive=False, prior_last_active=False
+                ),
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
             for s in sessions
         }
@@ -505,6 +507,8 @@ class TestClosedIssueIntegration:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=False,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
                 issue_state=IssueState(
@@ -514,12 +518,12 @@ class TestClosedIssueIntegration:
                     is_unassigned=False,
                     is_eligible=False,
                 ),
-                transition=Transition(flipped_to_inactive=False),
+                transition=Transition(
+                    flipped_to_inactive=False, prior_last_active=False
+                ),
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
             for s in sessions
         }

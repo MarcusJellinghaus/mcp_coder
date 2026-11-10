@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict, dataclass, fields
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 
 class VSCodeClaudeSession(TypedDict):
@@ -17,6 +17,7 @@ class VSCodeClaudeSession(TypedDict):
     vscode_pid: int | None
     vscode_pid_create_time: float | None  # Unix epoch seconds from psutil
     started_at: str  # ISO 8601
+    restarted_at: NotRequired[str]  # ISO 8601 UTC, set on each restart
     is_intervention: bool
     # Persisted liveness baseline ("never observed" until first apply() run).
     last_active: bool | None
@@ -31,6 +32,7 @@ class LivenessRule(StrEnum):
     CMDLINE = "cmdline"
     NO_ARTIFACTS = "no_artifacts"
     NO_MATCH = "no_match"
+    NO_WINDOW = "no_window"
 
 
 class SessionAction(StrEnum):
@@ -56,6 +58,8 @@ class DetectionSignals:
     age_seconds: float
     within_grace: bool  # plain bool, computed in gather_signals (Step 4)
     directory_empty: bool  # plain bool, computed in gather_signals (Step 4)
+    window_count: int  # VSCode windows seen in the snapshot (diagnostic)
+    title_authoritative: bool  # a title miss is trusted (past grace only)
 
 
 @dataclass(frozen=True)
@@ -83,6 +87,7 @@ class Transition:
     """Result of the transition layer."""
 
     flipped_to_inactive: bool  # active -> inactive flip flag
+    prior_last_active: bool | None  # persisted baseline; False = confirmed inactive
 
 
 @dataclass(frozen=True)
@@ -109,8 +114,6 @@ class SessionAssessment:
     issue_state: IssueState
     transition: Transition
     decision: Decision
-    pid_needs_refresh: bool
-    found_pid: int | None
     # Git status string computed once at build time ("Clean"/"Dirty"/"Missing"/
     # "No Git"/"Error"). Carried so status display reads the SAME snapshot that
     # fed ``decide`` instead of re-running git (TOCTOU-free determinism).
@@ -137,6 +140,8 @@ class SessionAssessment:
                 "age_seconds": self.signals.age_seconds,
                 "within_grace": self.signals.within_grace,
                 "directory_empty": self.signals.directory_empty,
+                "window_count": self.signals.window_count,
+                "title_authoritative": self.signals.title_authoritative,
             },
             "verdict": {
                 "active": self.verdict.active,
@@ -152,6 +157,7 @@ class SessionAssessment:
             },
             "transition": {
                 "flipped_to_inactive": self.transition.flipped_to_inactive,
+                "prior_last_active": self.transition.prior_last_active,
             },
             "decision": {
                 "action": self.decision.action.value,
@@ -159,8 +165,6 @@ class SessionAssessment:
                 "destructive": self.decision.destructive,
             },
             "git_status": self.git_status,
-            "pid_needs_refresh": self.pid_needs_refresh,
-            "found_pid": self.found_pid,
         }
 
     def to_audit_record(self, session: "VSCodeClaudeSession") -> dict[str, Any]:
@@ -190,8 +194,6 @@ class SessionAssessment:
             for key, value in data[section].items():
                 lines.append(f"  {key}: {value}")
         lines.append(f"git_status: {data['git_status']}")
-        lines.append(f"pid_needs_refresh: {data['pid_needs_refresh']}")
-        lines.append(f"found_pid: {data['found_pid']}")
         return "\n".join(lines)
 
 

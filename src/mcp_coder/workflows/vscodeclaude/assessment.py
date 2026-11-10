@@ -26,7 +26,7 @@ from ...mcp_workspace_github import (
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .audit import append_run, assessment_to_record
 from .config import get_github_username
-from .detection import capture_detection_snapshot, gather_signals, get_pid_create_time
+from .detection import capture_detection_snapshot, gather_signals
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -68,10 +68,16 @@ class IssueFacts:
 def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
     """Pure liveness verdict. Returns a frozen ``LivenessVerdict(active, rule)``.
 
-    Ordering is the contract: a live process is detectable regardless of folder
-    state, so the order is title -> pid -> cmdline -> folder-existence. PID is a
-    tie-breaker, NOT a gate, and there is no folder-gone short-circuit (a live
-    process for a deleted folder stays reachable as the zombie precursor).
+    Ordering is the contract:
+
+    - A title match always wins (``TITLE``).
+    - Past launch grace with an authoritative title, a title miss is decisive:
+      ``NO_ARTIFACTS`` when the folder is gone, ``NO_WINDOW`` when only VSCode's
+      shared main process still references the folder (pid/cmdline), else
+      ``NO_MATCH``.
+    - Otherwise pid -> cmdline -> folder-existence fallback. There is no
+      folder-gone short-circuit before the title/pid checks, so a live process
+      for a deleted folder stays reachable as the zombie precursor.
 
     Returns:
         A frozen :class:`LivenessVerdict` carrying ``active`` and the winning
@@ -79,6 +85,12 @@ def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
     """
     if signals.title_match:
         return LivenessVerdict(active=True, rule=LivenessRule.TITLE)
+    if signals.title_authoritative and not signals.within_grace:
+        if not signals.folder_exists:
+            return LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS)
+        if signals.pid_alive or signals.cmdline_match:
+            return LivenessVerdict(active=False, rule=LivenessRule.NO_WINDOW)
+        return LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH)
     if signals.pid_alive:
         return LivenessVerdict(active=True, rule=LivenessRule.PID)
     if signals.cmdline_match:
@@ -126,10 +138,10 @@ def assess_transition(
 
     Returns:
         A frozen :class:`Transition` whose ``flipped_to_inactive`` marks an
-        active->inactive flip.
+        active->inactive flip, carrying the ``prior_last_active`` baseline.
     """
     flipped = prior_last_active is True and not verdict.active
-    return Transition(flipped_to_inactive=flipped)
+    return Transition(flipped_to_inactive=flipped, prior_last_active=prior_last_active)
 
 
 def _ineligibility_reasons(issue_state: IssueState) -> str:
@@ -156,7 +168,66 @@ def _ineligibility_reasons(issue_state: IssueState) -> str:
     return ", ".join(reasons)
 
 
+NO_WINDOW_REASON = (
+    "no window, but VSCode main process still references folder"
+    " — close all VSCode windows to release it"
+)
+CONFIRMING_REASON = "just went inactive, confirming next run"
+
+
+def guard_reason(
+    verdict: LivenessVerdict, transition: Transition, action: SessionAction
+) -> str | None:
+    """Reason to hold back a DELETE/RESTART, or None if it may proceed.
+
+    Two guards, shared by :func:`decide` and the ``.to_be_deleted`` retry loop:
+
+    - Override guard: a ``NO_WINDOW`` verdict never deletes (the VSCode main
+      process may still hold the folder).
+    - Confirmation guard: DELETE/RESTART only once the session was already
+      inactive on the previous run (``prior_last_active is False``).
+
+    Returns:
+        The SKIP reason, or ``None`` when the action may proceed.
+    """
+    if action == SessionAction.DELETE and verdict.rule == LivenessRule.NO_WINDOW:
+        return NO_WINDOW_REASON
+    if transition.prior_last_active is not False:
+        return CONFIRMING_REASON
+    return None
+
+
 def decide(
+    verdict: LivenessVerdict,
+    issue_state: IssueState,
+    transition: Transition,
+    git_status: str,  # "Clean"|"Dirty"|"Missing"|"No Git"|"Error"
+    directory_empty: bool,
+) -> Decision:
+    """Pure: the decision matrix of :func:`_decide_unguarded`, then the guards.
+
+    A DELETE or RESTART from :func:`_decide_unguarded` is turned into a SKIP
+    when :func:`guard_reason` holds it back. Existing SKIP reasons (dirty,
+    unverified git status) keep precedence because those branches never return
+    DELETE or RESTART. DELETE is still produced only in
+    :func:`_decide_unguarded`.
+
+    Returns:
+        A frozen :class:`Decision` carrying the resolved :class:`SessionAction`,
+        a human reason, and the ``destructive`` flag.
+    """
+    decision = _decide_unguarded(
+        verdict, issue_state, transition, git_status, directory_empty
+    )
+    if decision.action not in (SessionAction.DELETE, SessionAction.RESTART):
+        return decision
+    reason = guard_reason(verdict, transition, decision.action)
+    if reason is None:
+        return decision
+    return Decision(action=SessionAction.SKIP, reason=reason, destructive=False)
+
+
+def _decide_unguarded(
     verdict: LivenessVerdict,
     issue_state: IssueState,
     transition: Transition,
@@ -168,15 +239,21 @@ def decide(
     DELETE is the ONLY destructive branch, and it requires ``git_status == "Clean"``
     OR ``directory_empty`` — never destruction on weak evidence ("No Git"/"Error"
     on a non-empty folder). This single place is covered by the invariant test.
+    :func:`decide` applies the guards on top; this function does not.
 
     Returns:
         A frozen :class:`Decision` carrying the resolved :class:`SessionAction`,
         a human reason, and the ``destructive`` flag.
     """
     if verdict.active and git_status == "Missing":
+        alive = (
+            "window still open"
+            if verdict.rule == LivenessRule.TITLE
+            else "process alive"
+        )
         return Decision(
             action=SessionAction.INVESTIGATE_ZOMBIE,
-            reason="folder missing, process alive",
+            reason=f"folder missing, {alive}",
             destructive=False,
         )
     if verdict.active:
@@ -234,7 +311,6 @@ def assess_session(
     issue_state = assess_issue_state(issue_facts)
     transition = assess_transition(prior_last_active, verdict)
     decision = decide(verdict, issue_state, transition, git_status, directory_empty)
-    pid_needs_refresh = verdict.active and signals.found_pid is not None
     return SessionAssessment(
         folder=folder,
         signals=signals,
@@ -242,8 +318,6 @@ def assess_session(
         issue_state=issue_state,
         transition=transition,
         decision=decision,
-        pid_needs_refresh=pid_needs_refresh,
-        found_pid=signals.found_pid,
         git_status=git_status,
     )
 
@@ -353,7 +427,8 @@ def _log_assessment(
     )
     logger.debug(
         "assess #%s signals: folder_exists=%s title=%s cmdline=%s pid_alive=%s "
-        "found_pid=%s age=%.0fs within_grace=%s directory_empty=%s",
+        "found_pid=%s age=%.0fs within_grace=%s directory_empty=%s "
+        "window_count=%s title_authoritative=%s",
         session["issue_number"],
         signals.folder_exists,
         signals.title_match,
@@ -363,6 +438,8 @@ def _log_assessment(
         signals.age_seconds,
         signals.within_grace,
         signals.directory_empty,
+        signals.window_count,
+        signals.title_authoritative,
     )
     if assessment.transition.flipped_to_inactive:
         logger.info(
@@ -380,8 +457,8 @@ def build_active_session_set(
     Computes one ``DetectionSnapshot`` and assesses every session, projecting the
     result onto the legacy ``dict[folder, bool]`` contract that the cleanup,
     restart, and status consumers still read. READ-ONLY: unlike the apply path
-    this performs no ``sessions.json`` writes — the PID refresh and ``last_active``
-    advance moved into :func:`apply_assessments`.
+    this performs no ``sessions.json`` writes — the ``last_active`` advance lives
+    in :func:`apply_assessments`.
 
     Returns:
         Mapping of each session's folder path to its liveness ``active`` bool.
@@ -420,13 +497,13 @@ def apply_assessments(
     *,
     write_audit: bool,
 ) -> None:
-    """Apply-only: refresh stale PIDs, advance ``last_active``, write the audit.
+    """Apply-only: advance ``last_active``, write the audit.
 
     The single mutation point of the pipeline. Loads the session store once and
-    applies each assessment's PID refresh and ``last_active``/``last_active_rule``
-    advance over the LIVE post-cleanup store — only surviving sessions are mutated
-    (sessions deleted by cleanup/restart are correctly gone from the store), then
-    writes the store back in ONE atomic save (no double-write).
+    applies each assessment's ``last_active``/``last_active_rule`` advance over
+    the LIVE post-cleanup store — only surviving sessions are mutated (sessions
+    deleted by cleanup/restart are correctly gone from the store), then writes
+    the store back in ONE atomic save (no double-write).
 
     When ``write_audit`` is True, also appends ONE audit run-block. The audit is
     sourced from ``assessments`` — the FULL set assessed at build time, threaded
@@ -450,15 +527,6 @@ def apply_assessments(
         assessment = assessments.get(session["folder"])
         if assessment is None:
             continue
-        if (
-            assessment.pid_needs_refresh
-            and assessment.found_pid is not None
-            and assessment.found_pid != session.get("vscode_pid")
-        ):
-            session["vscode_pid"] = assessment.found_pid
-            session["vscode_pid_create_time"] = get_pid_create_time(
-                assessment.found_pid
-            )
         session["last_active"] = assessment.verdict.active
         session["last_active_rule"] = assessment.verdict.rule.value
     save_sessions(store)

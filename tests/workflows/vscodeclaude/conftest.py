@@ -131,6 +131,8 @@ def make_signals(
     age_seconds: float = 0.0,
     within_grace: bool = False,
     directory_empty: bool = False,
+    window_count: int = 0,
+    title_authoritative: bool = False,
 ) -> DetectionSignals:
     """Build DetectionSignals with everything off by default."""
     return DetectionSignals(
@@ -142,6 +144,8 @@ def make_signals(
         age_seconds=age_seconds,
         within_grace=within_grace,
         directory_empty=directory_empty,
+        window_count=window_count,
+        title_authoritative=title_authoritative,
     )
 
 
@@ -168,10 +172,8 @@ def make_assessment(
             is_unassigned=False,
             is_eligible=True,
         ),
-        transition=Transition(flipped_to_inactive=False),
+        transition=Transition(flipped_to_inactive=False, prior_last_active=False),
         decision=Decision(action=action, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 
@@ -191,14 +193,12 @@ def make_sample_assessment(folder: str = "/path/to/folder") -> SessionAssessment
             is_eligible=True,
             stale_target=None,
         ),
-        transition=Transition(flipped_to_inactive=False),
+        transition=Transition(flipped_to_inactive=False, prior_last_active=False),
         decision=Decision(
             action=SessionAction.KEEP_ACTIVE,
             reason="vscode running",
             destructive=False,
         ),
-        pid_needs_refresh=False,
-        found_pid=1234,
     )
 
 
@@ -244,7 +244,13 @@ def make_stale_state(stale_target: str | None = "status-05:bot-pickup") -> Issue
     )
 
 
-NO_FLIP = Transition(flipped_to_inactive=False)
+# Prior ``False`` = confirmed inactive, so DELETE/RESTART pass the guards.
+NO_FLIP = Transition(flipped_to_inactive=False, prior_last_active=False)
+
+
+def make_transition(prior: bool | None) -> Transition:
+    """A transition for an inactive verdict with the given prior baseline."""
+    return Transition(flipped_to_inactive=prior is True, prior_last_active=prior)
 
 
 def make_session() -> VSCodeClaudeSession:
@@ -287,6 +293,7 @@ def _build_assessment(
     is_stale: bool = False,
     is_ineligible: bool = False,
     stale_target: str | None = None,
+    prior_last_active: bool | None = False,
 ) -> SessionAssessment:
     """Build the :class:`SessionAssessment` a status row renders.
 
@@ -311,6 +318,8 @@ def _build_assessment(
         age_seconds=0.0,
         within_grace=False,
         directory_empty=not folder_exists,
+        window_count=0,
+        title_authoritative=False,
     )
     issue_facts = IssueFacts(
         is_closed=is_closed,
@@ -326,7 +335,7 @@ def _build_assessment(
         issue_facts=issue_facts,
         git_status=git_status,
         directory_empty=not folder_exists,
-        prior_last_active=None,
+        prior_last_active=prior_last_active,
     )
 
 
