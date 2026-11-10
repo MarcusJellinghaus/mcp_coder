@@ -243,8 +243,6 @@ class TestClosedIssueIntegration:
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
             for s in sessions
         }
@@ -518,8 +516,6 @@ class TestClosedIssueIntegration:
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
             for s in sessions
         }

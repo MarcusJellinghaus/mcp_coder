@@ -209,8 +209,7 @@ class TestSessionManagement:
         Back-compat invariant — the wrapper preserves the legacy
         ``dict[folder, bool]`` contract (one entry per session) by delegating to
         ``build_assessments`` and projecting each verdict's ``active`` flag. It
-        is read-only: the PID refresh moved into ``apply_assessments``, so
-        ``save_sessions`` is never called here.
+        is read-only: ``save_sessions`` is never called here.
         """
         folder_a = str(tmp_path / "session_a")
         folder_b = str(tmp_path / "session_b")

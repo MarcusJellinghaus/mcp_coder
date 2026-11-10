@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Remove the PID refresh — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: test `test_apply_never_changes_vscode_pid`, drop `pid_needs_refresh` / top-level `found_pid` and refresh branch
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: test `test_apply_never_changes_vscode_pid`, drop `pid_needs_refresh` / top-level `found_pid` and refresh branch
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Launch grace also covers restarts (`restarted_at`) — [step_3.md](./steps/step_3.md)
 

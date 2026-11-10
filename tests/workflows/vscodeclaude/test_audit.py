@@ -83,8 +83,6 @@ def _assessment(
         ),
         transition=Transition(flipped_to_inactive=False),
         decision=Decision(action=action, reason=reason, destructive=destructive),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 

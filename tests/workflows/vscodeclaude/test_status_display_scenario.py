@@ -122,8 +122,6 @@ class TestScenarioACrossModule:
                     reason="folder missing",
                     destructive=False,
                 ),
-                pid_needs_refresh=False,
-                found_pid=None,
             )
         }
 

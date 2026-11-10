@@ -276,7 +276,7 @@ def display_status_table(
     liveness / staleness / closed / next-action (R1), so the enriched
     ``VSCode``/``Next Action`` columns cannot drift from cleanup, restart, audit,
     or ``--explain``. WRITE-FREE: this path performs no ``sessions.json`` writes
-    (the PID refresh + ``last_active`` advance live in ``apply_assessments``).
+    (the ``last_active`` advance lives in ``apply_assessments``).
 
     Args:
         sessions: Current sessions from JSON

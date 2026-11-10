@@ -26,7 +26,7 @@ from ...mcp_workspace_github import (
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .audit import append_run, assessment_to_record
 from .config import get_github_username
-from .detection import capture_detection_snapshot, gather_signals, get_pid_create_time
+from .detection import capture_detection_snapshot, gather_signals
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -234,7 +234,6 @@ def assess_session(
     issue_state = assess_issue_state(issue_facts)
     transition = assess_transition(prior_last_active, verdict)
     decision = decide(verdict, issue_state, transition, git_status, directory_empty)
-    pid_needs_refresh = verdict.active and signals.found_pid is not None
     return SessionAssessment(
         folder=folder,
         signals=signals,
@@ -242,8 +241,6 @@ def assess_session(
         issue_state=issue_state,
         transition=transition,
         decision=decision,
-        pid_needs_refresh=pid_needs_refresh,
-        found_pid=signals.found_pid,
         git_status=git_status,
     )
 
@@ -380,8 +377,8 @@ def build_active_session_set(
     Computes one ``DetectionSnapshot`` and assesses every session, projecting the
     result onto the legacy ``dict[folder, bool]`` contract that the cleanup,
     restart, and status consumers still read. READ-ONLY: unlike the apply path
-    this performs no ``sessions.json`` writes — the PID refresh and ``last_active``
-    advance moved into :func:`apply_assessments`.
+    this performs no ``sessions.json`` writes — the ``last_active`` advance lives
+    in :func:`apply_assessments`.
 
     Returns:
         Mapping of each session's folder path to its liveness ``active`` bool.
@@ -420,13 +417,13 @@ def apply_assessments(
     *,
     write_audit: bool,
 ) -> None:
-    """Apply-only: refresh stale PIDs, advance ``last_active``, write the audit.
+    """Apply-only: advance ``last_active``, write the audit.
 
     The single mutation point of the pipeline. Loads the session store once and
-    applies each assessment's PID refresh and ``last_active``/``last_active_rule``
-    advance over the LIVE post-cleanup store — only surviving sessions are mutated
-    (sessions deleted by cleanup/restart are correctly gone from the store), then
-    writes the store back in ONE atomic save (no double-write).
+    applies each assessment's ``last_active``/``last_active_rule`` advance over
+    the LIVE post-cleanup store — only surviving sessions are mutated (sessions
+    deleted by cleanup/restart are correctly gone from the store), then writes
+    the store back in ONE atomic save (no double-write).
 
     When ``write_audit`` is True, also appends ONE audit run-block. The audit is
     sourced from ``assessments`` — the FULL set assessed at build time, threaded
@@ -450,15 +447,6 @@ def apply_assessments(
         assessment = assessments.get(session["folder"])
         if assessment is None:
             continue
-        if (
-            assessment.pid_needs_refresh
-            and assessment.found_pid is not None
-            and assessment.found_pid != session.get("vscode_pid")
-        ):
-            session["vscode_pid"] = assessment.found_pid
-            session["vscode_pid_create_time"] = get_pid_create_time(
-                assessment.found_pid
-            )
         session["last_active"] = assessment.verdict.active
         session["last_active_rule"] = assessment.verdict.rule.value
     save_sessions(store)

@@ -93,7 +93,7 @@ class TestStatusAssessmentConsumer:
         folder = tmp_path / "live"
         folder.mkdir()
         session = self._session(folder)
-        # An active session would trigger a PID refresh on the apply path; the
+        # An active session would advance last_active on the apply path; the
         # status path must still leave the store untouched.
         display_status_table(
             sessions=[session],

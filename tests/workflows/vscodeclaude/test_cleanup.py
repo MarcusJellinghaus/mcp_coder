@@ -89,8 +89,6 @@ def _assessment(
             reason=reason,
             destructive=action == SessionAction.DELETE,
         ),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 

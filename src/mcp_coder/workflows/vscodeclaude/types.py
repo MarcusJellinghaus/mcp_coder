@@ -109,8 +109,6 @@ class SessionAssessment:
     issue_state: IssueState
     transition: Transition
     decision: Decision
-    pid_needs_refresh: bool
-    found_pid: int | None
     # Git status string computed once at build time ("Clean"/"Dirty"/"Missing"/
     # "No Git"/"Error"). Carried so status display reads the SAME snapshot that
     # fed ``decide`` instead of re-running git (TOCTOU-free determinism).
@@ -159,8 +157,6 @@ class SessionAssessment:
                 "destructive": self.decision.destructive,
             },
             "git_status": self.git_status,
-            "pid_needs_refresh": self.pid_needs_refresh,
-            "found_pid": self.found_pid,
         }
 
     def to_audit_record(self, session: "VSCodeClaudeSession") -> dict[str, Any]:
@@ -190,8 +186,6 @@ class SessionAssessment:
             for key, value in data[section].items():
                 lines.append(f"  {key}: {value}")
         lines.append(f"git_status: {data['git_status']}")
-        lines.append(f"pid_needs_refresh: {data['pid_needs_refresh']}")
-        lines.append(f"found_pid: {data['found_pid']}")
         return "\n".join(lines)
 
 

@@ -170,8 +170,6 @@ def make_assessment(
         ),
         transition=Transition(flipped_to_inactive=False),
         decision=Decision(action=action, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
     )
 
 
@@ -197,8 +195,6 @@ def make_sample_assessment(folder: str = "/path/to/folder") -> SessionAssessment
             reason="vscode running",
             destructive=False,
         ),
-        pid_needs_refresh=False,
-        found_pid=1234,
     )
 
 

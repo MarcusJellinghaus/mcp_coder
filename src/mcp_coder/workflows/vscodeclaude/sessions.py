@@ -187,8 +187,7 @@ def update_session_pid(folder: str, pid: int) -> None:
 
     Captures ``psutil.Process(pid).create_time()`` and stores it alongside
     ``vscode_pid`` in the same persistence step. This is the only populator
-    of ``vscode_pid_create_time``; the field self-populates on the first
-    cmdline-match refresh after launch.
+    of ``vscode_pid_create_time``.
 
     Args:
         folder: Session folder path

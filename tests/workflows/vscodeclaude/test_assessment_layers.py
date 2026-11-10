@@ -275,32 +275,6 @@ class TestAssessSession:
         )
         assert assessment.transition.flipped_to_inactive is False
 
-    def test_pid_needs_refresh_on_active_cmdline_match(self) -> None:
-        signals = make_signals(cmdline_match=True, found_pid=4321)
-        assessment = assess_session(
-            folder="C:/work/issue-42",
-            signals=signals,
-            issue_facts=make_issue_facts(),
-            git_status="Clean",
-            directory_empty=False,
-            prior_last_active=None,
-        )
-        assert assessment.verdict.active is True
-        assert assessment.pid_needs_refresh is True
-        assert assessment.found_pid == 4321
-
-    def test_no_pid_refresh_when_inactive(self) -> None:
-        signals = make_signals(found_pid=None)
-        assessment = assess_session(
-            folder="C:/work/issue-42",
-            signals=signals,
-            issue_facts=make_issue_facts(),
-            git_status="Clean",
-            directory_empty=False,
-            prior_last_active=None,
-        )
-        assert assessment.pid_needs_refresh is False
-
     def test_embeds_all_four_sub_results(self) -> None:
         assessment = assess_session(
             folder="C:/work/issue-42",

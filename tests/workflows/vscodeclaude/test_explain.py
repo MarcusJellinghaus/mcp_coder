@@ -2,8 +2,8 @@
 
 ``--explain`` renders the already-built assessments via the shared
 ``SessionAssessment.to_explain()`` serializer. It is READ-ONLY: it must never
-trigger ``apply_assessments`` (no PID refresh, no ``last_active`` advance, no
-audit write), consistent with status being write-free.
+trigger ``apply_assessments`` (no ``last_active`` advance, no audit write),
+consistent with status being write-free.
 """
 
 import argparse
