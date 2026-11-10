@@ -143,10 +143,14 @@ ls -la logs
 exit $RC
 """
 
+# The VIRTUAL_ENV line points mcp-tools-py checks at the project venv. It must
+# contain no $, braces or backticks (str.format and AutoRunner's outer bash -c),
+# and uses an if block because the executor runs under set -e.
 IMPLEMENT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
 export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
+if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json

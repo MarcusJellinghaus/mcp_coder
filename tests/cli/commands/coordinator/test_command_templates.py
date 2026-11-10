@@ -483,3 +483,44 @@ class TestFixConflictTemplateLlmArgs:
     def test_linux_template_logs_claude_version(self) -> None:
         """The Linux template logs the Claude CLI version."""
         assert "which claude && claude --version" in FIX_CONFLICT_COMMAND_TEMPLATE
+
+
+class TestImplementTemplateProjectVenv:
+    """The Linux implement template points the checks at the project venv."""
+
+    VENV_LINE = (
+        "if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi"
+    )
+
+    def test_linux_template_exports_virtual_env(self) -> None:
+        """The guarded VIRTUAL_ENV export is a line of the Linux template."""
+        assert self.VENV_LINE in IMPLEMENT_COMMAND_TEMPLATE.splitlines()
+
+    def test_virtual_env_line_precedes_implement_command(self) -> None:
+        """VIRTUAL_ENV is exported before mcp-coder implement runs."""
+        lines = IMPLEMENT_COMMAND_TEMPLATE.splitlines()
+        implement_index = next(
+            i
+            for i, line in enumerate(lines)
+            if "mcp-coder --log-level {log_level} implement" in line
+        )
+        assert lines.index(self.VENV_LINE) < implement_index
+
+    def test_virtual_env_line_has_no_shell_expansion(self) -> None:
+        """The line has no $ or backtick, which the outer bash -c would expand."""
+        line = next(
+            line
+            for line in IMPLEMENT_COMMAND_TEMPLATE.splitlines()
+            if "VIRTUAL_ENV" in line
+        )
+        assert "$" not in line
+        assert "`" not in line
+
+    def test_linux_template_still_formats(self) -> None:
+        """The template formats with its declared placeholders."""
+        result = IMPLEMENT_COMMAND_TEMPLATE.format(branch_name="b", log_level="INFO")
+        assert self.VENV_LINE in result.splitlines()
+
+    def test_windows_template_unchanged(self) -> None:
+        """Only the Linux template gets the export."""
+        assert self.VENV_LINE not in IMPLEMENT_COMMAND_WINDOWS
