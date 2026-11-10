@@ -20,3 +20,11 @@ pr_info/steps/step_5.md:13 — medium — After step 5, `abort_checks` calls the
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md, cover the existing `@patch("mcp_coder.workflows.implement.core.get_binding", ...)` decorators in `tests/workflows/implement/test_core_workflow.py:51` and `:174`, which break once `core.py` stops importing `get_binding`. For the test at `:51`, replace that patch with a `core.check_and_fix_mypy` patch returning `CheckOutcome("clean")`. Move the config-`ValueError` logging test (`:174`/`:222`) into `test_core_final_check.py` and rewrite it as a `general` failure, because `test_core_workflow.py` is close to the 750-line limit.', 'In pr_info/steps/step_5.md, tell the implementer to patch `core.rescue_commit` in every existing core test where the final check, or a `checks_failed=True` task outcome, ends non-clean. This includes the timeout and `mcp_unavailable` tests in `test_core_failure_categories.py` (around `:71` and `:137`). Also update any assertions on the exact failure message to allow the new "— rescue commit: …" suffix.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-11-10
+**Findings**:
+Reviewing plan vs. source: checking `task_processing.py`'s per-task check and retry handling next.Checking for tests outside `tests/workflows/implement/` that run the real final check.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
