@@ -38,16 +38,16 @@ ENTRY_POINT_GROUP = "mcp_coder.toolkits"
 _STANDARD_DEPTHS = ("quick", "standard", "full")
 
 DEFAULT_BINDINGS: dict[str, tuple[str, ...]] = {
-    "implement_task": (),
-    "implement_final": ("check@quick",),
+    "implement_task": ("check@quick",),
+    "implement_final": ("check@standard", "test@quick"),
     "commit": ("format@apply",),
     "rebase": ("check@standard", "test@standard"),
     "rebase_automated": ("check@standard", "test@unattended"),
 }
 
 _ALLOWED_ACTIONS: dict[str, frozenset[str]] = {
-    "implement_task": frozenset(),
-    "implement_final": frozenset({"check"}),
+    "implement_task": frozenset({"check", "test"}),
+    "implement_final": frozenset({"check", "test"}),
     "commit": frozenset({"format"}),
     "rebase": frozenset({"check", "test"}),
     "rebase_automated": frozenset({"check", "test"}),

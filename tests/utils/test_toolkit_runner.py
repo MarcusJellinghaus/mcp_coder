@@ -281,6 +281,9 @@ class TestRunBinding:
 
     def test_empty_binding(self, tmp_path: Path) -> None:
         """An empty binding runs nothing."""
+        _write_config(
+            tmp_path, "[tool.mcp-coder.toolkit.bindings]\nimplement_task = []\n"
+        )
         toolkit = _fake_class()()
         assert not run_binding(_loaded(tmp_path, toolkit), tmp_path, "implement_task")
         assert not toolkit.requests

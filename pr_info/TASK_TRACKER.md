@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 7: New default bindings, binding validation and the test budget — [step_7.md](./steps/step_7.md)
-- [ ] Implementation: update toolkit tests, then `DEFAULT_BINDINGS` / `_ALLOWED_ACTIONS` in `toolkit_runner.py` and `pytest-timeout = 1800` in `pyproject.toml`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update toolkit tests, then `DEFAULT_BINDINGS` / `_ALLOWED_ACTIONS` in `toolkit_runner.py` and `pytest-timeout = 1800` in `pyproject.toml`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Linux implement template exports `VIRTUAL_ENV` — [step_8.md](./steps/step_8.md)
 - [ ] Implementation: tests in `test_command_templates.py`, then the `VIRTUAL_ENV` line in `IMPLEMENT_COMMAND_TEMPLATE`

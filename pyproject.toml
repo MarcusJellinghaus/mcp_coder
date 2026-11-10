@@ -184,6 +184,8 @@ asyncio_mode = "auto"
 [tool.mcp-tools-py]
 # Formatter for run_format_code and mcp-coder workflows: ruff (import sorting + ruff format)
 formatter = "ruff"
+# Overrides every test depth's timeout: test@quick (~170 s here) gates implement_final
+pytest-timeout = 1800
 
 [tool.pylint.main]
 # Add project root to Python path so pylint can find workflows module
