@@ -94,19 +94,31 @@ class TestFinalCheckGate:
 
     def test_cap_is_checks_exhausted(self, mocks: _Mocks, tmp_path: Path) -> None:
         """Findings at the cap fail as checks_exhausted, with the detail."""
-        mocks.check.return_value = CheckOutcome("cap", "fix.check: 2 left")
+        detail = f"fix.check: findings remain after {MAX_FIX_TURNS} fix turns"
+        mocks.check.return_value = CheckOutcome("cap", detail)
 
         assert run_implement_workflow(tmp_path, "claude") == 1
 
         reason, stage, message = _failure(mocks)
         assert reason == "checks_exhausted"
         assert stage == _STAGE
-        assert message == (
-            f"Checks still report findings after {MAX_FIX_TURNS} fix turns"
-            f": fix.check: 2 left{_SUFFIX}"
-        )
+        assert message == f"{detail}{_SUFFIX}"
         mocks.formatters.assert_not_called()
         mocks.finalisation.assert_not_called()
+
+    def test_early_cap_message_keeps_real_turn_count(
+        self, mocks: _Mocks, tmp_path: Path
+    ) -> None:
+        """A cap before the third fix turn does not claim three fix turns."""
+        detail = "fix.check: no usable fragment after 0 fix turns"
+        mocks.check.return_value = CheckOutcome("cap", detail)
+
+        assert run_implement_workflow(tmp_path, "claude") == 1
+
+        reason, _stage, message = _failure(mocks)
+        assert reason == "checks_exhausted"
+        assert message == f"{detail}{_SUFFIX}"
+        assert f"after {MAX_FIX_TURNS} fix turns" not in message
 
     def test_error_is_general_with_detail(self, mocks: _Mocks, tmp_path: Path) -> None:
         """A config or tool error fails as general; the detail is the message."""

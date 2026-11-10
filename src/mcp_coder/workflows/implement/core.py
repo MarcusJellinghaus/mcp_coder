@@ -36,7 +36,7 @@ from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .blocked import read_and_clear_blocked
-from .check_loop import MAX_FIX_TURNS, CheckOutcome, check_and_fix_mypy, rescue_commit
+from .check_loop import CheckOutcome, check_and_fix_mypy, rescue_commit
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
@@ -70,10 +70,8 @@ def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
         (failure reason, message) for the "Final mypy check" stage.
     """
     if checks.status == "cap":
-        message = f"Checks still report findings after {MAX_FIX_TURNS} fix turns"
-        if checks.detail:
-            message += f": {checks.detail}"
-        return "checks_exhausted", message
+        # The detail carries the real turn count: the loop can cap early
+        return "checks_exhausted", checks.detail
     if checks.status == "error":
         return "general", checks.detail
     if checks.status == "blocked":
