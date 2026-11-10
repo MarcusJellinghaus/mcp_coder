@@ -12,7 +12,11 @@
 If either of these does not hold, write one line to `pr_info/.blocked.txt` and stop:
 
 - `github.md` still contains the line `with these read permissions. The list names the permissions behind its own rows of`.
-- `label-setup.md` still contains `The token needs \`repo\` scope permissions to create and manage labels.`
+- `label-setup.md` still contains this line:
+
+  ```text
+  The token needs `repo` scope permissions to create and manage labels.
+  ```
 
 ## WHERE
 
@@ -46,9 +50,6 @@ table is indented 3 spaces so it stays inside list item 1.
    | Metadata | Read | Always on |
    | Pull requests | Read and write | `create-pr` (`workflows/create_pr/core.py`, incl. best-effort PR assignee when `auto_review_implementation` is on), PR description edit (`pr_description.py`), `/pr_comment_triage` (`github_review_comment_reply`, `github_review_thread_resolve`) |
    | Workflows | Read and write (conditional) | Only if auto-merge may merge PRs that touch `.github/workflows/` (e.g. `define-labels --generate-github-actions` output, Dependabot `github-actions` bumps): GitHub rejects such an API merge without it |
-
-   No git operation uses this token: push, fetch and clone run on the system git
-   credentials.
 
    Unconfirmed, worth testing with a least-privilege token:
    - the `createLinkedBranch` mapping (Contents + Issues write) is inferred;
@@ -124,7 +125,13 @@ Do not touch the text from `## Repo Security Configuration Checks` onward. Its
 
 ### F. `label-setup.md`
 
-Replace `The token needs \`repo\` scope permissions to create and manage labels.` with:
+Replace this line:
+
+```text
+The token needs `repo` scope permissions to create and manage labels.
+```
+
+with:
 
 ```markdown
 For the permissions the token needs, see [GitHub Token Configuration](../repository-setup/github.md#github-token-configuration).
