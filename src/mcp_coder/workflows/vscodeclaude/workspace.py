@@ -3,6 +3,7 @@
 Handles git operations, folder creation, and file generation.
 """
 
+import json
 import logging
 import platform
 import shutil
@@ -459,21 +460,20 @@ def create_workspace_file(
     Returns:
         Path to created workspace file
     """
-    from .templates import WORKSPACE_FILE_TEMPLATE
-
     # Truncate title if too long
     title_short = issue_title[:30] + "..." if len(issue_title) > 30 else issue_title
     config = get_vscodeclaude_config(status)
     stage_short = config["stage_short"] if config else status[:6]
 
-    # Format the workspace file
-    content = WORKSPACE_FILE_TEMPLATE.format(
-        folder_path=f"./{folder_name}",
-        issue_number=issue_number,
-        stage_short=stage_short,
-        title_short=title_short,
-        repo_name=repo_name,
-    )
+    # Serialize a dict so quotes and backslashes in the title stay valid JSON
+    workspace = {
+        "folders": [{"path": f"./{folder_name}"}],
+        "settings": {
+            "window.title": f"[#{issue_number} {stage_short}] {title_short} - {repo_name}",
+            "task.allowAutomaticTasks": "on",
+        },
+    }
+    content = json.dumps(workspace, indent=4, ensure_ascii=False) + "\n"
 
     # Write to workspace_base
     workspace_file = get_workspace_file_path(workspace_base, folder_name)

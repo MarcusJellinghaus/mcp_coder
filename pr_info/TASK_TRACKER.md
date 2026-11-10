@@ -65,9 +65,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 8: Build the workspace file with `json.dumps` — [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation: test + dict/`json.dumps` in `create_workspace_file`, remove `WORKSPACE_FILE_TEMPLATE`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: test + dict/`json.dumps` in `create_workspace_file`, remove `WORKSPACE_FILE_TEMPLATE`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

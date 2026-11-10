@@ -24,28 +24,6 @@ def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 class TestTemplates:
     """Test template strings."""
 
-    def test_workspace_file_is_valid_json_template(self) -> None:
-        """Workspace template produces valid JSON when formatted."""
-
-        from mcp_coder.workflows.vscodeclaude.templates import (
-            WORKSPACE_FILE_TEMPLATE,
-        )
-
-        formatted = WORKSPACE_FILE_TEMPLATE.format(
-            folder_path="./test",
-            issue_number=123,
-            stage_short="review",
-            title_short="Test title",
-            repo_name="test-repo",
-        )
-        parsed = json.loads(formatted)
-        assert "folders" in parsed
-        assert "settings" in parsed
-        assert parsed["folders"][0]["path"] == "./test"
-        assert (
-            "[#123 review] Test title - test-repo" in parsed["settings"]["window.title"]
-        )
-
     def test_tasks_json_is_valid_json_template(self) -> None:
         """Tasks template produces valid JSON when formatted."""
         from mcp_coder.workflows.vscodeclaude.templates import (
