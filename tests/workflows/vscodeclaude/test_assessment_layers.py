@@ -6,12 +6,17 @@ tie-breaker, not a gate. The decide layer owns the full git-status safety
 matrix and is the ONLY place a destructive DELETE can be produced.
 """
 
+import pytest
+
 from mcp_coder.workflows.vscodeclaude.assessment import (
+    CONFIRMING_REASON,
+    NO_WINDOW_REASON,
     assess_issue_state,
     assess_liveness,
     assess_session,
     assess_transition,
     decide,
+    guard_reason,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
     Decision,
@@ -31,6 +36,7 @@ from tests.workflows.vscodeclaude.conftest import (
     make_session,
     make_signals,
     make_stale_state,
+    make_transition,
 )
 
 
@@ -151,6 +157,103 @@ class TestAssessTransition:
     def test_none_prior_blind_spot_no_flip(self) -> None:
         transition = assess_transition(None, make_inactive())
         assert transition.flipped_to_inactive is False
+
+    @pytest.mark.parametrize("prior", [True, False, None])
+    def test_carries_prior_last_active(self, prior: bool | None) -> None:
+        transition = assess_transition(prior, make_inactive())
+        assert transition.prior_last_active is prior
+        assert transition == make_transition(prior)
+
+
+_NO_WINDOW = make_inactive(LivenessRule.NO_WINDOW)
+
+
+class TestDecideGuards:
+    """Override (NO_WINDOW) and confirmation guards on DELETE/RESTART."""
+
+    @pytest.mark.parametrize(
+        ("verdict", "eligible", "git_status", "prior", "action", "reason"),
+        [
+            (make_inactive(), False, "Clean", False, SessionAction.DELETE, None),
+            (
+                make_inactive(),
+                False,
+                "Clean",
+                True,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (
+                make_inactive(),
+                False,
+                "Clean",
+                None,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (_NO_WINDOW, False, "Clean", False, SessionAction.SKIP, NO_WINDOW_REASON),
+            (make_inactive(), True, "Clean", False, SessionAction.RESTART, None),
+            (
+                make_inactive(),
+                True,
+                "Clean",
+                True,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (
+                make_inactive(),
+                True,
+                "Clean",
+                None,
+                SessionAction.SKIP,
+                CONFIRMING_REASON,
+            ),
+            (_NO_WINDOW, True, "Clean", False, SessionAction.RESTART, None),
+            (_NO_WINDOW, True, "Clean", None, SessionAction.SKIP, CONFIRMING_REASON),
+            (make_inactive(), True, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (make_inactive(), False, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (_NO_WINDOW, True, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (_NO_WINDOW, False, "Dirty", None, SessionAction.SKIP, "dirty"),
+            (
+                make_inactive(LivenessRule.NO_ARTIFACTS),
+                True,
+                "Missing",
+                None,
+                SessionAction.REMOVE_MISSING,
+                None,
+            ),
+            (
+                make_inactive(LivenessRule.NO_ARTIFACTS),
+                False,
+                "Missing",
+                None,
+                SessionAction.REMOVE_MISSING,
+                None,
+            ),
+        ],
+    )
+    def test_guard_matrix(
+        self,
+        verdict: LivenessVerdict,
+        eligible: bool,
+        git_status: str,
+        prior: bool | None,
+        action: SessionAction,
+        reason: str | None,
+    ) -> None:
+        state = make_eligible_state() if eligible else make_stale_state()
+        decision = decide(verdict, state, make_transition(prior), git_status, False)
+        assert decision.action == action
+        assert decision.destructive is (action == SessionAction.DELETE)
+        if reason is not None:
+            assert decision.reason == reason
+
+    def test_guard_reason_allows_confirmed_no_match_delete(self) -> None:
+        assert (
+            guard_reason(make_inactive(), make_transition(False), SessionAction.DELETE)
+            is None
+        )
 
 
 class TestDecide:

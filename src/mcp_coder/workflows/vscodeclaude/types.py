@@ -32,6 +32,7 @@ class LivenessRule(StrEnum):
     CMDLINE = "cmdline"
     NO_ARTIFACTS = "no_artifacts"
     NO_MATCH = "no_match"
+    NO_WINDOW = "no_window"
 
 
 class SessionAction(StrEnum):
@@ -84,6 +85,7 @@ class Transition:
     """Result of the transition layer."""
 
     flipped_to_inactive: bool  # active -> inactive flip flag
+    prior_last_active: bool | None  # persisted baseline; False = confirmed inactive
 
 
 @dataclass(frozen=True)
@@ -151,6 +153,7 @@ class SessionAssessment:
             },
             "transition": {
                 "flipped_to_inactive": self.transition.flipped_to_inactive,
+                "prior_last_active": self.transition.prior_last_active,
             },
             "decision": {
                 "action": self.decision.action.value,

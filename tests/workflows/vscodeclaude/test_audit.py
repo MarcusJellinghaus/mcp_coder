@@ -81,7 +81,7 @@ def _assessment(
             is_eligible=False,
             stale_target="status-05:bot-pickup",
         ),
-        transition=Transition(flipped_to_inactive=False),
+        transition=Transition(flipped_to_inactive=False, prior_last_active=False),
         decision=Decision(action=action, reason=reason, destructive=destructive),
     )
 
@@ -183,3 +183,11 @@ class TestAssessmentToRecord:
         assert record["decision"]["destructive"] is True
         assert record["repo"] == "owner/repo"
         assert record["issue_number"] == 38
+
+    def test_record_carries_prior_last_active(self) -> None:
+        """The transition block records the prior ``last_active`` baseline."""
+        record = assessment_to_record(_assessment(), _session())
+        assert record["transition"] == {
+            "flipped_to_inactive": False,
+            "prior_last_active": False,
+        }

@@ -149,6 +149,7 @@ Sessions can be in different states, shown in the `status` command:
 - **Orphaned sessions** are automatically removed when you run the main command
 - **Stale sessions** require `--cleanup` flag to delete
 - **Dirty sessions** require manual intervention (commit or discard changes)
+- **Restart and delete wait one run**: a closed or stale session is restarted or deleted one `launch` run after it first goes inactive. On the first run it shows `!! just went inactive, confirming next run`, and cleanup prints a `Skipping` line for it
 
 ### Generated Files
 

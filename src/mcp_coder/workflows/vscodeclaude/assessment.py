@@ -126,10 +126,10 @@ def assess_transition(
 
     Returns:
         A frozen :class:`Transition` whose ``flipped_to_inactive`` marks an
-        active->inactive flip.
+        active->inactive flip, carrying the ``prior_last_active`` baseline.
     """
     flipped = prior_last_active is True and not verdict.active
-    return Transition(flipped_to_inactive=flipped)
+    return Transition(flipped_to_inactive=flipped, prior_last_active=prior_last_active)
 
 
 def _ineligibility_reasons(issue_state: IssueState) -> str:
@@ -156,7 +156,66 @@ def _ineligibility_reasons(issue_state: IssueState) -> str:
     return ", ".join(reasons)
 
 
+NO_WINDOW_REASON = (
+    "no window, but VSCode main process still references folder"
+    " — close all VSCode windows to release it"
+)
+CONFIRMING_REASON = "just went inactive, confirming next run"
+
+
+def guard_reason(
+    verdict: LivenessVerdict, transition: Transition, action: SessionAction
+) -> str | None:
+    """Reason to hold back a DELETE/RESTART, or None if it may proceed.
+
+    Two guards, shared by :func:`decide` and the ``.to_be_deleted`` retry loop:
+
+    - Override guard: a ``NO_WINDOW`` verdict never deletes (the VSCode main
+      process may still hold the folder).
+    - Confirmation guard: DELETE/RESTART only once the session was already
+      inactive on the previous run (``prior_last_active is False``).
+
+    Returns:
+        The SKIP reason, or ``None`` when the action may proceed.
+    """
+    if action == SessionAction.DELETE and verdict.rule == LivenessRule.NO_WINDOW:
+        return NO_WINDOW_REASON
+    if transition.prior_last_active is not False:
+        return CONFIRMING_REASON
+    return None
+
+
 def decide(
+    verdict: LivenessVerdict,
+    issue_state: IssueState,
+    transition: Transition,
+    git_status: str,  # "Clean"|"Dirty"|"Missing"|"No Git"|"Error"
+    directory_empty: bool,
+) -> Decision:
+    """Pure: the decision matrix of :func:`_decide_unguarded`, then the guards.
+
+    A DELETE or RESTART from :func:`_decide_unguarded` is turned into a SKIP
+    when :func:`guard_reason` holds it back. Existing SKIP reasons (dirty,
+    unverified git status) keep precedence because those branches never return
+    DELETE or RESTART. DELETE is still produced only in
+    :func:`_decide_unguarded`.
+
+    Returns:
+        A frozen :class:`Decision` carrying the resolved :class:`SessionAction`,
+        a human reason, and the ``destructive`` flag.
+    """
+    decision = _decide_unguarded(
+        verdict, issue_state, transition, git_status, directory_empty
+    )
+    if decision.action not in (SessionAction.DELETE, SessionAction.RESTART):
+        return decision
+    reason = guard_reason(verdict, transition, decision.action)
+    if reason is None:
+        return decision
+    return Decision(action=SessionAction.SKIP, reason=reason, destructive=False)
+
+
+def _decide_unguarded(
     verdict: LivenessVerdict,
     issue_state: IssueState,
     transition: Transition,
@@ -168,6 +227,7 @@ def decide(
     DELETE is the ONLY destructive branch, and it requires ``git_status == "Clean"``
     OR ``directory_empty`` — never destruction on weak evidence ("No Git"/"Error"
     on a non-empty folder). This single place is covered by the invariant test.
+    :func:`decide` applies the guards on top; this function does not.
 
     Returns:
         A frozen :class:`Decision` carrying the resolved :class:`SessionAction`,

@@ -185,7 +185,7 @@ class TestAssessmentFrozen:
             state.is_open = False  # type: ignore[misc]
 
     def test_transition_frozen(self) -> None:
-        transition = Transition(flipped_to_inactive=False)
+        transition = Transition(flipped_to_inactive=False, prior_last_active=False)
         with pytest.raises(dataclasses.FrozenInstanceError):
             transition.flipped_to_inactive = True  # type: ignore[misc]
 

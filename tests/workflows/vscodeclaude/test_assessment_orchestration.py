@@ -239,7 +239,7 @@ class TestApplyAssessmentsAudit:
             directory_empty=False,
             prior_last_active=None,
         )
-        # #38-shaped: inactive + stale + clean -> destructive DELETE.
+        # #38-shaped: confirmed inactive + stale + clean -> destructive DELETE.
         deleting = assess_session(
             folder="C:/work/b",
             signals=make_signals(folder_exists=True),
@@ -248,7 +248,7 @@ class TestApplyAssessmentsAudit:
             ),
             git_status="Clean",
             directory_empty=False,
-            prior_last_active=None,
+            prior_last_active=False,
         )
 
         # Full build-time set (both sessions) threaded through, even though the
@@ -332,7 +332,7 @@ class TestApplyAssessmentsAudit:
             ),
             git_status="Clean",
             directory_empty=False,
-            prior_last_active=None,
+            prior_last_active=False,
         )
 
         apply_assessments({"C:/work/b": deleting}, [session], write_audit=True)

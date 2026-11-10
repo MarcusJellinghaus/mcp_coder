@@ -239,7 +239,9 @@ class TestClosedIssueIntegration:
                     is_unassigned=False,
                     is_eligible=False,
                 ),
-                transition=Transition(flipped_to_inactive=False),
+                transition=Transition(
+                    flipped_to_inactive=False, prior_last_active=False
+                ),
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),
@@ -512,7 +514,9 @@ class TestClosedIssueIntegration:
                     is_unassigned=False,
                     is_eligible=False,
                 ),
-                transition=Transition(flipped_to_inactive=False),
+                transition=Transition(
+                    flipped_to_inactive=False, prior_last_active=False
+                ),
                 decision=Decision(
                     action=SessionAction.DELETE, reason="closed", destructive=True
                 ),

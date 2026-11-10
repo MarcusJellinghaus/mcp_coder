@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Guards against acting on fresh or `NO_WINDOW` inactivity — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: tests + `LivenessRule.NO_WINDOW`, `Transition.prior_last_active`, `guard_reason` in `decide` and retry loop, docs
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `LivenessRule.NO_WINDOW`, `Transition.prior_last_active`, `guard_reason` in `decide` and retry loop, docs
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Window title authoritative on Windows after grace — [step_5.md](./steps/step_5.md)
 

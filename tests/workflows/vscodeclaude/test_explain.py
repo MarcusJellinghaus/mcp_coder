@@ -47,6 +47,13 @@ class TestRenderExplain:
         assert "keep_active" in text
         assert "/path/to/folder" in text
 
+    def test_transition_block_includes_prior_last_active(self) -> None:
+        """The transition section lists the prior ``last_active`` baseline."""
+        text = render_explain({"/path/to/folder": make_sample_assessment()})
+
+        assert "transition:\n  flipped_to_inactive: False\n" in text
+        assert "  prior_last_active: False" in text
+
     def test_one_block_per_session(self) -> None:
         """Each session contributes its own to_explain() block."""
         assessments = {
