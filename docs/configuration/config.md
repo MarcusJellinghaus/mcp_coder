@@ -691,7 +691,7 @@ Caveats:
 - Never merges: repositories without CI; skipped, neutral or action-required runs; CI runs longer than the 12.5-minute poll cap.
 - A CI run must appear for the pushed SHA within ~105 s, else the wait soft-passes and the issue stays on `status-10`.
 - Each merge attempt waits for the code-scanning run on `refs/pull/N/head`: up to ~5 minutes. If no run appears for the commit within ~105 s, it reads the alerts anyway and warns, so a repo without CodeQL pays that wait on every merge.
-- Alerts skipped (403/404: the token lacks `Code scanning alerts: Read`, or code scanning is not enabled) → merges, with a warning in the Jenkins log.
+- Alerts skipped (403/404: the token lacks the [code-scanning permission](../repository-setup/github.md#github-token-configuration), or code scanning is not enabled) → merges, with a warning in the Jenkins log.
 - A PR blocked by alerts needs a manual merge after triage (`status-10` launches no command), unless a later `fix-conflict` or `fix-ci` run merges it.
 - Rate limit: the issue may stay on its busy label; the Jenkins fallback label applies.
 - Branch not linked to an issue → label write skipped (the merge still runs); after a merge, the Jenkins fallback label applies.
@@ -704,14 +704,22 @@ Caveats:
 
 ### GitHub Credentials Setup
 
+The `github_credentials_id` credential (Username with password: GitHub user + PAT)
+serves both sides. AutoRunner's executor jobs export the PAT as `GITHUB_TOKEN`, which
+overrides `[github] token` in `config.toml`, so it is the workflows' API token. They
+also use it for the repo checkout; the container executor embeds it in the clone URL,
+so pushes use it too.
+
 For Jenkins to access GitHub repositories, you need to set up GitHub credentials in Jenkins:
 
 #### 1. Create GitHub Personal Access Token
 
-1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Click "Generate new token (classic)"
-3. Select appropriate scopes (minimum: `repo` for private repos, `public_repo` for public repos)
-4. Copy the generated token (save it securely - you won't see it again)
+1. Go to GitHub → Settings → Developer settings → Personal access tokens, and create a
+   fine-grained or classic token.
+2. Grant the permissions in [GitHub Token Configuration](../repository-setup/github.md#github-token-configuration),
+   plus Workflows write (classic: `workflow` scope) if pushes may change
+   `.github/workflows/`.
+3. Copy the generated token (save it securely - you won't see it again)
 
 #### 2. Store Token in Jenkins
 
