@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Move `read_and_clear_blocked` into `blocked.py` — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: move `read_and_clear_blocked` and constants to `blocked.py`, fix imports (pure refactor)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `read_and_clear_blocked` and constants to `blocked.py`, fix imports (pure refactor)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add the `checks_exhausted` failure reason — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: tests in `test_failure_reporting.py`, then `FAILURE_LABELS` / `CATEGORY_DISPLAY` entries

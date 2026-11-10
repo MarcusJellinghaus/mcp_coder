@@ -8,17 +8,19 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.workflow_steps.constants import BLOCKED_FILE
+from mcp_coder.workflows.implement.blocked import (
+    BLOCKED_REASON_FALLBACK,
+    BLOCKED_REASON_MAX_CHARS,
+    read_and_clear_blocked,
+)
 from mcp_coder.workflows.implement.constants import (
     BLOCKED_FILE as IMPLEMENT_BLOCKED_FILE,
 )
 from mcp_coder.workflows.implement.task_processing import (
-    BLOCKED_REASON_FALLBACK,
-    BLOCKED_REASON_MAX_CHARS,
     RETRY_REMINDER,
     TaskOutcome,
     process_single_task,
     process_task_with_retry,
-    read_and_clear_blocked,
 )
 from tests.workflows.implement.test_task_processing import _make_llm_response
 

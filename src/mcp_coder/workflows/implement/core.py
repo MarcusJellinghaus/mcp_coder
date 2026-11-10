@@ -36,6 +36,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
+from .blocked import read_and_clear_blocked
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
@@ -48,11 +49,7 @@ from .failure_reporting import (
 )
 from .finalisation import run_finalisation
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
-from .task_processing import (
-    check_and_fix_mypy,
-    process_task_with_retry,
-    read_and_clear_blocked,
-)
+from .task_processing import check_and_fix_mypy, process_task_with_retry
 from .task_tracker_prep import (
     TrackerPrepError,
     log_progress_summary,
