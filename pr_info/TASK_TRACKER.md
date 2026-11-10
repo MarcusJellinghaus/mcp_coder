@@ -21,6 +21,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Token permissions in `github.md`, links from the other docs
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: edit `github.md` (A, C, D, E), `label-setup.md` (F), `config.md` (G, H)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the summary and step plan
+- [ ] PR summary prepared
