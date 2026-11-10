@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: New fix loop in `check_loop.py` with a shared cap — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: tests in `test_check_loop.py` / `test_check_loop_fix_turns.py`, then `check_loop.py` (`CheckOutcome`, `check_and_fix_mypy`, `_fix_turn`, moved `_build_fix_prompt`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_check_loop.py` / `test_check_loop_fix_turns.py`, then `check_loop.py` (`CheckOutcome`, `check_and_fix_mypy`, `_fix_turn`, moved `_build_fix_prompt`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Both callers on the new loop; delete the old one — [step_4.md](./steps/step_4.md)
 - [ ] Implementation: conftest autouse fixture, `test_task_processing_checks.py`, `test_core_final_check.py`; switch `task_processing.py` / `core.py` / `__init__.py`; delete old loop and `test_task_processing_mypy.py`; update existing tests

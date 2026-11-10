@@ -41,6 +41,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 from .blocked import read_and_clear_blocked
+from .check_loop import _build_fix_prompt
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
@@ -137,9 +138,6 @@ def _run_check(project_dir: Path, entry: str) -> str | None:
     return "\n\n".join(texts) or None
 
 
-_CHECK_OUTPUT_HEADING = "Check output:"
-
-
 def _fix_check_text(project_dir: Path) -> str | None:
     """Return the toolkit's raw ``fix.check`` fragment.
 
@@ -156,21 +154,6 @@ def _fix_check_text(project_dir: Path) -> str | None:
         logger.warning("Could not load toolkit prompt fragments: %s", e)
         return None
     return fragments.get("fix.check")
-
-
-def _build_fix_prompt(fix_check: str, fix_text: str, check_instructions: str) -> str:
-    """Build the fix prompt from the fragment, the check output and instructions.
-
-    Args:
-        fix_check: The toolkit's ``fix.check`` fragment
-        fix_text: Fix text of the failing check
-        check_instructions: Filled ``check_instructions`` slot, or "" to omit
-
-    Returns:
-        The non-empty parts joined by a blank line.
-    """
-    parts = [fix_check, f"{_CHECK_OUTPUT_HEADING}\n{fix_text}", check_instructions]
-    return "\n\n".join(p for p in parts if p)
 
 
 def check_and_fix_mypy(
