@@ -17,6 +17,7 @@ from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 _CORE = "mcp_coder.workflows.implement.core"
 _STAGE = "Final mypy check"
+_SUFFIX = " — rescue commit: pushed abc1234"
 
 
 @dataclass
@@ -57,6 +58,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
         patch(
             f"{_CORE}.check_and_fix_mypy", return_value=CheckOutcome("clean")
         ) as check,
+        patch(f"{_CORE}.rescue_commit", return_value="pushed abc1234"),
         patch(f"{_CORE}.run_formatters", return_value=True) as formatters,
         patch(
             f"{_CORE}.get_full_status",
@@ -100,7 +102,7 @@ class TestFinalCheckGate:
         assert stage == _STAGE
         assert message == (
             f"Checks still report findings after {MAX_FIX_TURNS} fix turns"
-            ": fix.check: 2 left"
+            f": fix.check: 2 left{_SUFFIX}"
         )
         mocks.formatters.assert_not_called()
         mocks.finalisation.assert_not_called()
@@ -111,7 +113,7 @@ class TestFinalCheckGate:
 
         assert run_implement_workflow(tmp_path, "claude") == 1
 
-        assert _failure(mocks) == ("general", _STAGE, "bad toolkit config")
+        assert _failure(mocks) == ("general", _STAGE, f"bad toolkit config{_SUFFIX}")
         mocks.finalisation.assert_not_called()
 
     def test_blocked(self, mocks: _Mocks, tmp_path: Path) -> None:
@@ -120,7 +122,7 @@ class TestFinalCheckGate:
 
         assert run_implement_workflow(tmp_path, "claude") == 1
 
-        assert _failure(mocks) == ("blocked", _STAGE, "cannot fix")
+        assert _failure(mocks) == ("blocked", _STAGE, f"cannot fix{_SUFFIX}")
 
     def test_marker_after_clean_is_blocked(self, mocks: _Mocks, tmp_path: Path) -> None:
         """A marker read in the finally turns a clean result into blocked."""
@@ -134,7 +136,7 @@ class TestFinalCheckGate:
 
         assert run_implement_workflow(tmp_path, "claude") == 1
 
-        assert _failure(mocks) == ("blocked", _STAGE, "gave up")
+        assert _failure(mocks) == ("blocked", _STAGE, f"gave up{_SUFFIX}")
         assert not (tmp_path / BLOCKED_FILE).exists()
         mocks.formatters.assert_not_called()
 

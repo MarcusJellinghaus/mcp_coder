@@ -16,6 +16,7 @@ from typing import Literal, cast
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
+from mcp_coder.mcp_workspace_git import commit_all_changes
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.prompt_slots import (
     resolve_prompt_slots,
@@ -29,14 +30,17 @@ from mcp_coder.utils.toolkit_runner import (
     load_toolkit,
     run_request,
 )
+from mcp_coder.workflow_steps.commit import push_changes, run_formatters
 from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
 
 from .blocked import read_and_clear_blocked
-from .constants import LLM_INACTIVITY_TIMEOUT_SECONDS
+from .constants import COMMIT_MESSAGE_FILE, LLM_INACTIVITY_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
 
 MAX_FIX_TURNS = 3
+
+RESCUE_COMMIT_MESSAGE = "wip(implement): checks failed ({reason})"
 
 CheckStatus = Literal["clean", "cap", "error", "blocked", "timeout", "mcp_unavailable"]
 
@@ -286,3 +290,44 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
         )
         if ended:
             return ended
+
+
+def rescue_commit(project_dir: Path, reason: str) -> str:
+    """Format, commit and push whatever is in the tree after a check-stage abort.
+
+    Args:
+        project_dir: Path to the project directory
+        reason: The failure reason, used in the commit message.
+
+    Returns:
+        One line for the failure comment: "pushed <sha>", "committed <sha>,
+        push failed", "nothing to commit" or "commit failed: <error>". Never
+        raises: the original failure reason must win.
+    """
+    try:
+        read_and_clear_blocked(project_dir)
+        (project_dir / COMMIT_MESSAGE_FILE).unlink(missing_ok=True)
+        try:
+            if not run_formatters(project_dir):
+                logger.warning("Formatting failed before rescue commit")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.warning("Formatting failed before rescue commit: %s", e)
+
+        result = commit_all_changes(
+            RESCUE_COMMIT_MESSAGE.format(reason=reason), project_dir
+        )
+        if not result["success"]:
+            logger.error("Rescue commit failed: %s", result["error"])
+            return f"commit failed: {result['error']}"
+        sha = result["commit_hash"]
+        if not sha:
+            logger.info("Rescue commit: nothing to commit")
+            return "nothing to commit"
+        if push_changes(project_dir):
+            logger.info("Rescue commit %s pushed", sha)
+            return f"pushed {sha}"
+        logger.error("Rescue commit %s could not be pushed", sha)
+        return f"committed {sha}, push failed"
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Rescue commit failed: %s", e)
+        return f"commit failed: {e}"

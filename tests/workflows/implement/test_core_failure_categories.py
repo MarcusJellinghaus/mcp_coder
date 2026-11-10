@@ -15,6 +15,10 @@ from mcp_coder.workflows.implement.task_processing import TaskOutcome
 class TestRunImplementWorkflowFailureCategories:
     """Test that final-mypy and CI-analysis exceptions get the right category."""
 
+    @patch(
+        "mcp_coder.workflows.implement.core.rescue_commit",
+        new=MagicMock(return_value="pushed abc1234"),
+    )
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
@@ -78,6 +82,10 @@ class TestRunImplementWorkflowFailureCategories:
         assert failure_arg.category == "llm_timeout"
         assert failure_arg.stage == "Final mypy check"
 
+    @patch(
+        "mcp_coder.workflows.implement.core.rescue_commit",
+        new=MagicMock(return_value="pushed abc1234"),
+    )
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)

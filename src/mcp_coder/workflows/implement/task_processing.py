@@ -74,11 +74,13 @@ class TaskOutcome:
         success: True if the task completed successfully.
         reason: Category key the orchestrator maps to a failure label.
         detail: Free-text explanation accompanying the category, if any.
+        checks_failed: True if the attempt aborted in the per-task check stage.
     """
 
     success: bool
     reason: str
     detail: str = ""
+    checks_failed: bool = False
 
 
 def _count_incomplete_tasks(project_dir: Path) -> int:
@@ -312,7 +314,7 @@ Please implement this task step by step."""
             "Per-task checks still report findings - committing and continuing"
         )
     elif checks.status != "clean":
-        return TaskOutcome(False, checks.status, checks.detail)
+        return TaskOutcome(False, checks.status, checks.detail, checks_failed=True)
 
     # Step 8: Run formatters
     if not run_formatters(project_dir):

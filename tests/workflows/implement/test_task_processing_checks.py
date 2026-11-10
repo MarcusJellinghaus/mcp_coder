@@ -85,6 +85,7 @@ class TestProcessSingleTaskChecks:
         assert outcome.success is False
         assert outcome.reason == status
         assert outcome.detail == detail
+        assert outcome.checks_failed is True
         mocks.formatters.assert_not_called()
         mocks.commit.assert_not_called()
         mocks.push.assert_not_called()
@@ -107,8 +108,45 @@ class TestProcessSingleTaskChecks:
         assert outcome.success is False
         assert outcome.reason == "blocked"
         assert outcome.detail == "stuck on mypy"
+        assert outcome.checks_failed is True
         mocks.commit.assert_not_called()
         assert not (tmp_path / BLOCKED_FILE).exists()
+
+    def test_success_keeps_checks_failed_false(
+        self, mocks: _Mocks, tmp_path: Path
+    ) -> None:
+        """A completed task is not a check abort."""
+        assert process_single_task(tmp_path, "claude").checks_failed is False
+
+    def test_empty_main_response_is_not_a_check_abort(
+        self, mocks: _Mocks, tmp_path: Path
+    ) -> None:
+        """An empty response from the main LLM call keeps checks_failed False."""
+        with patch(f"{_TP}.prompt_llm", return_value=_make_llm_response("")):
+            outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.reason == "error"
+        assert outcome.checks_failed is False
+        mocks.check.assert_not_called()
+        mocks.commit.assert_not_called()
+
+    def test_blocked_main_call_is_not_a_check_abort(
+        self, mocks: _Mocks, tmp_path: Path
+    ) -> None:
+        """A marker from the main LLM call keeps checks_failed False."""
+
+        def _blocks(*_args: Any, **_kwargs: Any) -> Any:
+            (tmp_path / "pr_info").mkdir(exist_ok=True)
+            (tmp_path / BLOCKED_FILE).write_text("need input", encoding="utf-8")
+            return _make_llm_response("Done")
+
+        with patch(f"{_TP}.prompt_llm", side_effect=_blocks):
+            outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.reason == "blocked"
+        assert outcome.checks_failed is False
+        mocks.check.assert_not_called()
+        mocks.commit.assert_not_called()
 
     def test_marker_cleared_when_check_raises(
         self, mocks: _Mocks, tmp_path: Path

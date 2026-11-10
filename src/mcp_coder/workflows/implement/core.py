@@ -36,7 +36,7 @@ from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .blocked import read_and_clear_blocked
-from .check_loop import MAX_FIX_TURNS, CheckOutcome, check_and_fix_mypy
+from .check_loop import MAX_FIX_TURNS, CheckOutcome, check_and_fix_mypy, rescue_commit
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
@@ -141,6 +141,12 @@ def run_implement_workflow(
         post_issue_comments=post_issue_comments,
     )
 
+    def abort_checks(reason: str, *, stage: str, message: str) -> int:
+        # Every check-stage abort first commits and pushes the work in the
+        # tree, so it survives a discarded checkout. The original reason wins.
+        rescue = rescue_commit(project_dir, reason)
+        return fail(reason, stage=stage, message=f"{message} — rescue commit: {rescue}")
+
     def body() -> int:
         formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
         if formatter_err:
@@ -192,19 +198,21 @@ def run_implement_workflow(
                 if outcome.reason == "no_tasks":
                     # Legitimate completion - no more tasks
                     break
+                # A check-stage abort rescues the work in the tree first
+                task_fail = abort_checks if outcome.checks_failed else fail
                 if outcome.reason == "blocked":
                     # The agent reported it could not proceed - terminal, no retry.
                     # Logged unconditionally: comment posting can be off, and the
                     # reason text is the whole point of this exit.
                     logger.error("Implementation blocked: %s", outcome.detail)
-                    return fail(
+                    return task_fail(
                         "blocked",
                         stage="Task implementation",
                         message=outcome.detail,
                     )
                 if outcome.reason == "timeout":
                     # LLM timeout during task processing
-                    return fail(
+                    return task_fail(
                         "timeout",
                         stage="Task implementation",
                         message=append_detail(
@@ -213,7 +221,7 @@ def run_implement_workflow(
                     )
                 if outcome.reason == "mcp_unavailable":
                     # A required MCP server was unavailable during task processing
-                    return fail(
+                    return task_fail(
                         "mcp_unavailable",
                         stage="Task implementation",
                         message=append_detail(
@@ -249,7 +257,7 @@ def run_implement_workflow(
                     # Error occurred during task processing. A plain fallback,
                     # not append_detail: "(agent reported: ...)" is the wrong
                     # framing for e.g. an unreadable tracker.
-                    return fail(
+                    return task_fail(
                         "general",
                         stage="Task implementation",
                         message=outcome.detail or "Task processing failed",
@@ -293,7 +301,7 @@ def run_implement_workflow(
                 checks = CheckOutcome("blocked", marker)
             if checks.status != "clean":
                 reason, message = _final_check_failure(checks)
-                return fail(reason, stage="Final mypy check", message=message)
+                return abort_checks(reason, stage="Final mypy check", message=message)
 
             # Format code after mypy fixes
             if not run_formatters(project_dir):

@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Rescue commit and the abort rule — [step_5.md](./steps/step_5.md)
-- [ ] Implementation: tests in `test_check_loop_rescue.py` / `test_core_check_abort.py`, then `rescue_commit`, `TaskOutcome.checks_failed`, `abort_checks` in `core.py`; patch `rescue_commit` in existing core tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_check_loop_rescue.py` / `test_core_check_abort.py`, then `rescue_commit`, `TaskOutcome.checks_failed`, `abort_checks` in `core.py`; patch `rescue_commit` in existing core tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Run the final check on a re-run with all tasks ticked — [step_6.md](./steps/step_6.md)
 - [ ] Implementation: tests in `test_core_final_check.py`, patch `no_tasks` core tests, remove `progress.completed > 0` gate in `core.py`
