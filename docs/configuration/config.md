@@ -704,13 +704,13 @@ Caveats:
 
 ### GitHub Credentials Setup
 
-For Jenkins to access GitHub repositories, you need to set up GitHub credentials in Jenkins:
-
 The `github_credentials_id` credential (Username with password: GitHub user + PAT)
 serves both sides. AutoRunner's executor jobs export the PAT as `GITHUB_TOKEN`, which
 overrides `[github] token` in `config.toml`, so it is the workflows' API token. They
 also use it for the repo checkout; the container executor embeds it in the clone URL,
 so pushes use it too.
+
+For Jenkins to access GitHub repositories, you need to set up GitHub credentials in Jenkins:
 
 #### 1. Create GitHub Personal Access Token
 
