@@ -36,6 +36,9 @@ FAILURE_LABELS: dict[str, str] = {
     "blocked": "implementation_blocked",
     "ci_fix_exhausted": "ci_fix_needed",
     "branch_moved": "ci_fix_needed",
+    # The check fix loop hit its cap. Shares the general label so the label
+    # set and the coordinator stay unchanged.
+    "checks_exhausted": "implementing_failed",
 }
 
 # Maps a reason -> the human-readable Category text used in the failure
@@ -51,6 +54,7 @@ CATEGORY_DISPLAY: dict[str, str] = {
     "blocked": "Blocked",
     "ci_fix_exhausted": "Ci Fix Exhausted",
     "branch_moved": "Branch Moved",
+    "checks_exhausted": "Checks Exhausted",
 }
 
 

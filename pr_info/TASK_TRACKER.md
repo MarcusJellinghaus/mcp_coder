@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Add the `checks_exhausted` failure reason — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: tests in `test_failure_reporting.py`, then `FAILURE_LABELS` / `CATEGORY_DISPLAY` entries
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_failure_reporting.py`, then `FAILURE_LABELS` / `CATEGORY_DISPLAY` entries
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: New fix loop in `check_loop.py` with a shared cap — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: tests in `test_check_loop.py` / `test_check_loop_fix_turns.py`, then `check_loop.py` (`CheckOutcome`, `check_and_fix_mypy`, `_fix_turn`, moved `_build_fix_prompt`)
