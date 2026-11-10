@@ -183,8 +183,6 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
             bash_grants=bash_grants,
         )
         response = llm_response["text"]
-        if not response or not response.strip():
-            raise RuntimeError("LLM returned empty response")
     except (LLMTimeoutError, McpServersUnavailableError) as e:
         blocked = read_and_clear_blocked(project_dir)
         status = cast(CheckStatus, llm_failure_reason(e) or "timeout")
@@ -196,6 +194,13 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
             return CheckOutcome("blocked", blocked)
         logger.error("Fix turn %d failed: %s", turn, e)
         return CheckOutcome("cap", f"Fix turn failed: {e}")
+
+    if not response or not response.strip():
+        blocked = read_and_clear_blocked(project_dir)
+        if blocked:
+            return CheckOutcome("blocked", blocked)
+        logger.error("Fix turn %d failed: LLM returned empty response", turn)
+        return CheckOutcome("cap", "Fix turn failed: LLM returned empty response")
 
     try:
         store_session(
