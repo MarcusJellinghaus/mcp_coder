@@ -1,37 +1,56 @@
-# Step 7: Linux implement template points the checks at the project venv
+# Step 7: New default bindings, binding validation and the test budget
 
-mcp-tools-py runs checks in the project env only when `VIRTUAL_ENV` points at it. On the Linux executor this is a no-op until #1204 / AutoRunner#59 provide a venv.
+Turns the gate on: `implement_task` → `check@quick`; `implement_final` → `check@standard`, `test@quick`. Both entries accept `check` and `test`; `format` is a config error. `pytest-timeout = 1800` keeps this repo's `test@quick` within budget.
 
 ## LLM prompt
 
-> Read `pr_info/steps/summary.md` and `pr_info/steps/step_7.md`. Implement step 7 only: add the tests to `tests/cli/commands/coordinator/test_command_templates.py` first, then add the `VIRTUAL_ENV` line to `IMPLEMENT_COMMAND_TEMPLATE`. Run pylint, mypy and the fast pytest suite; all must pass. Format, then make one commit.
+> Read `pr_info/steps/summary.md` and `pr_info/steps/step_7.md`. Implement step 7 only: update the tests first, then change `DEFAULT_BINDINGS` and `_ALLOWED_ACTIONS` in `toolkit_runner.py` and add `pytest-timeout = 1800` to `[tool.mcp-tools-py]` in `pyproject.toml`. Run pylint, mypy and the fast pytest suite; all must pass. Format, then make one commit.
 
 ## WHERE
-- `src/mcp_coder/cli/commands/coordinator/command_templates.py`
-- `tests/cli/commands/coordinator/test_command_templates.py`
+- `src/mcp_coder/utils/toolkit_runner.py`
+- `pyproject.toml`
+- `tests/utils/test_toolkit_config.py`, `tests/utils/test_toolkit_permissions.py`, `tests/utils/test_toolkit_runner.py`, `tests/workflows/rebase/test_command_toolkit_binding.py`
 
 ## WHAT
-Insert one line in `IMPLEMENT_COMMAND_TEMPLATE`, after `export MCP_TIMEOUT=30000` and before the `mcp-coder ... implement` line:
-```bash
-if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi
+```python
+DEFAULT_BINDINGS: dict[str, tuple[str, ...]] = {
+    "implement_task": ("check@quick",),
+    "implement_final": ("check@standard", "test@quick"),
+    "commit": ("format@apply",),
+    "rebase": ("check@standard", "test@standard"),
+    "rebase_automated": ("check@standard", "test@unattended"),
+}
+
+_ALLOWED_ACTIONS: dict[str, frozenset[str]] = {
+    "implement_task": frozenset({"check", "test"}),
+    "implement_final": frozenset({"check", "test"}),
+    ...  # rest unchanged
+}
 ```
-Optionally define it as a module constant `_PROJECT_VENV_LINE` and reference it in the test; the template itself stays a literal string.
+```toml
+[tool.mcp-tools-py]
+# Formatter for run_format_code and mcp-coder workflows: ruff (import sorting + ruff format)
+formatter = "ruff"
+# Overrides every test depth's timeout: test@quick (~170 s here) gates implement_final
+pytest-timeout = 1800
+```
 
 ## HOW
-- No `$`, `${...}` or backticks in this line: `str.format` forbids braces, and AutoRunner embeds the template in an outer `bash -c "…"` where `$` and backticks expand on the Jenkins host.
-- `if` block, not `[ ] && export`, because the executor runs under `set -e`.
-- Guard on the interpreter: a `.venv` without `bin/python` would make mcp-tools-py raise.
-- `PATH` is not touched, so `mcp-coder` stays the tool install.
-- Only the Linux template; `IMPLEMENT_COMMAND_WINDOWS` is unchanged.
+- Precondition: the installed `mcp_tools_py` toolkit's `describe()` declares `check` depth `standard` and `test` depth `quick`, and `prompt_fragments()` has non-empty `fix.check` and `fix.test` (search `.venv` with `mcp__mcp-tools-py__search_library_files`, scope `mcp_tools_py`). If not, write one line to `pr_info/.blocked.txt` naming what is missing, and stop.
+- Precondition: mcp-tools-py reads `pytest-timeout` from `[tool.mcp-tools-py]` (search `pytest-timeout` in scope `mcp_tools_py`). If not, write one line to `pr_info/.blocked.txt` and stop.
 
 ## ALGORITHM
 None.
 
 ## DATA
-Unchanged template signature (`{branch_name}`, `{log_level}`).
+See WHAT.
 
 ## Tests (write first)
-- The exact line is present in `IMPLEMENT_COMMAND_TEMPLATE`.
-- It comes before the line containing `mcp-coder --log-level {log_level} implement`.
-- That line contains no `$` and no backtick. Assert on that line only — the template already has `RC=$?` elsewhere.
-- `IMPLEMENT_COMMAND_TEMPLATE.format(branch_name="b", log_level="INFO")` still works (existing tests likely cover this).
+- `test_toolkit_config.py`:
+  - defaults equal the new table (the existing `== DEFAULT_BINDINGS` tests cover the constant; add one explicit assertion on the two implement entries).
+  - `implement_task = ["check@quick", "test@quick"]` and `implement_final = ["test@quick", "check@full"]` are accepted (the two parametrised rejection cases around lines 197–202 move to the accepted side).
+  - `implement_task = ["format@apply"]` and `implement_final = ["format@check"]` raise `ValueError` naming "check, test".
+  - `implement_task = []` is accepted (the documented opt-out).
+- `test_toolkit_permissions.py`: the "implement_task binds nothing" test now expects the `check@quick` permissions of the fixture toolkit (or override the binding to `[]` in the fixture and keep the assertion — pick whichever keeps the test's intent clearer).
+- `test_toolkit_runner.py` (~line 285): the empty `implement_task` run uses an explicit `implement_task = []` binding, or asserts the new default request.
+- `test_command_toolkit_binding.py::test_implement_final_runs_check_quick`: rename and update to the new requests; if the fixture's command toolkit declares no `test.quick`, assert `run_binding` returns an `error` result for it (the documented undeclared-depth behaviour).

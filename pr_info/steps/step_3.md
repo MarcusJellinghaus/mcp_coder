@@ -1,15 +1,15 @@
-# Step 3: Fix loop with a shared cap, and both callers on the new result type
+# Step 3: New fix loop in `check_loop.py` with a shared cap
 
-Replaces `check_and_fix_mypy`'s `bool` result and identical-output counter with a grouped, capped loop returning `CheckOutcome`. Both callers switch to it. Rescue commits come in step 4; in this step check-stage aborts fail directly.
+Adds the grouped, capped loop returning `CheckOutcome`, with its own unit tests. The old `check_and_fix_mypy` in `task_processing.py` and both callers stay unchanged in this step; step 4 switches the callers and deletes the old code.
 
 ## LLM prompt
 
-> Read `pr_info/steps/summary.md` and `pr_info/steps/step_3.md`. Implement step 3 only. Write the tests in `tests/workflows/implement/test_check_loop.py`, `test_check_loop_fix_turns.py`, `test_task_processing_checks.py` and `test_core_final_check.py` first, then create `check_loop.py`, move the fix-loop code there and update `task_processing.py`, `core.py` and `__init__.py`. Delete `tests/workflows/implement/test_task_processing_mypy.py` once its useful cases are covered in the new files. Keep every file under 750 lines. Run pylint, mypy and the fast pytest suite; all must pass. Format, then make one commit.
+> Read `pr_info/steps/summary.md` and `pr_info/steps/step_3.md`. Implement step 3 only. Write the tests in `tests/workflows/implement/test_check_loop.py` and `test_check_loop_fix_turns.py` first, then create `check_loop.py` and move `_build_fix_prompt` / `_CHECK_OUTPUT_HEADING` there. Do not change `process_single_task`, `core.py` or the old `check_and_fix_mypy` in `task_processing.py` beyond the import of `_build_fix_prompt`. Run pylint, mypy and the fast pytest suite; all must pass. Format, then make one commit.
 
 ## WHERE
 - Create `src/mcp_coder/workflows/implement/check_loop.py`.
-- Modify `task_processing.py`, `core.py`, `__init__.py` in `src/mcp_coder/workflows/implement/`.
-- Tests: create `test_check_loop.py`, `test_check_loop_fix_turns.py`, `test_task_processing_checks.py`, `test_core_final_check.py`; delete `test_task_processing_mypy.py`; update `test_task_processing.py`, `test_task_processing_branch_name.py`, `test_core.py`, `test_core_failure_categories.py`, `test_core_failure_routing.py`, `test_core_workflow.py` (all in `tests/workflows/implement/`).
+- Modify `src/mcp_coder/workflows/implement/task_processing.py` (import `_build_fix_prompt` from `.check_loop` only).
+- Tests: create `tests/workflows/implement/test_check_loop.py`, `tests/workflows/implement/test_check_loop_fix_turns.py`.
 
 ## WHAT
 
@@ -52,60 +52,29 @@ def _run_group(loaded: LoadedToolkit, project_dir: Path, requests: list[str]) ->
     fix_text-or-summary of results with findings, or None."""
 
 def _fix_turn(
-    prompt: str, project_dir: Path, provider: str, turn: int, step_num: int,
-    env_vars, mcp_config, settings_file, bash_grants: list[str],
+    fragment: str, fix_text: str, project_dir: Path, provider: str, turn: int,
+    step_num: int, env_vars, mcp_config, settings_file,
 ) -> CheckOutcome | None:
-    """One LLM fix turn. None when the turn went through; otherwise the outcome
-    that ends the loop."""
+    """One LLM fix turn: compute the grants and check instructions, build the
+    prompt, call the LLM. None when the turn went through; otherwise the
+    outcome that ends the loop. Never raises."""
 
 def _build_fix_prompt(fix_fragment: str, fix_text: str, check_instructions: str) -> str:
     """Moved unchanged from task_processing (heading "Check output:")."""
 ```
 
 ## HOW
-- Move `_build_fix_prompt` and `_CHECK_OUTPUT_HEADING` from `task_processing.py` to `check_loop.py`. Delete `_run_check`, `_fix_check_text` and the old `check_and_fix_mypy` from `task_processing.py`; remove now-unused imports there (`get_binding`, `load_toolkit`, `run_binding`, `toolkit_declares_bash_grants`, etc. — keep what `process_single_task` still uses).
+- Move `_build_fix_prompt` and `_CHECK_OUTPUT_HEADING` from `task_processing.py` to `check_loop.py`; `task_processing.py` imports `_build_fix_prompt` from `.check_loop` so its old `check_and_fix_mypy` keeps working until step 4. `check_loop.py` must not import `task_processing` (step 4 makes `task_processing` import `check_loop`).
 - `check_loop.py` imports: `load_toolkit`, `run_request`, `get_fragment`, `llm_permissions`, `bash_grants_of`, `LoadedToolkit` from `mcp_coder.utils.toolkit_runner`; `resolve_prompt_slots`, `toolkit_declares_bash_grants` from `mcp_coder.utils.prompt_slots`; `prompt_llm`, `LLMTimeoutError` from `mcp_coder.llm.interface`; `McpServersUnavailableError`; `llm_failure_reason`; `store_session`; `get_branch_name_for_logging`; `read_and_clear_blocked` from `.blocked`; `LLM_INACTIVITY_TIMEOUT_SECONDS` from `.constants`.
 - `get_fragment` already returns the raw fragment, or `""` when missing or when `prompt_fragments()` raises. A falsy fragment counts as missing.
-- Compute `bash_grants` and `check_instructions` once, lazily, before the first fix turn, exactly as the old code did.
-- `__init__.py` re-exports `check_and_fix_mypy` from `.check_loop`; also export `CheckOutcome`.
+- `bash_grants` and `check_instructions` are computed inside `_fix_turn`, under its catch-all (see rules): `bash_grants = bash_grants_of(llm_permissions(project_dir, provider))`; `check_instructions` is the filled `[check_instructions]` slot when `toolkit_declares_bash_grants(project_dir)`, else `""`. Recomputing them per turn is cheap and keeps every exception inside `_fix_turn`.
 - Session step name stays `f"step_{step_num}_mypy_{turn}"`.
 
 ### `_fix_turn` rules
-- `prompt_llm` raises `LLMTimeoutError` / `McpServersUnavailableError` → `blocked = read_and_clear_blocked(...)`; return `CheckOutcome(llm_failure_reason(e) or "timeout", blocked or "")`.
-- Any other exception, or an empty / whitespace response → `read_and_clear_blocked`; if it returned a reason, return `blocked` with it, else return `CheckOutcome("cap", "Fix turn failed: <short reason>")`.
+One `try` covers the grant / instruction computation, `_build_fix_prompt` and `prompt_llm`:
+- `LLMTimeoutError` / `McpServersUnavailableError` → `blocked = read_and_clear_blocked(...)`; return `CheckOutcome(llm_failure_reason(e) or "timeout", blocked or "")`.
+- Any other exception (including from `llm_permissions`, `toolkit_declares_bash_grants` or `resolve_prompt_slots`), or an empty / whitespace response → `read_and_clear_blocked`; if it returned a reason, return `blocked` with it, else return `CheckOutcome("cap", "Fix turn failed: <short reason>")`. Use `# pylint: disable=broad-exception-caught`.
 - Success: store the session (failures logged, as today), then `blocked = read_and_clear_blocked(...)`; return `CheckOutcome("blocked", blocked)` if set, else `None`.
-
-### `process_single_task` (replace Step 7)
-Remove the `if not check_type_hints` / `get_binding` block. Then:
-```python
-try:
-    checks = check_and_fix_mypy(project_dir, step_num, provider, env_vars, mcp_config,
-                                settings_file, entry="implement_task",
-                                check_type_hints=check_type_hints)
-finally:
-    marker = read_and_clear_blocked(project_dir)   # safety net
-if checks.status in ("clean", "cap") and marker:
-    checks = CheckOutcome("blocked", marker)
-if checks.status == "cap":
-    logger.warning("Per-task checks still report findings - committing and continuing")
-elif checks.status != "clean":
-    return TaskOutcome(False, checks.status, checks.detail)
-```
-`error` maps to the existing `"error"` reason (core routes it to `general` with `outcome.detail`); `blocked`, `timeout`, `mcp_unavailable` are existing reasons. Update the docstring's reason list.
-
-### `core.py` final check (Step 5 block)
-- Remove the `get_binding` try block and `final_binding`; the gate becomes `if progress.completed > 0:` (step 5 removes that too). Drop the `get_binding` import.
-- Call `check_and_fix_mypy(..., entry="implement_final", check_type_hints=implement_config.check_type_hints)` inside the existing `try/finally: read_and_clear_blocked`, capturing the marker; promote `clean` + marker to `blocked`.
-- Map a non-clean outcome to `fail` with stage `"Final mypy check"`:
-
-| status | reason | message |
-|---|---|---|
-| `cap` | `checks_exhausted` | `f"Checks still report findings after {MAX_FIX_TURNS} fix turns"` + `: detail` if any |
-| `error` | `general` | `detail` |
-| `blocked` | `blocked` | `detail` (log at ERROR like the task path) |
-| `timeout` / `mcp_unavailable` | same | `append_detail("LLM failure during final mypy check", detail)` |
-
-- Delete the inner `try/except (LLMTimeoutError, McpServersUnavailableError)` and the "continuing anyway" warning. Formatting, commit and push of a clean run stay as they are.
 
 ## ALGORITHM (`check_and_fix_mypy`)
 ```
@@ -119,12 +88,13 @@ loop:
     if text is None: return clean
     fragment = get_fragment(loaded, key)
     if turn == MAX_FIX_TURNS or not fragment: return CheckOutcome("cap", <key and turn count>)
-    turn += 1; ended = _fix_turn(_build_fix_prompt(fragment, text, instr), ...); if ended: return ended
+    turn += 1
+    ended = _fix_turn(fragment, text, dir, provider, turn, ...)   # never raises
+    if ended: return ended
 ```
 
 ## DATA
 - `CheckOutcome(status, detail)` as above.
-- `TaskOutcome` unchanged in this step.
 
 ## Tests (write first)
 
@@ -139,31 +109,18 @@ loop:
 - `error` result → `error`, no fix turn, detail contains the request and summary.
 - `load_toolkit` raising `ValueError` on the first pass, and on a re-run after a fix turn → `error` with the config message.
 - missing fragment, empty fragment (`""`) and `get_fragment` returning `""` because `prompt_fragments()` raised → `cap` with 0 fix turns.
+- `_fix_turn` returning `cap` / `blocked` / `timeout` ends the loop with that outcome.
 - `check_type_hints=False` with `implement_final = ("check@standard", "test@quick")` → only `test@quick` runs; the dropped requests are logged.
 - `check_type_hints=False` with only check requests → logs "skipped", returns `clean`.
 - `load_toolkit` is called once per pass.
 
-`test_check_loop_fix_turns.py` — test `_fix_turn` with `prompt_llm`, `store_session`, `read_and_clear_blocked` patched:
+`test_check_loop_fix_turns.py` — test `_fix_turn` with `prompt_llm`, `store_session`, `read_and_clear_blocked`, `llm_permissions`, `toolkit_declares_bash_grants` and `resolve_prompt_slots` patched in `check_loop`:
 - success, no marker → `None`.
 - success with a marker → `blocked` with the reason.
-- empty response → `cap`; untyped exception → `cap`.
+- empty response → `cap`; untyped exception from `prompt_llm` → `cap`.
+- `llm_permissions`, `toolkit_declares_bash_grants` or `resolve_prompt_slots` raising → `cap`, `prompt_llm` not called, nothing raised (parametrised).
 - `LLMTimeoutError` → `timeout`; `McpServersUnavailableError` → `mcp_unavailable`; with a marker present the status is kept and `detail` is the marker text.
-- branch name forwarding (move the useful case from `test_task_processing_branch_name.py`; that file then tests the new module or is reduced accordingly).
+- bash grants and filled `check_instructions` reach `prompt_llm` / the prompt when the toolkit declares Bash grants.
+- branch name is forwarded to `prompt_llm` and `store_session`.
 
-`test_task_processing_checks.py` — `process_single_task` with `check_and_fix_mypy` patched:
-- `clean` and `cap` → commit, push, `completed`.
-- `error` → `TaskOutcome(False, "error", detail)`; no commit.
-- `blocked` → `blocked` outcome; no commit.
-- `timeout` / `mcp_unavailable` → same reason, detail kept; no commit.
-- a marker found in the `finally` after a `clean` result → `blocked`.
-- `check_type_hints` is forwarded and `entry="implement_task"`.
-Move the four check-gate tests out of `test_task_processing.py` (the `check_type_hints` / binding-empty / binding-error tests around lines 431–620) — they test removed behaviour; delete them. Update `TestIntegration` to patch `check_and_fix_mypy` with `return_value=CheckOutcome("clean")` and assert the new call (`check_type_hints=True`, no `get_binding` patch).
-
-`test_core_final_check.py` — `run_implement_workflow` with one completed task and `check_and_fix_mypy` patched:
-- `cap` → `_fail` reason `checks_exhausted`, stage "Final mypy check".
-- `error` → `general` with the detail as message.
-- `blocked` → `blocked`; a marker read in the `finally` after `clean` → `blocked`.
-- `timeout` / `mcp_unavailable` → their reasons, message includes the appended marker text.
-- `check_type_hints` from `ImplementConfig` is forwarded.
-
-Existing core tests: replace `return_value=True` with `return_value=CheckOutcome("clean")`; tests that set `side_effect=LLMTimeoutError(...)` become `return_value=CheckOutcome("timeout")`; tests asserting the final check is skipped when `check_type_hints=False` now assert it is called with `check_type_hints=False`.
+These tests call `check_loop` directly, so step 4's conftest fixture (which patches `task_processing.check_and_fix_mypy`) does not affect them.

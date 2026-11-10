@@ -1,6 +1,6 @@
 # Step 2: Add the `checks_exhausted` failure reason
 
-`implement_final` will fail with this reason when the fix loop reaches its cap (step 3). It reuses the existing `implementing_failed` label; no new GitHub label.
+`implement_final` will fail with this reason when the fix loop reaches its cap (step 4). It reuses the existing `implementing_failed` label; no new GitHub label.
 
 ## LLM prompt
 

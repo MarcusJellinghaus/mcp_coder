@@ -27,7 +27,8 @@ Part of epic #1192. #1195–#1197 rewired the checks to the toolkit with unchang
    - Requests run one by one through `run_request` (not `run_binding`), grouped by action. `load_toolkit` is called once per pass; the binding and fragments come from that same load. Raw fragments come from `get_fragment` (already returns `""` for missing / raising).
    - Private `_CheckAbort` exception: raised for a config `ValueError` or an `error` result, caught once in the loop → `CheckOutcome("error", detail)`.
    - `rescue_commit(project_dir, reason) -> str`: clears the blocked marker and stale commit-message file, formats (failures logged), commits via `commit_all_changes` with `wip(implement): checks failed (<reason>)`, pushes, and returns a one-line outcome (pushed with sha / push failed / nothing to commit / commit failed). Never raises.
-   - The old `_run_check`, `_fix_check_text` and the identical-output counter are deleted.
+   - `_fix_turn` computes the Bash grants and check instructions inside its own catch-all, so no exception escapes the loop; any untyped failure there counts as the cap.
+   - The old `_run_check`, `_fix_check_text` and the identical-output counter are deleted (step 4, once both callers use the new loop).
 2. **New module `workflows/implement/blocked.py`** holds `read_and_clear_blocked` and its constants (moved out of `task_processing.py`) so `check_loop.py` can use it without a circular import.
 3. **One rescue call site, in `core.py`.** `process_single_task` does not commit on a check abort; it returns its usual reason with `TaskOutcome.checks_failed=True`. `core.py` routes such outcomes, and every final-check abort, through a nested `abort_checks(reason, *, stage, message)` that calls `rescue_commit` and appends `— rescue commit: <outcome>` to the failure message before calling `fail`. Exits from the main implementation LLM call never set the flag, so they still commit nothing.
 4. **`check_type_hints` gates removed** from `process_single_task` and `core.py`; the filter lives in the loop. The `get_binding` log-and-skip blocks at both call sites are gone (config errors now abort).
@@ -57,7 +58,7 @@ Part of epic #1192. #1195–#1197 rewired the checks to the toolkit with unchang
 - `src/mcp_coder/utils/toolkit_runner.py`
 - `src/mcp_coder/cli/commands/coordinator/command_templates.py`
 - `pyproject.toml`
-- `tests/workflows/implement/test_task_processing.py`, `test_task_processing_branch_name.py`, `test_task_processing_blocked.py`, `test_core.py`, `test_core_failure_categories.py`, `test_core_failure_routing.py`, `test_core_workflow.py`, `test_failure_reporting.py`
+- `tests/workflows/implement/conftest.py`, `test_task_processing.py`, `test_task_processing_bash_grants.py`, `test_task_processing_branch_name.py`, `test_task_processing_blocked.py`, `test_core.py`, `test_core_failure_categories.py`, `test_core_failure_routing.py`, `test_core_workflow.py`, `test_failure_reporting.py`
 - `tests/utils/test_toolkit_config.py`, `tests/utils/test_toolkit_permissions.py`, `tests/utils/test_toolkit_runner.py`, `tests/workflows/rebase/test_command_toolkit_binding.py`
 - `tests/cli/commands/coordinator/test_command_templates.py`
 - `docs/repository-setup/python.md`, `docs/processes-prompts/processes/05-implementation.md`, `docs/architecture/architecture.md`, `docs/repository-setup/quality-and-security-checks.md`
@@ -75,9 +76,10 @@ Part of epic #1192. #1195–#1197 rewired the checks to the toolkit with unchang
 
 1. Move `read_and_clear_blocked` to `blocked.py` (pure refactor).
 2. Add the `checks_exhausted` failure reason.
-3. New fix loop (`check_loop.py`, `CheckOutcome`) and both callers on the new result type.
-4. Rescue commit and the abort rule.
-5. Final check runs on a re-run with all tasks ticked.
-6. New default bindings, binding validation, `pytest-timeout = 1800`.
-7. Linux implement template exports `VIRTUAL_ENV`.
-8. Migration note and doc updates.
+3. New fix loop (`check_loop.py`, `CheckOutcome`) with its own unit tests; old loop and callers untouched.
+4. Both callers on the new loop; old loop and `test_task_processing_mypy.py` deleted; conftest fixture stubs the per-task check.
+5. Rescue commit and the abort rule.
+6. Final check runs on a re-run with all tasks ticked.
+7. New default bindings, binding validation, `pytest-timeout = 1800`.
+8. Linux implement template exports `VIRTUAL_ENV`.
+9. Migration note and doc updates.
