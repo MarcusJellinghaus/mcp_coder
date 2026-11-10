@@ -10,7 +10,7 @@ Every abort from the check stage (per task and final) formats, commits with a fi
 - `src/mcp_coder/workflows/implement/check_loop.py` (add `rescue_commit`)
 - `src/mcp_coder/workflows/implement/task_processing.py` (`TaskOutcome.checks_failed`, set on check aborts)
 - `src/mcp_coder/workflows/implement/core.py` (`abort_checks`)
-- Tests: create `tests/workflows/implement/test_check_loop_rescue.py`, `tests/workflows/implement/test_core_check_abort.py`; extend `test_task_processing_checks.py`; adjust `test_core_final_check.py` (patch `rescue_commit`).
+- Tests: create `tests/workflows/implement/test_check_loop_rescue.py`, `tests/workflows/implement/test_core_check_abort.py`; extend `test_task_processing_checks.py`; adjust `test_core_final_check.py`, `test_core_failure_categories.py` and any other core test that reaches a check-stage abort (patch `rescue_commit`).
 
 ## WHAT
 ```python
@@ -88,3 +88,5 @@ except Exception as e: log; return f"commit failed: {e}"
 - final check `error` → `general`; `blocked` → `blocked`; `timeout` → `timeout`, each after a rescue.
 - `rescue_commit` returning "commit failed: x" still fails with the original reason.
 - final check `ValueError` from the config (outcome `error` with the config message) → `general` with that message.
+
+Existing core tests: `rescue_commit` lives in `check_loop`, so patches of `core.run_formatters` / `core.push_changes` don't stop it from running real formatters and git calls on `/test/project`. Patch `mcp_coder.workflows.implement.core.rescue_commit` (e.g. `return_value="pushed abc1234"`) in every existing core test where the final check ends non-clean or a task outcome has `checks_failed=True`. This includes the final-check `timeout` / `mcp_unavailable` tests in `test_core_failure_categories.py` (~lines 71 and 137, converted to `CheckOutcome` in step 4) and the `test_core_final_check.py` tests from step 4. Assertions on the exact failure message must allow the new `— rescue commit: …` suffix (use `startswith` / `in`, or include the suffix). Keep `test_core_workflow.py` under 750 lines.
