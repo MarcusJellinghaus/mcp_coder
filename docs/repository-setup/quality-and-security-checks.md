@@ -47,7 +47,7 @@ or redundant with earlier gates. Every check runs at least once before merge (#1
 
 | Job | Feature push | PR | Main push / dispatch | Why |
 |---|---|---|---|---|
-| ruff-format, ruff, mypy, file-size, no-url-deps, forbidden-calls, vulture, import-linter | ✅ | — | ✅ | First-line: no automated gate before CI (mypy, ruff-format also run in `implement`); the push run covers the PR |
+| ruff-format, ruff, mypy, file-size, no-url-deps, forbidden-calls, vulture, import-linter | ✅ | — | ✅ | First-line: no automated gate before CI (`implement` runs the `implement_task` / `implement_final` bindings — mypy per task; mypy, pylint and fast pytest at the end, as a gate — and ruff-format on commit); the push run covers the PR |
 | unit-tests, integration-tests | ✅ | ✅ | ✅ | Every event: `coverage` needs them in the PR run; integration markers are excluded locally |
 | pylint | — | ✅ | ✅ | Backup: ruff is the main linter (#1163); pylint also runs locally per task and in `mcp-coder rebase` |
 | tach, deptry | — | ✅ | ✅ | Backup: rarely triggered |

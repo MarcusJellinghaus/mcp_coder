@@ -19,7 +19,7 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.mcp-tools-py] formatter` | mcp-tools-py (`run_format_code` MCP tool and mcp-coder's formatting) | Selects the formatter: `"black"` (isort + black) or `"ruff"` (ruff imports + ruff format). Optional while table detection is unambiguous |
 | `[tool.ruff.format]` | `mcp__mcp-tools-py__run_format_code` | ruff format config; selects ruff when `formatter` is unset and `[tool.black]` is absent |
 | `[tool.mcp-coder] format_code` | mcp-coder (`run_formatters`, `verify`) | Bool, default `true`. Set `false` to opt out of formatting in `implement`, `rebase`, `review`, `fix-ci` and `check_branch_status --fix` |
-| `[tool.mcp-coder.implement] check_type_hints` | mcp-coder (`implement`, `verify`) | Bool, default `true`. After the last task, runs mypy and has the LLM fix what it reports; unresolved issues are logged and the run continues. Set `false` for a repository without mypy |
+| `[tool.mcp-coder.implement] check_type_hints` | mcp-coder (`implement`, `verify`) | Bool, default `true`. `false` drops the `check@*` requests from the `implement_task` and `implement_final` bindings; the remaining requests (e.g. `test@quick`) still run. Set `false` for a repository without mypy. See the [migration note](../migration/multi-language.md#implement-checks-are-a-gate-1389) |
 | `[tool.pytest.ini_options]` | `mcp__mcp-tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
 | `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__mcp-tools-py__run_pylint_check`, pylint CLI | Pylint config |

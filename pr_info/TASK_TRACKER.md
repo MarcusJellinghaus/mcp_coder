@@ -62,9 +62,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 9: Migration note and doc updates — [step_9.md](./steps/step_9.md)
-- [ ] Implementation: create `docs/migration/multi-language.md`, update `python.md`, `05-implementation.md`, `architecture.md`, `quality-and-security-checks.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `docs/migration/multi-language.md`, update `python.md`, `05-implementation.md`, `architecture.md`, `quality-and-security-checks.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review the full branch diff against the base branch and address findings
