@@ -28,7 +28,7 @@ Add your GitHub token to the config file:
 token = "ghp_your_github_token_here"
 ```
 
-The token needs `repo` scope permissions to create and manage labels.
+For the permissions the token needs, see [GitHub Token Configuration](../repository-setup/github.md#github-token-configuration).
 
 ## Label Configuration
 

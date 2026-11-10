@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Token permissions in `github.md`, links from the other docs
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: edit `github.md` (A, C, D, E), `label-setup.md` (F), `config.md` (G, H)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: edit `github.md` (A, C, D, E), `label-setup.md` (F), `config.md` (G, H)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

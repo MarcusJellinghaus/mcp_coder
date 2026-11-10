@@ -25,15 +25,28 @@ token = "ghp_your_github_token_here"
 **Token options** (either one works):
 
 1. **Fine-grained PAT** (least privilege). Grant repository access to the target repos
-   with these read permissions. The list names the permissions behind its own rows of
-   `mcp-coder verify`; it is not every permission `verify` probes:
-   - `Contents: Read`
-   - `Administration: Read` (branch protection)
-   - `Pull requests: Read`
-   - `Issues: Read`
-   - `Actions: Read`
-   - `Commit statuses: Read`
-   - `Code scanning alerts: Read`
+   with these permissions:
+
+   | Permission | Level | Needed by |
+   |---|---|---|
+   | Actions | Read | Workflow runs, jobs and logs: `workflow_steps/ci.py`, `workflow_steps/merge.py`, `check_branch_status`, vscodeclaude (`workflows/vscodeclaude/checks.py`, `get_latest_ci_status`) |
+   | Administration | Read (optional) | `verify` only: branch protection, Dependabot / secret-scanning rows; auto-delete branches unconfirmed (`verify` reads `delete_branch_on_merge` from the plain repo GET; whether it needs Administration is untested) |
+   | Code scanning alerts | Read | `check_branch_status`, vscodeclaude (`workflows/vscodeclaude/checks.py`), auto-merge (`merge.py`), `/pr_comment_triage` |
+   | Commit statuses | Read | Listing non-green checks when a PR is `mergeable_state=unstable` (mcp-workspace `get_non_green_checks`, via `check_branch_status`) |
+   | Contents | Read and write | Write: issue branch creation via GraphQL `createLinkedBranch` (`gh-tool checkout-issue-branch`, `create_plan/prerequisites.py`) and auto-merge (`merge.py` → PUT `/pulls/{n}/merge`) |
+   | Issues | Read and write | Labels create/update/delete (`define-labels`), `define-labels` initialising `status-01` on existing issues, label transitions (`set-status`, coordinator, `label_transitions.py`), the vscodeclaude `status-91` escalation, comments (`failure_handling.py`, `review/handoff.py`), mcp-workspace `github_issue_create` / `_edit` / `_comment` / `github_subissue_*`; linking the branch in `createLinkedBranch` |
+   | Metadata | Read | Always on |
+   | Pull requests | Read and write | `create-pr` (`workflows/create_pr/core.py`, incl. best-effort PR assignee when `auto_review_implementation` is on), PR description edit (`pr_description.py`), `/pr_comment_triage` (`github_review_comment_reply`, `github_review_thread_resolve`) |
+   | Workflows | Read and write (conditional) | Only if auto-merge may merge PRs that touch `.github/workflows/` (e.g. `define-labels --generate-github-actions` output, Dependabot `github-actions` bumps): GitHub rejects such an API merge without it |
+
+   Unconfirmed, worth testing with a least-privilege token:
+   - the `createLinkedBranch` mapping (Contents + Issues write) is inferred;
+   - the Workflows-write requirement for API merges of workflow-touching PRs;
+   - whether the merge PUT needs Contents write;
+   - the auto-delete-branches mapping (Administration vs. plain repo GET).
+
+   `verify` does not test write access, so a token can pass `verify` and still fail on
+   writes.
 
    `verify` reads branch protection from both classic protection and rulesets.
    Classic protection needs `Administration: Read`; without it, the protection rows
@@ -48,16 +61,44 @@ token = "ghp_your_github_token_here"
    Effective rules do not expose bypass actors, so "protected" does not mean "nobody
    can bypass".
 
-   **Code scanning alerts** — `Code scanning alerts: Read` (`security_events` read) is
-   needed by `check_branch_status`, the coordinator and auto-merge. Without it, the
-   coordinator silently does nothing about alerts and auto-merge merges with only a
-   warning.
+   **Code scanning alerts** — without `Code scanning alerts: Read`, vscodeclaude
+   silently does nothing about alerts, auto-merge merges with only a warning, and
+   `check_branch_status` reports the alerts as not checked.
 
 2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public
    repositories only). Classic scopes grant permissions in bundles, so a `repo`-scope
    token satisfies the other permission-list checks above.
    - For code-scanning alerts, add `security_events` alongside `repo`, and confirm with
      the Code scanning alerts row of `mcp-coder verify`.
+   - If auto-merge may merge PRs that touch `.github/workflows/`, add the `workflow`
+     scope (`repo` doesn't include it). Unconfirmed.
+
+**Check runs limitation:** whether fine-grained PATs can be granted a Checks permission
+is unconfirmed. `check_branch_status` lists non-green checks only when CI passed (or is
+not configured) and GitHub reports the PR as `mergeable_state=unstable`. It reads commit
+statuses and check runs together, so if the check-run call fails (403 on a private repo)
+neither is listed and `check_branch_status` shows `could not list checks: …`.
+
+**Required in the future:** not needed by mcp-coder today, or needed only in specific
+setups. These are recommended for full visibility of repo problems, and are candidates
+if mcp-coder starts surfacing them.
+
+Read:
+
+| Permission | Why |
+|---|---|
+| Dependabot alerts | Vulnerable-dependency alerts (repos with `dependabot.yml`) |
+| Discussions | GitHub Discussions, if the repo uses them |
+| Repository security advisories | Private vulnerability reports (the `SECURITY.md` channel) |
+| Secret scanning alerts | Leaked-credential alerts |
+
+Write:
+
+| Permission | Why |
+|---|---|
+| Discussions | Posting in GitHub Discussions |
+| Repository security advisories | Triage and publish vulnerability reports outside the web UI |
+| Workflows | Also needed if the same token is the git push credential (local or Jenkins `github_credentials_id`): pushes changing `.github/workflows/` need it |
 
 **How to create:** go to GitHub → Settings → Developer settings → Personal access
 tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
