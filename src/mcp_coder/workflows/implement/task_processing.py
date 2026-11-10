@@ -369,7 +369,8 @@ def process_task_with_retry(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        check_type_hints: If True, run mypy type checking after implementation
+        check_type_hints: If False, the implement_task binding's check@*
+            requests are dropped; its other requests still run
 
     Returns:
         TaskOutcome whose reason may be:
