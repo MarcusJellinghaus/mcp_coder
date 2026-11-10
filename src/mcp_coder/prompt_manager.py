@@ -82,6 +82,7 @@ from .prompt_parsing import (
     _find_duplicates,
 )
 from .prompt_sources import _is_file_path, _load_content
+from .utils.prompt_slots import fill_prompt
 
 
 def get_prompt(source: str, header: str) -> str:
@@ -218,10 +219,7 @@ def get_prompt_with_substitutions(
             }
         )
     """
-    prompt = get_prompt(source, header)
-    for key, value in substitutions.items():
-        prompt = prompt.replace(f"[{key}]", value)
-    return prompt
+    return fill_prompt(get_prompt(source, header), substitutions, {})
 
 
 def validate_prompt_markdown(source: str) -> dict[str, Any]:

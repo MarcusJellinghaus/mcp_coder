@@ -33,9 +33,10 @@ def _resolve_rebase_settings(
     """Resolve an explicit ``--settings`` path for the rebase LLM session.
 
     When ``--settings`` is provided explicitly, delegate to the standard
-    resolver. Otherwise return None so ``rebase_settings_file`` materializes the
-    least-privilege ``REBASE_LLM_PERMISSIONS``, bypassing the broad
-    ``settings.local.json`` auto-detect.
+    resolver; it replaces the generated settings entirely. Otherwise return
+    None so ``rebase_settings_file`` materializes the least-privilege
+    ``rebase_settings``, bypassing the broad ``settings.local.json``
+    auto-detect.
 
     Args:
         settings_arg: Explicit ``--settings`` path, or None.
@@ -85,7 +86,9 @@ def execute_rebase(args: argparse.Namespace) -> int:
         # Import here to avoid circular dependency during module load
         from ...workflows.rebase import run_rebase_workflow
 
-        with rebase_settings_file(explicit_settings) as settings_file:
+        with rebase_settings_file(
+            project_dir, "rebase", explicit_settings
+        ) as settings_file:
             return run_rebase_workflow(
                 project_dir,
                 provider,

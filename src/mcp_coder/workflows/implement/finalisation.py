@@ -12,8 +12,9 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
-from mcp_coder.prompt_manager import get_prompt_with_substitutions
+from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
@@ -67,17 +68,18 @@ def run_finalisation(
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
 
-    finalisation_prompt = get_prompt_with_substitutions(
-        str(PROMPTS_FILE_PATH),
-        "Finalisation Prompt",
+    bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+    template = get_prompt(str(PROMPTS_FILE_PATH), "Finalisation Prompt")
+    finalisation_prompt = fill_prompt(
+        template,
         {
             "pr_info_dir": PR_INFO_DIR,
             # COMMIT_MESSAGE_FILE already carries the pr_info/ prefix.
             "commit_message_path": COMMIT_MESSAGE_FILE,
         },
+        resolve_prompt_slots(template, project_dir, provider, bash_grants),
     )
 
-    bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
     try:
         llm_response = prompt_llm(
             finalisation_prompt,

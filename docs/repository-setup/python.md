@@ -53,6 +53,8 @@ claude-system-prompt-mode = "append"                   # "append" (default) or "
 
 **Path resolution:** Paths are resolved relative to the project root directory. Absolute paths are also supported. When the section is absent or a field is omitted, shipped defaults from the `mcp_coder` package are used.
 
+**Toolkit slots:** Custom system and project prompts may contain `[language_context]` and `[check_instructions]`, each on a line of its own. The configured toolkit fills them: an empty fragment removes the line, a missing one gives a neutral default. A file without these placeholders is sent unchanged.
+
 **When prompts are injected:**
 
 | Context | Behavior |

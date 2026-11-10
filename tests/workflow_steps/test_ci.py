@@ -621,10 +621,12 @@ class TestDefaultPromptHeaders:
     @patch("mcp_coder.workflow_steps.ci.run_formatters", return_value=True)
     @patch("mcp_coder.workflow_steps.ci.store_session")
     @patch("mcp_coder.workflow_steps.ci.prompt_llm")
-    @patch("mcp_coder.workflow_steps.ci.get_prompt_with_substitutions")
+    @patch("mcp_coder.workflow_steps.ci.resolve_prompt_slots", return_value={})
+    @patch("mcp_coder.workflow_steps.ci.get_prompt")
     def test_fix_uses_default_header(
         self,
         mock_get_prompt: MagicMock,
+        _mock_slots: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_store: MagicMock,
         _mock_format: MagicMock,
@@ -717,10 +719,7 @@ class TestRunCiFixAbsorbsLlmFailures:
     """_run_ci_fix absorbs the two typed LLM failures into one failed attempt."""
 
     @patch("mcp_coder.workflow_steps.ci.prompt_llm")
-    @patch(
-        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
-        return_value="fix prompt",
-    )
+    @patch("mcp_coder.workflow_steps.ci.get_prompt", return_value="fix prompt")
     def test_llm_timeout_absorbed_as_false(
         self, _mock_prompt: MagicMock, mock_prompt_llm: MagicMock
     ) -> None:
@@ -731,10 +730,7 @@ class TestRunCiFixAbsorbsLlmFailures:
         assert result is False
 
     @patch("mcp_coder.workflow_steps.ci.prompt_llm")
-    @patch(
-        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
-        return_value="fix prompt",
-    )
+    @patch("mcp_coder.workflow_steps.ci.get_prompt", return_value="fix prompt")
     def test_mcp_unavailable_absorbed_as_false(
         self, _mock_prompt: MagicMock, mock_prompt_llm: MagicMock
     ) -> None:

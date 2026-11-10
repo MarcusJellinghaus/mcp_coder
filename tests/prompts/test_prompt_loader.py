@@ -533,13 +533,18 @@ def test_tracker_repair_prompt_has_no_header_lines(prompt_name: str) -> None:
     "prompt_name",
     [
         "Task Tracker Update Prompt",
-        "Mypy Fix Prompt",
         "Implementation Plan Creation",
     ],
 )
 def test_existing_prompt_lookups_still_work(prompt_name: str) -> None:
     """Adding prompt sections does not break existing lookups."""
     assert len(get_prompt(str(PROMPTS_FILE_PATH), prompt_name).strip()) > 0
+
+
+def test_mypy_fix_prompt_removed() -> None:
+    """The implement fix loop uses the toolkit's fix.check fragment instead."""
+    with pytest.raises(ValueError, match="not found"):
+        get_prompt(str(PROMPTS_FILE_PATH), "Mypy Fix Prompt")
 
 
 def test_plan_creation_forbids_editing_task_tracker() -> None:

@@ -86,7 +86,9 @@ def rebase_with_llm_fallback(
 
     logger.info("Git-only rebase ended with %s - trying the LLM rebase", outcome.reason)
     try:
-        with rebase_settings_file(settings_override) as settings:
+        with rebase_settings_file(
+            project_dir, "rebase_automated", settings_override
+        ) as settings:
             result = run_rebase_workflow(
                 project_dir,
                 provider,

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from mcp_coder.cli.commands.rebase import _resolve_rebase_settings, execute_rebase
 from mcp_coder.cli.main import create_parser
 from mcp_coder.workflows.rebase import RebaseRunResult
-from mcp_coder.workflows.rebase_permissions import REBASE_LLM_PERMISSIONS
+from mcp_coder.workflows.rebase_permissions import rebase_settings
 
 
 class TestRebaseParser:
@@ -58,6 +58,10 @@ class TestExecuteRebase:
         return args
 
     @patch(
+        "mcp_coder.workflows.rebase_permissions.llm_permissions",
+        return_value=["mcp__mcp-tools-py__run_pylint_check"],
+    )
+    @patch(
         "mcp_coder.workflows.rebase.run_rebase_workflow",
         return_value=RebaseRunResult(2, "force-push rejected", push_rejected=True),
     )
@@ -74,6 +78,7 @@ class TestExecuteRebase:
         mock_parse_llm: MagicMock,
         mock_mcp: MagicMock,
         mock_workflow: MagicMock,
+        mock_perms: MagicMock,
     ) -> None:
         """Without --settings the workflow gets a temp file removed afterwards."""
         project_dir = Path("/test/project")
@@ -99,7 +104,8 @@ class TestExecuteRebase:
         mock_workflow.assert_called_once()
         call_args = mock_workflow.call_args.args
         assert call_args[:4] == (project_dir, "claude", "main", None)
-        assert seen["contents"] == REBASE_LLM_PERMISSIONS
+        mock_perms.assert_called_once_with(project_dir, "claude", "rebase")
+        assert seen["contents"] == rebase_settings(project_dir, "rebase")
         settings_path = seen["path"]
         assert isinstance(settings_path, Path)
         assert not settings_path.exists()

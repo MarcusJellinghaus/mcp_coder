@@ -18,7 +18,7 @@ In the future, these files will also be used by iCoder.
 
 > **Customize:** Tool list, project conventions, and allowed bash commands.
 
-This file contains mandatory instructions that Claude reads at the start of every session. Use it for code quality requirements, project conventions and mandatory tool use (for example the MCP tools `run_pylint_check`, `run_pytest_check`, `run_mypy_check`). `implement` assumes Claude can read files and run pylint, pytest and mypy, preferably through these MCP tools.
+This file contains mandatory instructions that Claude reads at the start of every session. Use it for code quality requirements, project conventions and mandatory tool use (for example the MCP tools `run_pylint_check`, `run_pytest_check`, `run_mypy_check`). `implement` assumes Claude can read files and run the checks of the configured toolkit (for Python projects, the `mcp-tools-py` MCP tools).
 
 Example: mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md).
 

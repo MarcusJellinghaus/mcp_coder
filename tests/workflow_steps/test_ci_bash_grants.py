@@ -15,8 +15,12 @@ class TestBashGrants:
     @patch("mcp_coder.workflow_steps.ci.store_session")
     @patch("mcp_coder.workflow_steps.ci.prompt_llm")
     @patch(
-        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
-        return_value="fix prompt",
+        "mcp_coder.workflow_steps.ci.resolve_prompt_slots",
+        return_value={"check_instructions": "Run npm test."},
+    )
+    @patch(
+        "mcp_coder.workflow_steps.ci.get_prompt",
+        return_value="Problem: [problem_description]\n\n[check_instructions]\n",
     )
     @patch(
         "mcp_coder.workflow_steps.ci.llm_permissions",
@@ -26,20 +30,27 @@ class TestBashGrants:
         self,
         mock_perms: MagicMock,
         _mock_get_prompt: MagicMock,
+        mock_slots: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_store: MagicMock,
         _mock_format: MagicMock,
         _mock_commit: MagicMock,
         _mock_push: MagicMock,
     ) -> None:
-        """The fix session gets only the Bash entries."""
+        """The fix session gets only the Bash entries; slots see the same grants."""
         mock_prompt_llm.return_value = {"text": "fix response"}
         config = _make_config()
 
-        _run_ci_fix(config, "problem", fix_attempt=0)
+        _run_ci_fix(config, "the problem", fix_attempt=0)
 
         mock_perms.assert_called_once_with(config.project_dir, config.provider)
-        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm test)"]
+        grants = mock_prompt_llm.call_args.kwargs["bash_grants"]
+        assert grants == ["Bash(npm test)"]
+        assert mock_slots.call_args.args[3] == grants
+        prompt = mock_prompt_llm.call_args.args[0]
+        assert "Problem: the problem" in prompt
+        assert "Run npm test." in prompt
+        assert "[check_instructions]" not in prompt
 
     @patch("mcp_coder.workflow_steps.ci.store_session")
     @patch("mcp_coder.workflow_steps.ci.prompt_llm")

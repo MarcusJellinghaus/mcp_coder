@@ -238,15 +238,15 @@ class TestBuildRegressionFixPrompt:
     def test_filter_text_replaces_placeholder(self) -> None:
         """The filter text takes the placeholder's place."""
         prompt = _build_regression_fix_prompt(
-            {"regression_output": self._KEY, "pytest_marker_filter": "FILTER"}
+            {"regression_output": self._KEY, "test_filter": "FILTER"}
         )
-        assert "[pytest_marker_filter]" not in prompt
+        assert "[test_filter]" not in prompt
         assert "FILTER" in prompt
 
     def test_missing_names_remove_placeholders(self) -> None:
         """Placeholders without a replacement render as empty text."""
         prompt = _build_regression_fix_prompt({"regression_output": self._KEY})
-        for name in ("check_tools", "pytest_marker_filter", "fix_text", "shell_ban"):
+        for name in ("check_tools", "test_filter", "fix_text", "shell_ban"):
             assert f"[{name}]" not in prompt
         assert "markers=" not in prompt
 

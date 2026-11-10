@@ -21,14 +21,14 @@ from mcp_coder.utils.toolkit_runner import (
 
 _REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
 _REGRESSION_PLACEHOLDERS = re.compile(
-    r"\[(check_tools|pytest_marker_filter|regression_output|fix_text|shell_ban)\]"
+    r"\[(check_tools|test_filter|regression_output|fix_text|shell_ban)\]"
 )
 
 
 def _marker_filter_text(
     project_dir: Path, automated: bool, permissions: Sequence[str]
 ) -> str:
-    """Return the toolkit's unattended test-filter instruction for the fix prompt.
+    """Return the ``[test_filter]`` text: the toolkit's unattended test filter.
 
     ``permissions`` are the fix session's permissions for the
     ``rebase_automated`` binding. When the toolkit declares ``Bash(`` grants
