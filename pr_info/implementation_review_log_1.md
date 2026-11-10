@@ -7,3 +7,11 @@ Reading `run_request`/`get_fragment` next, then the tests.`src/mcp_coder/workflo
 Verdict(decision='tasks', tasks=['At src/mcp_coder/workflows/implement/core.py:73, stop hard-coding "Checks still report findings after 3 fix turns" in the checks_exhausted message. Use checks.detail, which already includes the actual turn count, so the message stays correct when the loop returns cap early. Early returns happen when there is no usable fix.* fragment, when the LLM response is empty, or when a fix turn raises an exception. Update or add a test that checks the message for one early-cap path, such as no usable fragment after 0 turns, so it no longer claims 3 fix turns.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-10
+**Findings**:
+Reviewing the diff; next checking `toolkit_runner` binding validation and `task_processing` call site.Code reviewed; now checking test coverage against the issue's "Done when" list.`src/mcp_coder/workflows/implement/task_processing.py:372` — low — The `process_task_with_retry` docstring still says `check_type_hints` means "If True, run mypy type checking after implementation". After this change, `False` only drops the `check@*` requests and the binding's other requests still run. `process_single_task`'s docstring was updated to say this, but this one was missed.
+**Decisions**:
+Verdict(decision='tasks', tasks=["Update the process_task_with_retry docstring at src/mcp_coder/workflows/implement/task_processing.py:372 so check_type_hints matches the new behaviour: False only drops the check@* requests and the binding's other requests still run. Use the same wording as process_single_task's updated docstring."], escalate_reason=None)
+**Changes**:
+applied
