@@ -68,10 +68,16 @@ class IssueFacts:
 def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
     """Pure liveness verdict. Returns a frozen ``LivenessVerdict(active, rule)``.
 
-    Ordering is the contract: a live process is detectable regardless of folder
-    state, so the order is title -> pid -> cmdline -> folder-existence. PID is a
-    tie-breaker, NOT a gate, and there is no folder-gone short-circuit (a live
-    process for a deleted folder stays reachable as the zombie precursor).
+    Ordering is the contract:
+
+    - A title match always wins (``TITLE``).
+    - Past launch grace with an authoritative title, a title miss is decisive:
+      ``NO_ARTIFACTS`` when the folder is gone, ``NO_WINDOW`` when only VSCode's
+      shared main process still references the folder (pid/cmdline), else
+      ``NO_MATCH``.
+    - Otherwise pid -> cmdline -> folder-existence fallback. There is no
+      folder-gone short-circuit before the title/pid checks, so a live process
+      for a deleted folder stays reachable as the zombie precursor.
 
     Returns:
         A frozen :class:`LivenessVerdict` carrying ``active`` and the winning
@@ -79,6 +85,12 @@ def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
     """
     if signals.title_match:
         return LivenessVerdict(active=True, rule=LivenessRule.TITLE)
+    if signals.title_authoritative and not signals.within_grace:
+        if not signals.folder_exists:
+            return LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS)
+        if signals.pid_alive or signals.cmdline_match:
+            return LivenessVerdict(active=False, rule=LivenessRule.NO_WINDOW)
+        return LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH)
     if signals.pid_alive:
         return LivenessVerdict(active=True, rule=LivenessRule.PID)
     if signals.cmdline_match:
@@ -410,7 +422,8 @@ def _log_assessment(
     )
     logger.debug(
         "assess #%s signals: folder_exists=%s title=%s cmdline=%s pid_alive=%s "
-        "found_pid=%s age=%.0fs within_grace=%s directory_empty=%s",
+        "found_pid=%s age=%.0fs within_grace=%s directory_empty=%s "
+        "window_count=%s title_authoritative=%s",
         session["issue_number"],
         signals.folder_exists,
         signals.title_match,
@@ -420,6 +433,8 @@ def _log_assessment(
         signals.age_seconds,
         signals.within_grace,
         signals.directory_empty,
+        signals.window_count,
+        signals.title_authoritative,
     )
     if assessment.transition.flipped_to_inactive:
         logger.info(

@@ -1,9 +1,11 @@
 """Tests for the pure assessment layers and serializer.
 
 Full rule matrix, no Windows — the #38 de-risker. The liveness rule order is
-the contract: title -> pid -> cmdline -> folder-existence. PID is a
-tie-breaker, not a gate. The decide layer owns the full git-status safety
-matrix and is the ONLY place a destructive DELETE can be produced.
+the contract: a title match always wins; past grace with an authoritative
+title a miss is decisive (NO_WINDOW when only pid/cmdline still reference the
+folder); otherwise pid -> cmdline -> folder-existence. The decide layer owns
+the full git-status safety matrix and is the ONLY place a destructive DELETE
+can be produced.
 """
 
 import pytest
@@ -58,7 +60,7 @@ class TestAssessLiveness:
         assert verdict == LivenessVerdict(active=True, rule=LivenessRule.CMDLINE)
 
     def test_pid_alive_only(self) -> None:
-        """PID alive (title + cmdline miss) yields ACTIVE via PID tie-breaker."""
+        """PID alive (title not authoritative, cmdline miss) yields ACTIVE(PID)."""
         verdict = assess_liveness(
             make_signals(title_match=False, pid_alive=True, cmdline_match=False)
         )
@@ -97,6 +99,58 @@ class TestAssessLiveness:
         """The verdict is a LivenessVerdict instance."""
         verdict = assess_liveness(make_signals(title_match=True))
         assert isinstance(verdict, LivenessVerdict)
+
+    @pytest.mark.parametrize(
+        ("authoritative", "within_grace", "signals", "expected"),
+        [
+            (True, False, {"pid_alive": True}, (False, LivenessRule.NO_WINDOW)),
+            (True, False, {"cmdline_match": True}, (False, LivenessRule.NO_WINDOW)),
+            (
+                True,
+                False,
+                {"pid_alive": True, "folder_exists": False},
+                (False, LivenessRule.NO_ARTIFACTS),
+            ),
+            (True, False, {}, (False, LivenessRule.NO_MATCH)),
+            (True, True, {"pid_alive": True}, (True, LivenessRule.PID)),
+            (True, True, {"cmdline_match": True}, (True, LivenessRule.CMDLINE)),
+            (False, False, {"pid_alive": True}, (True, LivenessRule.PID)),
+            (False, False, {"cmdline_match": True}, (True, LivenessRule.CMDLINE)),
+            (
+                True,
+                False,
+                {"title_match": True, "pid_alive": True},
+                (True, LivenessRule.TITLE),
+            ),
+        ],
+        ids=[
+            "auth_past_grace_pid_is_no_window",
+            "auth_past_grace_cmdline_is_no_window",
+            "auth_past_grace_folder_missing_is_no_artifacts",
+            "auth_past_grace_nothing_is_no_match",
+            "auth_within_grace_pid_active",
+            "auth_within_grace_cmdline_active",
+            "not_auth_pid_active",
+            "not_auth_cmdline_active",
+            "auth_past_grace_title_match_active",
+        ],
+    )
+    def test_title_authoritative_matrix(
+        self,
+        authoritative: bool,
+        within_grace: bool,
+        signals: dict[str, bool],
+        expected: tuple[bool, LivenessRule],
+    ) -> None:
+        """Past grace an authoritative title miss is decisive; else fallback."""
+        verdict = assess_liveness(
+            make_signals(
+                title_authoritative=authoritative,
+                within_grace=within_grace,
+                **signals,
+            )
+        )
+        assert verdict == LivenessVerdict(active=expected[0], rule=expected[1])
 
 
 class TestAssessIssueState:

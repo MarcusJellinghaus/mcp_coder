@@ -8,8 +8,8 @@ The whole point of :class:`DetectionSnapshot` is R4 (no age-skew): all three
 module caches (processes, window titles, PIDs) are populated in immediate
 succession so no signal ages relative to another. ``gather_signals`` then reads
 only the frozen snapshot + the session dict + ``Path`` existence + the stored
-PID, computing the seven raw signals plus ``directory_empty`` / ``within_grace``
-as plain bools.
+PID, computing the raw signals plus ``directory_empty`` / ``within_grace`` /
+``window_count`` / ``title_authoritative`` as plain values.
 """
 
 import logging
@@ -41,7 +41,9 @@ VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
 # Seconds after launch during which a negative window-title check is not
 # trusted (covers VSCode cold-start and extension reinstall delays). Beyond
-# this window the title check is authoritative on Windows.
+# this window the title check is authoritative on Windows when win32gui is
+# available, window enumeration succeeded, the session has a repo, and at
+# least one VSCode window was seen while Code.exe runs.
 LAUNCH_GRACE_SECONDS = 60.0
 
 
@@ -190,31 +192,31 @@ def _get_vscode_pids() -> set[int]:
     return pids
 
 
-def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
-    """Return list of (pid, title) pairs for visible VSCode windows.
+def _get_vscode_window_titles(
+    refresh: bool = False,
+) -> tuple[list[tuple[int, str]], bool]:
+    """Return (pid, title) pairs for visible VSCode windows plus a success flag.
 
     Uses win32gui to enumerate windows owned by Code.exe processes.
     This catches all VSCode windows including integrated terminals
-    that don't have "Visual Studio Code" in the title.
-
-    The PID is the owning process so callers can bind a title match to
-    the specific VSCode instance that has the folder open, eliminating
-    cross-process title-leak false positives.
+    that don't have "Visual Studio Code" in the title. The PID is the
+    process that owns the window.
 
     Args:
         refresh: Force refresh of cached titles
 
     Returns:
-        List of (pid, title) tuples for visible VSCode-owned windows,
-        or empty list on non-Windows.
+        ``(titles, ok)``: the (pid, title) tuples for visible VSCode-owned
+        windows, and whether enumeration succeeded. ``([], False)`` without
+        win32gui or when ``EnumWindows`` fails (failures are not cached).
     """
     global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
 
     if not HAS_WIN32GUI:
-        return []
+        return [], False
 
     if _vscode_window_cache is not None and not refresh:
-        return _vscode_window_cache
+        return _vscode_window_cache, True
 
     # Refresh PID cache when refreshing window cache
     if refresh:
@@ -249,11 +251,11 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
         win32gui.EnumWindows(enum_callback, None)
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to enumerate windows: %s", e)
-        return []
+        return [], False
 
     _vscode_window_cache = entries
     logger.debug("Found %d VSCode windows: %s", len(entries), entries)
-    return entries
+    return entries, True
 
 
 def clear_vscode_window_cache() -> None:
@@ -294,6 +296,7 @@ class DetectionSnapshot:
     processes: tuple[dict[str, Any], ...]  # each: pid + cmdline_lower
     window_titles: tuple[tuple[int, str], ...]  # (owning_pid, title)
     pids: frozenset[int]
+    window_enum_ok: bool
     captured_at: datetime
 
 
@@ -308,12 +311,13 @@ def capture_detection_snapshot() -> DetectionSnapshot:
         A frozen :class:`DetectionSnapshot` over the just-refreshed caches.
     """
     processes = _get_vscode_processes(refresh=True)
-    window_titles = _get_vscode_window_titles(refresh=True)
+    window_titles, window_enum_ok = _get_vscode_window_titles(refresh=True)
     pids = _get_vscode_pids()
     return DetectionSnapshot(
         processes=tuple(processes),
         window_titles=tuple(window_titles),
         pids=frozenset(pids),
+        window_enum_ok=window_enum_ok,
         captured_at=datetime.now(UTC),
     )
 
@@ -402,18 +406,21 @@ def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
 def gather_signals(
     session: VSCodeClaudeSession, snapshot: DetectionSnapshot
 ) -> DetectionSignals:
-    """Compute the seven raw signals for one session from the frozen snapshot.
+    """Compute the raw signals for one session from the frozen snapshot.
 
     This is the IO/Windows boundary: it reads only the snapshot, the session
     dict, ``Path`` existence, and the stored PID. ``folder_exists`` and
     ``pid_alive`` are gathered INDEPENDENTLY (R6) — there is no folder-gone
     short-circuit, so a live process for a deleted folder stays reachable as a
-    zombie precursor. ``directory_empty`` and ``within_grace`` are computed
-    here as plain bools so the downstream ``types``/``decide`` stay pure.
+    zombie precursor. ``directory_empty``, ``within_grace``, ``window_count``
+    and ``title_authoritative`` are computed here as plain values so the
+    downstream ``types``/``decide`` stay pure. An authoritative title miss
+    logs the snapshot's window titles at DEBUG.
 
     Returns:
-        A frozen :class:`DetectionSignals` with the seven raw signals plus
-        ``directory_empty`` and ``within_grace``.
+        A frozen :class:`DetectionSignals` with the raw signals plus
+        ``directory_empty``, ``within_grace``, ``window_count`` and
+        ``title_authoritative``.
     """
     folder = session["folder"]
     folder_path = Path(folder)
@@ -429,6 +436,20 @@ def gather_signals(
     age_seconds = _session_age_seconds(session, snapshot.captured_at)
     within_grace = age_seconds < LAUNCH_GRACE_SECONDS
 
+    window_count = len(snapshot.window_titles)
+    title_authoritative = bool(
+        HAS_WIN32GUI
+        and snapshot.window_enum_ok
+        and session.get("repo")
+        and not (snapshot.pids and window_count == 0)
+    )
+    if title_authoritative and not title_match:
+        logger.debug(
+            "Title miss for #%s; VSCode windows: %s",
+            session["issue_number"],
+            list(snapshot.window_titles),
+        )
+
     return DetectionSignals(
         folder_exists=folder_exists,
         title_match=title_match,
@@ -438,4 +459,6 @@ def gather_signals(
         age_seconds=age_seconds,
         within_grace=within_grace,
         directory_empty=directory_empty,
+        window_count=window_count,
+        title_authoritative=title_authoritative,
     )

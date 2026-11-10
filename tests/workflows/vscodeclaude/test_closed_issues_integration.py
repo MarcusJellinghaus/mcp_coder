@@ -230,6 +230,8 @@ class TestClosedIssueIntegration:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=False,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
                 issue_state=IssueState(
@@ -505,6 +507,8 @@ class TestClosedIssueIntegration:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=False,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
                 issue_state=IssueState(

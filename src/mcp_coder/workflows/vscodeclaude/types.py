@@ -58,6 +58,8 @@ class DetectionSignals:
     age_seconds: float
     within_grace: bool  # plain bool, computed in gather_signals (Step 4)
     directory_empty: bool  # plain bool, computed in gather_signals (Step 4)
+    window_count: int  # VSCode windows seen in the snapshot (diagnostic)
+    title_authoritative: bool  # a title miss is trusted (past grace only)
 
 
 @dataclass(frozen=True)
@@ -138,6 +140,8 @@ class SessionAssessment:
                 "age_seconds": self.signals.age_seconds,
                 "within_grace": self.signals.within_grace,
                 "directory_empty": self.signals.directory_empty,
+                "window_count": self.signals.window_count,
+                "title_authoritative": self.signals.title_authoritative,
             },
             "verdict": {
                 "active": self.verdict.active,

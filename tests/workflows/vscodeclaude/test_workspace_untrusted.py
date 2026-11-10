@@ -144,6 +144,7 @@ def test_workspace_title_blank_still_detectable(
         processes=(),
         window_titles=((1, f"{window_title} - Visual Studio Code"),),
         pids=frozenset(),
+        window_enum_ok=True,
         captured_at=datetime.now(UTC),
     )
     assert _title_binds(snapshot, 123, "owner/repo") is True

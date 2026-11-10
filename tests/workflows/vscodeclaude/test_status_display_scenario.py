@@ -107,6 +107,8 @@ class TestScenarioACrossModule:
                     age_seconds=0.0,
                     within_grace=False,
                     directory_empty=True,
+                    window_count=0,
+                    title_authoritative=False,
                 ),
                 verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS),
                 issue_state=IssueState(

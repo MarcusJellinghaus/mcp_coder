@@ -13,8 +13,10 @@ detection helpers, so no real VSCode is required. The key behaviours under test:
   the result into immutable tuples.
 """
 
+import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -22,6 +24,7 @@ from mcp_coder.workflows.vscodeclaude.assessment import assess_liveness
 from mcp_coder.workflows.vscodeclaude.detection import (
     DetectionSnapshot,
     capture_detection_snapshot,
+    clear_vscode_window_cache,
     gather_signals,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
@@ -65,6 +68,7 @@ def _snapshot(
     processes: tuple[dict[str, object], ...] = (),
     window_titles: tuple[tuple[int, str], ...] = (),
     pids: frozenset[int] = frozenset(),
+    window_enum_ok: bool = True,
     captured_at: datetime | None = None,
 ) -> DetectionSnapshot:
     """Build a DetectionSnapshot with empty defaults."""
@@ -72,6 +76,7 @@ def _snapshot(
         processes=processes,
         window_titles=window_titles,
         pids=pids,
+        window_enum_ok=window_enum_ok,
         captured_at=captured_at or datetime.now(UTC),
     )
 
@@ -511,9 +516,9 @@ class TestCaptureDetectionSnapshot:
             calls.append(f"processes:{refresh}")
             return [{"pid": 1, "cmdline_lower": "code.exe foo"}]
 
-        def fake_titles(refresh: bool = False) -> list[tuple[int, str]]:
+        def fake_titles(refresh: bool = False) -> tuple[list[tuple[int, str]], bool]:
             calls.append(f"titles:{refresh}")
-            return [(1, "[#38 x] foo")]
+            return [(1, "[#38 x] foo")], True
 
         def fake_pids() -> set[int]:
             calls.append("pids")
@@ -531,4 +536,135 @@ class TestCaptureDetectionSnapshot:
         assert isinstance(snapshot.pids, frozenset)
         assert snapshot.pids == frozenset({1, 2})
         assert snapshot.window_titles == ((1, "[#38 x] foo"),)
+        assert snapshot.window_enum_ok is True
         assert isinstance(snapshot.captured_at, datetime)
+
+    def test_enum_failure_sets_window_enum_ok_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """EnumWindows raising -> snapshot.window_enum_ok is False."""
+        _force_windows(monkeypatch)
+        fake_win32gui = MagicMock()
+        fake_win32gui.EnumWindows.side_effect = RuntimeError("boom")
+        monkeypatch.setattr(f"{DETECTION}.win32gui", fake_win32gui, raising=False)
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_processes", lambda **_: [])
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_pids", lambda: {1})
+
+        snapshot = capture_detection_snapshot()
+        clear_vscode_window_cache()
+
+        assert snapshot.window_titles == ()
+        assert snapshot.window_enum_ok is False
+
+    def test_without_win32gui_window_enum_ok_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No win32gui -> snapshot.window_enum_ok is False."""
+        _force_windows(monkeypatch, enabled=False)
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_processes", lambda **_: [])
+        monkeypatch.setattr(f"{DETECTION}._get_vscode_pids", set)
+
+        snapshot = capture_detection_snapshot()
+
+        assert snapshot.window_enum_ok is False
+
+
+_TITLE_38 = "[#38 code-review] Fix - mcp_coder - Visual Studio Code"
+_OTHER_TITLE = "[#99 code-review] Other - mcp_coder - Visual Studio Code"
+
+
+class TestGatherSignalsTitleAuthoritative:
+    """window_count and title_authoritative computed at the IO boundary."""
+
+    @pytest.mark.parametrize(
+        ("has_win32gui", "window_enum_ok", "repo", "pids", "titles"),
+        [
+            (True, False, "owner/mcp_coder", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (False, True, "owner/mcp_coder", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (True, True, "", frozenset({1}), ((1, _OTHER_TITLE),)),
+            (True, True, "owner/mcp_coder", frozenset({1}), ()),
+        ],
+        ids=["enum_failed", "no_win32gui", "no_repo", "code_running_no_windows"],
+    )
+    def test_not_authoritative(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        has_win32gui: bool,
+        window_enum_ok: bool,
+        repo: str,
+        pids: frozenset[int],
+        titles: tuple[tuple[int, str], ...],
+    ) -> None:
+        """Any missing precondition -> title_authoritative False."""
+        _force_windows(monkeypatch, enabled=has_win32gui)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(
+            window_titles=titles, pids=pids, window_enum_ok=window_enum_ok
+        )
+
+        signals = gather_signals(_session(str(tmp_path), repo=repo), snapshot)
+
+        assert signals.title_authoritative is False
+
+    def test_authoritative(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """win32gui + enum ok + repo + at least one window -> authoritative."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        titles = ((1, _OTHER_TITLE), (2, "mcp_coder - Visual Studio Code"))
+        snapshot = _snapshot(window_titles=titles, pids=frozenset({1, 2}))
+
+        signals = gather_signals(_session(str(tmp_path)), snapshot)
+
+        assert signals.title_authoritative is True
+        assert signals.window_count == len(titles)
+
+    def test_authoritative_miss_logs_window_titles(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """An authoritative miss dumps the snapshot's titles at DEBUG."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((1, _OTHER_TITLE),), pids=frozenset({1}))
+
+        with caplog.at_level(logging.DEBUG, logger=DETECTION):
+            gather_signals(_session(str(tmp_path)), snapshot)
+
+        messages = [r.getMessage() for r in caplog.records]
+        dumps = [m for m in messages if "Title miss" in m]
+        assert len(dumps) == 1
+        assert "#38" in dumps[0]
+        assert _OTHER_TITLE in dumps[0]
+
+    def test_title_match_does_not_log_window_titles(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A title match does not dump the window titles."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, False)
+        snapshot = _snapshot(window_titles=((1, _TITLE_38),), pids=frozenset({1}))
+
+        with caplog.at_level(logging.DEBUG, logger=DETECTION):
+            gather_signals(_session(str(tmp_path)), snapshot)
+
+        assert not [r for r in caplog.records if "Title miss" in r.getMessage()]
+
+    def test_authoritative_miss_past_grace_with_live_pid_is_no_window(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """#1342 shape: past grace, title miss, live shared PID -> NO_WINDOW."""
+        _force_windows(monkeypatch)
+        _stub_pid_alive(monkeypatch, True)
+        snapshot = _snapshot(window_titles=((1, _OTHER_TITLE),), pids=frozenset({1}))
+
+        verdict = assess_liveness(gather_signals(_session(str(tmp_path)), snapshot))
+
+        assert verdict == LivenessVerdict(active=False, rule=LivenessRule.NO_WINDOW)

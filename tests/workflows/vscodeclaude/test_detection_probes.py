@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude import detection
 from mcp_coder.workflows.vscodeclaude.detection import (
     VSCODE_PROCESS_NAMES,
     _get_vscode_processes,
@@ -186,10 +187,11 @@ class TestGetVSCodeWindowTitles:
             raising=False,
         )
 
-        result = _get_vscode_window_titles(refresh=True)
+        result, ok = _get_vscode_window_titles(refresh=True)
 
         clear_vscode_window_cache()
 
+        assert ok is True
         assert isinstance(result, list)
         assert len(result) == 2
         for entry in result:
@@ -199,3 +201,41 @@ class TestGetVSCodeWindowTitles:
             assert isinstance(entry[1], str)
         assert result[0][0] == 100
         assert result[1][0] == 200
+
+    def test_enum_windows_failure_returns_not_ok(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """EnumWindows raising -> ([], False), and the failure is not cached."""
+        clear_vscode_window_cache()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_pids",
+            lambda: {100},
+        )
+        mock_win32gui = MagicMock()
+        mock_win32gui.EnumWindows.side_effect = RuntimeError("boom")
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection.win32gui",
+            mock_win32gui,
+            raising=False,
+        )
+
+        result = _get_vscode_window_titles(refresh=True)
+        cache = detection._vscode_window_cache  # pylint: disable=protected-access
+
+        clear_vscode_window_cache()
+
+        assert result == ([], False)
+        assert cache is None
+
+    def test_without_win32gui_returns_not_ok(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No win32gui -> ([], False)."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI", False
+        )
+
+        assert _get_vscode_window_titles(refresh=True) == ([], False)

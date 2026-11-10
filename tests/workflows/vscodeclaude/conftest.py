@@ -131,6 +131,8 @@ def make_signals(
     age_seconds: float = 0.0,
     within_grace: bool = False,
     directory_empty: bool = False,
+    window_count: int = 0,
+    title_authoritative: bool = False,
 ) -> DetectionSignals:
     """Build DetectionSignals with everything off by default."""
     return DetectionSignals(
@@ -142,6 +144,8 @@ def make_signals(
         age_seconds=age_seconds,
         within_grace=within_grace,
         directory_empty=directory_empty,
+        window_count=window_count,
+        title_authoritative=title_authoritative,
     )
 
 
@@ -314,6 +318,8 @@ def _build_assessment(
         age_seconds=0.0,
         within_grace=False,
         directory_empty=not folder_exists,
+        window_count=0,
+        title_authoritative=False,
     )
     issue_facts = IssueFacts(
         is_closed=is_closed,

@@ -74,6 +74,8 @@ def _assessment(
         age_seconds=0.0,
         within_grace=False,
         directory_empty=False,
+        window_count=0,
+        title_authoritative=False,
     )
     if rule is None:
         rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH

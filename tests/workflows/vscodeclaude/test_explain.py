@@ -39,6 +39,8 @@ class TestRenderExplain:
             "age_seconds",
             "within_grace",
             "directory_empty",
+            "window_count",
+            "title_authoritative",
         ):
             assert signal_field in text
 
