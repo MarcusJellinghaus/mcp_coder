@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: New `=== LLM TEST` section + docs + streaming test
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code + `docs/cli-reference.md`)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code + `docs/cli-reference.md`)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Per-section alignment tests, including indent 6
 See [step_8.md](./steps/step_8.md)

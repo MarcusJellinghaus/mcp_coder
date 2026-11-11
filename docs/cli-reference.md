@@ -173,7 +173,7 @@ Check the whole local setup in one report. Run it after editing `config.toml` an
 mcp-coder verify [OPTIONS]
 ```
 
-The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers (smoke test) and MLflow. Exits 1 when a check fails.
+The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails.
 
 - `--llm-method METHOD` checks that provider instead of the configured one.
 - `--check-models` lists the models available to the configured LangChain backend (needs network).

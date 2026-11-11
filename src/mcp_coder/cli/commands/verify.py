@@ -487,6 +487,11 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
                 [Row(label, symbols["warning"], value) for label, value in warnings],
             )
 
+    # LLM TEST holds the smoke test and the test prompt; it opens before either
+    # runs so its header streams while they execute.
+    if mcp_config_ok is not False:
+        out.open("LLM TEST")
+
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved and mcp_config_ok is not False:
         out.add(
@@ -548,6 +553,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
             out.add(Row("Test prompt", symbols["failure"], f"FAILED ({category})"))
             logger.debug("Test prompt failure details: %s", exc, exc_info=True)
             out.add("  Run with --debug for detailed diagnostics.")
+    out.close()
 
     # 4. MLflow verification (now with since= to confirm logging)
     mlflow_result = verify_mlflow(since=timestamp)

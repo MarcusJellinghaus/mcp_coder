@@ -145,6 +145,7 @@ class TestMcpConfigValidityRow:
         mock_prompt.assert_not_called()
         assert "MCP SERVERS" not in output
         assert "Test prompt" not in output
+        assert "=== LLM TEST" not in output
         assert result == 1
 
 
