@@ -10,6 +10,7 @@ import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import _format_row
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _print_project_section,
     _toolkit_rows,
@@ -18,7 +19,11 @@ from mcp_coder.cli.commands.verify_sections import (
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit import VerifyItem
 from mcp_coder.utils.toolkit_runner import verify_toolkit
-from tests.cli.commands.conftest import _make_args, _make_verify_mocks
+from tests.cli.commands.conftest import (
+    _assert_section_aligned,
+    _make_args,
+    _make_verify_mocks,
+)
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 _VERIFY_TOOLKIT = "mcp_coder.cli.commands.verify_sections.verify_toolkit"
@@ -45,7 +50,7 @@ def _run(
     """Write *content* as pyproject.toml (if given), run the section, return result."""
     if content is not None:
         (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
-    ok = _print_project_section(tmp_path, _SYMBOLS)
+    ok = _print_project_section(tmp_path, _SYMBOLS, SectionBuilder())
     return ok, capsys.readouterr().out.splitlines()
 
 
@@ -240,6 +245,16 @@ class TestToolkitRows:
         assert "[ERR]" in row
         assert "boom" in row
 
+    @pytest.mark.usefixtures("toolkit_with_ruff")
+    def test_toolkit_item_row_aligns_with_section(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert _row(lines, "ruff").startswith("      ruff ")
+        assert _row(lines, "format_code").startswith("    format_code ")
+        assert _row(lines, "pyproject.toml").startswith("  pyproject.toml ")
+        assert _assert_section_aligned("\n".join(lines)) >= 3
+
     def test_mcp_coder_toml_without_pyproject(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -280,7 +295,7 @@ class TestCommandToolkitGating:
     def test_command_project_has_no_formatter_row(
         self, command_project: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        ok = _print_project_section(command_project, _SYMBOLS)
+        ok = _print_project_section(command_project, _SYMBOLS, SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         assert ok is True
         assert not any(line.strip().startswith("Formatter ") for line in lines)
@@ -303,7 +318,7 @@ class TestCommandToolkitGating:
         )
         mock_verify = MagicMock()
         with patch(_VERIFY_TOOLKIT, mock_verify):
-            assert _toolkit_rows(command_project, _SYMBOLS) is True
+            assert _toolkit_rows(command_project, _SYMBOLS, SectionBuilder()) is True
         mock_verify.assert_not_called()
         assert "command" in _row(capsys.readouterr().out.splitlines(), "Toolkit")
 
@@ -313,7 +328,7 @@ class TestCommandToolkitGating:
         )
         mock_verify = MagicMock()
         with patch(_VERIFY_TOOLKIT, mock_verify):
-            assert _toolkit_rows(command_project, _SYMBOLS) is True
+            assert _toolkit_rows(command_project, _SYMBOLS, SectionBuilder()) is True
         mock_verify.assert_not_called()
 
     def test_broken_command_config_is_error(
@@ -327,12 +342,14 @@ class TestCommandToolkitGating:
             ),
             encoding="utf-8",
         )
-        assert _toolkit_rows(command_project, _SYMBOLS) is False
+        assert _toolkit_rows(command_project, _SYMBOLS, SectionBuilder()) is False
         errors = [
             line for line in capsys.readouterr().out.splitlines() if "[ERR]" in line
         ]
         assert any("unknown top-level key 'bogus'" in line for line in errors)
-        assert _print_project_section(command_project, _SYMBOLS) is False
+        assert (
+            _print_project_section(command_project, _SYMBOLS, SectionBuilder()) is False
+        )
 
 
 class TestUsesMcpToolsPy:

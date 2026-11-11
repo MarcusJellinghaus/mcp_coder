@@ -116,8 +116,8 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert "[OK]" in result
-        assert "edit verified" in result
+        assert result.marker == "[OK]"
+        assert "edit verified" in result.value
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_prompt_uses_posix_scratch_path(
@@ -193,7 +193,7 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert "edit verified" in result
+        assert "edit verified" in result.value
         assert agent_file.exists()
         assert not test_file.exists()
 
@@ -210,8 +210,8 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert "[WARN]" in result
-        assert "skipped: .scratch/mcp_coder_verify.md is gitignored" in result
+        assert result.marker == "[WARN]"
+        assert "skipped: .scratch/mcp_coder_verify.md is gitignored" in result.value
         mock_prompt_llm.assert_not_called()
         assert not (tmp_path / ".scratch").exists()
 
@@ -228,8 +228,8 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert "[WARN]" in result
-        assert "edit not verified" in result
+        assert result.marker == "[WARN]"
+        assert "edit not verified" in result.value
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_error_displays_warning(
@@ -244,9 +244,9 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
-        assert "[WARN]" in result
-        assert "edit not verified" in result
-        assert "timed out" in result
+        assert result.marker == "[WARN]"
+        assert "edit not verified" in result.value
+        assert "timed out" in result.value
 
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -307,8 +307,8 @@ class TestMcpEditSmokeTest:
                 tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
             )
 
-        assert "[WARN]" in result
-        assert "edit not verified (gitignore unreadable)" in result
+        assert result.marker == "[WARN]"
+        assert "edit not verified (gitignore unreadable)" in result.value
         mock_prompt_llm.assert_not_called()
         assert not (tmp_path / ".scratch").exists()
 

@@ -33,12 +33,12 @@ from ...utils.toolkit_runner import (
     verify_toolkit,
 )
 from .verify_formatting import (
-    _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
-    _format_row,
+    Row,
     _format_section,
-    _pad,
+    _hint,
 )
+from .verify_render import SectionBuilder
 
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
@@ -283,7 +283,9 @@ def _map_security_row(key: str, row: Mapping[str, Any] | None) -> dict[str, Any]
     return entry
 
 
-def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -> None:
+def _print_github_security_section(
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+) -> None:
     """Merge local-file and API-backed security rows, print GITHUB SECURITY.
 
     The five API-backed rows come from ``verify_github_security``, each
@@ -310,15 +312,14 @@ def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -
             "code_scanning_alerts", api.get("code_scanning_alerts")
         ),
     }
-    print(_format_section("GITHUB SECURITY", github_security_result, symbols))
+    out.section("GITHUB SECURITY", _format_section(github_security_result, symbols))
 
 
-def _print_environment_section() -> None:
+def _print_environment_section(out: SectionBuilder) -> None:
     """Print the ENVIRONMENT section (Python info, TLS/proxy, 4 package versions).
 
-    Uses ``sys``, ``os.environ``, ``importlib.metadata``. Writes directly to
-    stdout via ``print`` to match the style of inline sections in
-    ``execute_verify``.
+    Uses ``sys``, ``os.environ``, ``importlib.metadata``. Opens and closes the
+    section on *out*.
     """
     # Lazy, like the test-prompt failure branch in verify.py: _exceptions keeps
     # its httpx / openai / anthropic / google.genai imports behind try/except
@@ -328,16 +329,16 @@ def _print_environment_section() -> None:
         _truststore_available,
     )
 
-    print(_pad("ENVIRONMENT"))
+    out.open("ENVIRONMENT")
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     )
-    print(_format_row("Python version", "", python_version, indent=2))
-    print(_format_row("Executable", "", sys.executable, indent=2))
+    out.add(Row("Python version", "", python_version))
+    out.add(Row("Executable", "", sys.executable))
     virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
-    print(_format_row("Virtualenv", "", virtualenv, indent=2))
+    out.add(Row("Virtualenv", "", virtualenv))
     pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
-    print(_format_row("PYTHONPATH", "", pythonpath, indent=2))
+    out.add(Row("PYTHONPATH", "", pythonpath))
     # _truststore_available() is exactly what create_ssl_context branches on,
     # so the source reported here is the one the HTTP client will really use.
     ssl_source = (
@@ -347,36 +348,34 @@ def _print_environment_section() -> None:
     )
     # Boolean only: the proxy URL may embed credentials.
     proxy = "configured (HTTPS_PROXY/HTTP_PROXY)" if _proxy_configured() else "none"
-    print(
-        _format_row(
-            "TLS / proxy", "", f"SSL context: {ssl_source}; proxy: {proxy}", indent=2
-        )
-    )
-    print()
+    out.add(Row("TLS / proxy", "", f"SSL context: {ssl_source}; proxy: {proxy}"))
+    out.add("")
     for pkg in _ENVIRONMENT_PACKAGES:
         try:
             value = version(pkg)
-            print(_format_row(pkg, "", value, indent=2))
+            out.add(Row(pkg, "", value))
         except PackageNotFoundError:
-            print(
-                _format_row(pkg, STATUS_SYMBOLS["failure"], "not installed", indent=2)
-            )
+            out.add(Row(pkg, STATUS_SYMBOLS["failure"], "not installed"))
+    out.close()
 
 
-def _format_code_row(project_dir: Path, symbols: dict[str, str]) -> bool:
-    """Print the ``[tool.mcp-coder] format_code`` row.
+def _format_code_row(
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+) -> bool:
+    """Add the ``[tool.mcp-coder] format_code`` row to *out*.
 
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the row is added to.
 
     Returns:
-        False if the value is invalid (row printed as [ERR]).
+        False if the value is invalid (row added as [ERR]).
     """
     try:
         setting = get_format_code(project_dir)
     except ValueError as exc:
-        print(_format_row("format_code", symbols["failure"], str(exc), indent=4))
+        out.add(Row("format_code", symbols["failure"], str(exc), 4))
         return False
     if not setting.enabled:
         value = "disabled"
@@ -384,31 +383,30 @@ def _format_code_row(project_dir: Path, symbols: dict[str, str]) -> bool:
         value = "enabled"
     else:
         value = "enabled (default)"
-    print(_format_row("format_code", symbols["success"], value, indent=4))
+    out.add(Row("format_code", symbols["success"], value, 4))
     return True
 
 
 def _formatter_row(
-    project_dir: Path, symbols: dict[str, str], *, indent: int = 4
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
 ) -> bool:
-    """Print the Formatter row with the steps mcp-tools-py resolves.
+    """Add the Formatter row with the steps mcp-tools-py resolves to *out*.
 
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the row is added to.
         indent: Number of leading spaces.
 
     Returns:
-        False if no formatter can be resolved (row printed as [ERR]).
+        False if no formatter can be resolved (row added as [ERR]).
     """
     try:
         steps = resolve_steps(project_dir)
     except ValueError as exc:
-        print(_format_row("Formatter", symbols["failure"], str(exc), indent=indent))
+        out.add(Row("Formatter", symbols["failure"], str(exc), indent))
         return False
-    print(
-        _format_row("Formatter", symbols["success"], " → ".join(steps), indent=indent)
-    )
+    out.add(Row("Formatter", symbols["success"], " → ".join(steps), indent))
     return True
 
 
@@ -443,9 +441,9 @@ def _formatting_enabled(project_dir: Path) -> bool:
 
 
 def _toolkit_rows(
-    project_dir: Path, symbols: dict[str, str], *, indent: int = 4
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
 ) -> bool:
-    """Print the Toolkit row and one row per toolkit verify item for ``format``.
+    """Add the Toolkit row and one row per toolkit verify item for ``format``.
 
     The ``format`` items are only checked when formatting is on and the
     ``commit`` binding is non-empty. The toolkit's ``formatter`` item is
@@ -454,10 +452,11 @@ def _toolkit_rows(
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the rows are added to.
         indent: Number of leading spaces of the Toolkit row.
 
     Returns:
-        False if the toolkit fails to load or verify, or any printed item is
+        False if the toolkit fails to load or verify, or any added item is
         an error.
     """
     try:
@@ -468,72 +467,80 @@ def _toolkit_rows(
             else []
         )
     except ValueError as exc:
-        print(_format_row("Toolkit", symbols["failure"], str(exc), indent=indent))
+        out.add(Row("Toolkit", symbols["failure"], str(exc), indent))
         return False
-    print(_format_row("Toolkit", symbols["success"], loaded.name, indent=indent))
+    out.add(Row("Toolkit", symbols["success"], loaded.name, indent))
     shown = [item for item in items if item.name != "formatter"]
     for item in shown:
-        print(
-            _format_row(
+        out.add(
+            Row(
                 item.name,
                 symbols[_VERIFY_STATUS_SYMBOL[item.status]],
                 item.message or item.status,
-                indent=indent + 2,
+                indent + 2,
             )
         )
     return all(item.status != "error" for item in shown)
 
 
-def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
+def _print_project_section(
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+) -> bool:
     """Print the PROJECT section showing language detection and tool config.
+
+    Opens and closes the section on *out*.
 
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the section is rendered through.
 
     Returns:
-        False if any row printed [ERR].
+        False if any row is [ERR].
     """
-    print(_pad("PROJECT"))
+    out.open("PROJECT")
     pyproject_exists = (project_dir / "pyproject.toml").exists()
     if not pyproject_exists:
-        print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
-        print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
+        out.add(Row("pyproject.toml", symbols["warning"], "not found"))
+        out.add(Row("Language", symbols["success"], "(none detected)"))
         ok = not _uses_mcp_tools_py(project_dir) or _formatter_row(
-            project_dir, symbols, indent=2
+            project_dir, symbols, out, indent=2
         )
-        return _toolkit_rows(project_dir, symbols, indent=2) and ok
-    print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
-    print(_format_row("Language", symbols["success"], "Python (detected)", indent=2))
-    print()
-    print("  [Python]")
-    ok = _format_code_row(project_dir, symbols)
+        ok = _toolkit_rows(project_dir, symbols, out, indent=2) and ok
+        out.close()
+        return ok
+    out.add(Row("pyproject.toml", symbols["success"], "found"))
+    out.add(Row("Language", symbols["success"], "Python (detected)"))
+    out.add("")
+    out.add("  [Python]")
+    ok = _format_code_row(project_dir, symbols, out)
     if _uses_mcp_tools_py(project_dir):
-        ok = _formatter_row(project_dir, symbols) and ok
-    ok = _toolkit_rows(project_dir, symbols) and ok
+        ok = _formatter_row(project_dir, symbols, out) and ok
+    ok = _toolkit_rows(project_dir, symbols, out) and ok
     if has_legacy_format_code_key(project_dir):
-        print(
-            _format_row(
+        out.add(
+            Row(
                 "legacy format_code",
                 symbols["failure"],
                 "[tool.mcp-coder.implement] format_code ignored"
                 " — use [tool.mcp-coder] format_code",
-                indent=4,
+                4,
             )
         )
         ok = False
     config = get_implement_config(project_dir)
     if config.check_type_hints:
-        print(_format_row("check_type_hints", symbols["success"], "enabled", indent=4))
+        out.add(Row("check_type_hints", symbols["success"], "enabled", 4))
     else:
-        print(
-            _format_row(
+        out.add(
+            Row(
                 "check_type_hints",
                 symbols["warning"],
                 "disabled (set in pyproject.toml)",
-                indent=4,
+                4,
             )
         )
+    out.close()
     return ok
 
 
@@ -550,7 +557,9 @@ def _prompt_source(configured: str | None, default_label: str) -> str:
     return configured if configured else f"({default_label})"
 
 
-def _print_retired_env_var_warning(symbols: dict[str, str]) -> None:
+def _print_retired_env_var_warning(
+    symbols: dict[str, str], out: SectionBuilder
+) -> None:
     """Warn (exit-neutral) when a retired MCP_CODER_* env var is still exported.
 
     Called unconditionally — outside both provider gates — because a retired
@@ -560,34 +569,36 @@ def _print_retired_env_var_warning(symbols: dict[str, str]) -> None:
     Args:
         symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
             ``"warning"`` marker for the emitted rows.
+        out: Builder the rows are added to; the section widens to fit them.
     """
     for old, new in _RETIRED_ENV_VARS.items():
         if not os.environ.get(old):
             continue
-        print(
-            _format_row(
+        out.add(
+            Row(
                 old,
                 symbols["warning"],
                 f"retired env var is set and ignored — use {new}",
-                indent=2,
-                label_width=len(old),
             )
         )
 
 
-def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
+def _print_langchain_readiness_warning(
+    symbols: dict[str, str], out: SectionBuilder
+) -> None:
     """Warn (exit-neutral) when the configured langchain backend module is missing.
 
     Runs for non-langchain providers only — its single call site is the
     else-branch of the langchain gate in ``execute_verify``, where
     ``verify_langchain`` would otherwise report nothing. Prints nothing when
     langchain is not configured, or when a known backend's module is
-    installed. Builds no result dict — it only prints, so it can never affect
-    the exit code.
+    installed. Builds no result dict — it only adds rows, so it can never
+    affect the exit code.
 
     Args:
         symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
             ``"warning"`` marker for the emitted row.
+        out: Builder the row and its hint are added to.
     """
     from ...llm.providers.langchain import _load_langchain_config
     from ...llm.providers.langchain._provider_checks import (
@@ -609,6 +620,6 @@ def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
         display = pkg.replace("_", "-")
         msg = f"backend '{backend}' configured but {display} not installed"
         hint = f"pip install {display} (needed for --llm-method langchain)"
-    print(_format_row("Langchain backend", symbols["warning"], msg, indent=2))
+    out.add(Row("Langchain backend", symbols["warning"], msg))
     if hint:
-        print(f"{' ' * _VALUE_COLUMN_INDENT}-> {hint}")
+        out.add(_hint(f"-> {hint}"))

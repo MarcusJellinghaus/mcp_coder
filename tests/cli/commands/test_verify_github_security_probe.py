@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_github_security_section
 from mcp_coder.mcp_workspace_github import GithubException, verify_github_security
 
@@ -30,7 +31,7 @@ def _render(
             mock_cls.side_effect = ValueError("no token")
         else:
             mock_cls.return_value._get_repository.return_value = repo
-        _print_github_security_section(project_dir, STATUS_SYMBOLS)
+        _print_github_security_section(project_dir, STATUS_SYMBOLS, SectionBuilder())
     return capsys.readouterr().out
 
 

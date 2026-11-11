@@ -1,7 +1,8 @@
 """Shared test fixtures for CLI commands tests."""
 
 import argparse
-from collections.abc import Generator
+import re
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -11,20 +12,27 @@ import pytest
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
-    _format_row,
-    _pad,
+    STATUS_SYMBOLS,
+    Line,
+    Row,
 )
+from mcp_coder.cli.commands.verify_render import SectionBuilder, _render_rows
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.toolkit import VerifyItem
+
+_SMOKE_ROW = Row("MCP edit smoke test", "[OK]", "edit verified")
 
 
-def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
+def _expected_value_column(*, label_width: int = _LABEL_WIDTH) -> int:
     """Return the 0-indexed column where the value SHOULD begin.
 
-    Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
-    Computed purely from layout constants; does NOT inspect any line.
-    Use ``_assert_value_at_column`` to verify a real line against this.
+    Layout: [indent][label.ljust(label_width - (indent - 2))][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
+    The label field shrinks as the indent grows, so the value column is
+    the same at every indent. Computed purely from layout constants; does
+    NOT inspect any line. Use ``_assert_value_at_column`` to verify a real
+    line against this.
     """
-    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
+    return 2 + label_width + 1 + _MARKER_SLOT_WIDTH + 1
 
 
 def _assert_value_at_column(line: str, expected_col: int) -> None:
@@ -39,6 +47,48 @@ def _assert_value_at_column(line: str, expected_col: int) -> None:
     assert not line[expected_col].isspace(), (
         f"value missing at col {expected_col} (expected non-space): {line!r}"
     )
+
+
+def _render(lines: Sequence[Line]) -> str:
+    """Render a section's lines to text (test helper)."""
+    return "\n".join(_render_rows(lines))
+
+
+_MARKER_RE = re.compile("|".join(re.escape(s) for s in STATUS_SYMBOLS.values()))
+
+
+def _assert_section_aligned(text: str) -> int:
+    """All marker-bearing rows share marker column and value column; return row count."""
+    first: tuple[int, int] | None = None
+    count = 0
+    for line in text.splitlines():
+        m = _MARKER_RE.search(line)
+        rest = line[m.end() :] if m else ""
+        if m is None or not rest.strip():
+            continue  # hints, marker-less rows, freeform
+        value_col = len(line) - len(rest.lstrip())
+        if first is None:
+            first = (m.start(), value_col)
+        assert m.start() == first[0], (
+            f"marker at col {m.start()}, expected {first[0]}: {line!r}"
+        )
+        _assert_value_at_column(line, first[1])
+        count += 1
+    return count
+
+
+def _assert_sections_aligned(output: str) -> None:
+    """Apply ``_assert_section_aligned`` to each '=== ' section of ``output``.
+
+    Asserts at least one row was checked overall.
+    """
+    chunks: list[list[str]] = [[]]
+    for line in output.splitlines():
+        if line.startswith("=== "):
+            chunks.append([])
+        chunks[-1].append(line)
+    total = sum(_assert_section_aligned("\n".join(chunk)) for chunk in chunks)
+    assert total > 0, f"no marker-bearing rows found in output: {output!r}"
 
 
 @pytest.fixture
@@ -116,6 +166,12 @@ def _mock_resolve_claude_settings_path() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
+def _clear_retired_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep CONFIG width independent of the developer's environment."""
+    monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_ENDPOINT", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _mock_verify_config() -> Generator[MagicMock, None, None]:
     """Auto-mock verify_config to return a default OK result.
 
@@ -187,15 +243,36 @@ def _mock_print_project_section() -> Generator[MagicMock, None, None]:
     it directly import from verify_sections and are unaffected.
     """
 
-    def _print_header(*_args: Any, **_kwargs: Any) -> bool:
-        print(_pad("PROJECT"))
+    def _header(_project_dir: Any, _symbols: Any, out: SectionBuilder) -> bool:
+        out.section("PROJECT", [])
         return True
 
     with patch(
         "mcp_coder.cli.commands.verify._print_project_section",
-        side_effect=_print_header,
+        side_effect=_header,
     ) as mock:
         yield mock
+
+
+@pytest.fixture
+def toolkit_with_ruff() -> Generator[None, None, None]:
+    """Stub the toolkit so a non-formatter item (ruff) renders at indent 6."""
+    from mcp_tools_py.toolkit import PythonToolkit
+
+    with (
+        patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: PythonToolkit,
+        ),
+        patch(
+            "mcp_coder.cli.commands.verify_sections.verify_toolkit",
+            lambda _l, _p, _a: [
+                VerifyItem("formatter", "ok"),
+                VerifyItem("ruff", "ok"),
+            ],
+        ),
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -277,7 +354,7 @@ def _make_verify_mocks() -> Generator[dict[str, MagicMock], None, None]:
     claude_mcp_statuses = [
         ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
     ]
-    smoke_row = _format_row("MCP edit smoke test", "[OK]", "edit verified", indent=2)
+    smoke_row = _SMOKE_ROW
 
     with (
         patch(

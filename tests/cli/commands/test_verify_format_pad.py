@@ -5,10 +5,13 @@ import pytest
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
-    _VALUE_COLUMN_INDENT,
+    Line,
+    Row,
     _format_row,
     _format_row_prefix,
+    _hint,
     _pad,
+    _section_label_width,
 )
 
 
@@ -40,7 +43,7 @@ class TestFormatRowHelpers:
     ) -> str:
         return (
             f"{' ' * indent}"
-            f"{label.ljust(label_width)} "
+            f"{label.ljust(label_width - (indent - 2))} "
             f"{marker.ljust(_MARKER_SLOT_WIDTH)} "
         )
 
@@ -80,8 +83,7 @@ class TestFormatRowHelpers:
         """All markers produce equal-length prefixes derived from constants."""
         prefix = _format_row_prefix("x", marker, indent=2)
         expected_len = 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-        assert len(prefix) == expected_len
-        assert expected_len == _VALUE_COLUMN_INDENT
+        assert len(prefix) == expected_len == 32
 
     def test_prefix_lengths_match_across_markers(self) -> None:
         """Prefix lengths are identical for [OK], [WARN], [ERR]."""
@@ -102,8 +104,58 @@ class TestFormatRowHelpers:
         prefix = _format_row_prefix("x", "[OK]", indent=2, label_width=30)
         assert len(prefix) == 2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1
 
-    def test_custom_label_width_value_column(self) -> None:
-        """_format_row honours label_width when computing the value column."""
-        out = _format_row("longish label", "[OK]", "Z", indent=2, label_width=30)
-        expected_col = 2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1
-        assert out.index("Z") == expected_col
+
+class TestPerSectionColumnRule:
+    """Tests for the indent-independent column rule and the Row model."""
+
+    @pytest.mark.parametrize("indent", [2, 4, 6])
+    def test_short_label_value_at_column_32_for_any_indent(self, indent: int) -> None:
+        """Nested rows share the default value column with indent-2 rows."""
+        out = _format_row("label", "[OK]", "value", indent=indent)
+        assert out.index("value") == 32
+        assert out.startswith(" " * indent + "label")
+
+    @pytest.mark.parametrize("indent", [2, 4, 6])
+    def test_prefix_length_is_label_width_plus_10(self, indent: int) -> None:
+        """Prefix length does not depend on indent."""
+        for label_width in (_LABEL_WIDTH, 30):
+            prefix = _format_row_prefix(
+                "x", "[OK]", indent=indent, label_width=label_width
+            )
+            assert len(prefix) == label_width + 10
+
+    def test_long_label_widens_instead_of_overrunning_indent_2(self) -> None:
+        """A label longer than the field widens the row's own column."""
+        out = _format_row("x" * 30, "[OK]", "v", indent=2)
+        assert out.index("v") == 2 + 30 + 1 + 6 + 1
+        assert out[2 + 30 + 1 :].startswith("[OK]")
+
+    def test_long_label_widens_instead_of_overrunning_indent_4(self) -> None:
+        """At indent 4 a 21-char label needs label width 23 → value column 33."""
+        out = _format_row("a" * 21, "[OK]", "v", indent=4)
+        assert out.index("v") == 33
+
+    def test_section_label_width_empty(self) -> None:
+        assert _section_label_width([]) == _LABEL_WIDTH == 22
+
+    def test_section_label_width_ignores_str_items(self) -> None:
+        assert _section_label_width(["x" * 60, "", "  [Python]"]) == _LABEL_WIDTH
+
+    def test_section_label_width_counts_indent(self) -> None:
+        assert _section_label_width([Row("a" * 21, "", "", 4)]) == 23
+
+    def test_section_label_width_takes_max(self) -> None:
+        lines: list[Line] = [Row("short", "[OK]", "v"), "free", Row("b" * 25, "", "v")]
+        assert _section_label_width(lines) == 25
+
+    def test_row_defaults(self) -> None:
+        row = Row("label", "[OK]", "value")
+        assert row.indent == 2
+        assert row.wrap is False
+
+    def test_hint_is_empty_label_and_marker_row(self) -> None:
+        assert _hint("-> x") == Row("", "", "-> x")
+
+    def test_hint_text_starts_at_value_column(self) -> None:
+        out = _format_row(*_hint("-> x")[:3], indent=2)
+        assert out.index("-> x") == 32

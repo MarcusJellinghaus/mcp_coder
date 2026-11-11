@@ -11,6 +11,7 @@ from mcp_coder.cli.commands.verify import execute_verify
 
 from .conftest import (
     _LC_VERIFY,
+    _SMOKE_ROW,
     _VERIFY,
     _claude_ok,
     _github_ok_default,
@@ -393,7 +394,7 @@ class TestVerifyOrchestration:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK]",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
@@ -424,7 +425,7 @@ class TestVerifyOrchestration:
         mock_mcp_servers.return_value = _mcp_servers_ok()
 
         with patch(f"{_VERIFY}._format_mcp_section") as mock_fmt:
-            mock_fmt.return_value = "mocked"
+            mock_fmt.return_value = ("MCP SERVERS", ["mocked"])
             execute_verify(_make_args(list_mcp_tools=True, mcp_config=".mcp.json"))
             mock_fmt.assert_called_once()
             call_kwargs = mock_fmt.call_args

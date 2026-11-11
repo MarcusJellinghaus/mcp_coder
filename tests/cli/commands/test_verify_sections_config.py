@@ -13,11 +13,13 @@ import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_environment_section
 
 from .conftest import (
     _LC_VERIFY,
     _VERIFY,
+    _assert_section_aligned,
     _assert_value_at_column,
     _claude_ok,
     _expected_value_column,
@@ -189,15 +191,21 @@ class TestProviderEnvVarVisibility:
     def test_warning_row_aligns_with_active_provider_row(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """The long label gets an explicit label_width so the columns line up."""
+        """The provider row and the Active provider row share the value column."""
         monkeypatch.setenv(self._LABEL, "claude")
         _result, output = self._run(
             ("langchain", "cli argument"), capsys, llm_method="langchain"
         )
 
-        warn_row = next(iter(self._env_rows(output)))
+        start = output.index("=== LLM PROVIDER ")
+        end = output.index("\n=== ", start)
+        chunk = output[start:end]
+        assert "Active provider" in chunk
+        assert self._LABEL in chunk
+        assert _assert_section_aligned(chunk) == 2
+        warn_row = next(iter(self._env_rows(chunk)))
         _assert_value_at_column(
-            warn_row, _expected_value_column(2, label_width=len(self._LABEL))
+            warn_row, _expected_value_column(label_width=len(self._LABEL))
         )
 
     def test_env_set_and_is_the_source_adds_no_row(
@@ -244,7 +252,7 @@ class TestTlsProxySummaryRow:
             monkeypatch.delenv(var, raising=False)
 
     def _row(self, capsys: pytest.CaptureFixture[str]) -> str:
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
         return next(line for line in out.splitlines() if self._LABEL in line)
 
@@ -280,7 +288,7 @@ class TestTlsProxySummaryRow:
         self._clear_proxy(monkeypatch)
         monkeypatch.setenv(var, secret)
 
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
 
         row = next(line for line in out.splitlines() if self._LABEL in line)
@@ -306,7 +314,7 @@ class TestTlsProxySummaryRow:
 
         row = self._row(capsys)
         assert not any(symbol in row for symbol in STATUS_SYMBOLS.values())
-        _assert_value_at_column(row, _expected_value_column(2))
+        _assert_value_at_column(row, _expected_value_column())
 
     def test_row_uses_the_real_predicates(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

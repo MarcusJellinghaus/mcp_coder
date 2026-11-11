@@ -14,6 +14,7 @@ from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 from .conftest import (
     _LC_VERIFY,
+    _SMOKE_ROW,
     _VERIFY,
     _claude_ok,
     _github_ok_default,
@@ -62,7 +63,7 @@ class TestMcpConfigValidityRow:
                 ],
             ),
             patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response()),
-            patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke"),
+            patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value=_SMOKE_ROW),
             patch(f"{_VERIFY}.log_to_mlflow", create=True),
             patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=str(mcp_json)),
             patch(f"{_LC_VERIFY}.verify_mcp_servers", return_value=_mcp_servers_ok()),
@@ -144,6 +145,7 @@ class TestMcpConfigValidityRow:
         mock_prompt.assert_not_called()
         assert "MCP SERVERS" not in output
         assert "Test prompt" not in output
+        assert "=== LLM TEST" not in output
         assert result == 1
 
 

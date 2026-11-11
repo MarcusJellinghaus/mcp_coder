@@ -5,10 +5,19 @@ from typing import Any
 import pytest
 
 from mcp_coder.cli.commands.verify_formatting import (
-    _VALUE_COLUMN_INDENT,
     _format_row,
     _format_section,
 )
+
+from .conftest import _assert_section_aligned, _expected_value_column, _render
+
+
+def _has_row(output: str, label: str, marker: str, value: str) -> bool:
+    """True if the indent-4 row for *label* carries *marker* and ends in *value*."""
+    return any(
+        line.startswith(f"    {label} ") and marker in line and line.endswith(value)
+        for line in output.splitlines()
+    )
 
 
 class TestFormatSection:
@@ -23,7 +32,7 @@ class TestFormatSection:
             "cli_found": {"ok": True, "value": "YES"},
             "overall_ok": True,
         }
-        output = _format_section("BASIC VERIFICATION", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert _format_row("Claude CLI Found", "[OK]", "YES", indent=2) in output
 
     def test_failed_entry_formatted_with_failure_symbol(self) -> None:
@@ -32,7 +41,7 @@ class TestFormatSection:
             "cli_found": {"ok": False, "value": "NO"},
             "overall_ok": False,
         }
-        output = _format_section("BASIC VERIFICATION", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert _format_row("Claude CLI Found", "[ERR]", "NO", indent=2) in output
 
     def test_skipped_entry_formatted(self) -> None:
@@ -41,7 +50,7 @@ class TestFormatSection:
             "test_prompt": {"ok": None, "value": "skipped (no API key)", "error": None},
             "overall_ok": True,
         }
-        output = _format_section("TEST", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert "[WARN]" in output
         assert "skipped (no API key)" in output
 
@@ -51,17 +60,11 @@ class TestFormatSection:
             "api_integration": {"ok": False, "value": "FAILED", "error": "not found"},
             "overall_ok": False,
         }
-        output = _format_section("TEST", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert (
             _format_row("API Integration", "[ERR]", "FAILED (not found)", indent=2)
             in output
         )
-
-    def test_section_title_in_header(self) -> None:
-        """Section header contains the title."""
-        result: dict[str, Any] = {"overall_ok": True}
-        output = _format_section("MY SECTION", result, self._symbols())
-        assert "=== MY SECTION " in output
 
     def test_install_hint_rendered_inline(self) -> None:
         """When entry has install_hint and ok=False, hint appears indented below."""
@@ -73,13 +76,13 @@ class TestFormatSection:
             },
             "overall_ok": False,
         }
-        output = _format_section("TEST", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert (
             _format_row("Backend package", "[ERR]", "not installed", indent=2) in output
         )
         # Continuation line aligned under value column
         expected_hint_line = (
-            f"{' ' * _VALUE_COLUMN_INDENT}-> pip install langchain-openai"
+            f"{' ' * _expected_value_column()}-> pip install langchain-openai"
         )
         assert expected_hint_line in output
 
@@ -101,7 +104,7 @@ class TestBranchProtectionNesting:
             "branch_deletion": {"ok": True, "value": "disabled"},
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         lines = output.split("\n")
         # Parent at 2-space indent
         parent_lines = [line for line in lines if "Branch protection" in line]
@@ -159,7 +162,7 @@ class TestBranchProtectionNesting:
             },
             "overall_ok": False,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         # Parent line present
         parent_lines = [
             line for line in output.split("\n") if "Branch protection" in line
@@ -192,7 +195,7 @@ class TestBranchProtectionNesting:
             "branch_deletion": dict(row),
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         parent_lines = [
             line for line in output.split("\n") if "Branch protection" in line
         ]
@@ -222,7 +225,7 @@ class TestBranchProtectionNesting:
             "branch_deletion": {"ok": True, "value": "disabled"},
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         lines = output.split("\n")
         strict_lines = [line for line in lines if "Strict mode" in line]
         assert len(strict_lines) == 1
@@ -245,7 +248,7 @@ class TestBranchProtectionNesting:
             },
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert (
             _format_row(
                 "Require pull request",
@@ -271,7 +274,7 @@ class TestBranchProtectionNesting:
             },
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert (
             _format_row(
                 "Branch protection",
@@ -298,7 +301,7 @@ class TestBranchProtectionNesting:
             },
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert "get_protection failed" not in output
 
     def test_non_github_section_unaffected(self) -> None:
@@ -308,7 +311,7 @@ class TestBranchProtectionNesting:
             "cli_version": {"ok": True, "value": "1.0.0"},
             "overall_ok": True,
         }
-        output = _format_section("BASIC VERIFICATION", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         lines = output.split("\n")
         content_lines = [
             line for line in lines if line.strip() and not line.startswith("===")
@@ -366,7 +369,7 @@ class TestGitHubLabelMappings:
             },
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert "Token configured" in output
         assert "Repo accessible" in output
         assert "Network / proxy" in output  # labeled row present
@@ -384,7 +387,7 @@ class TestGitHubLabelMappings:
             },
             "overall_ok": False,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert "Token configured" in output
         assert "[ERR]" in output
         assert "GITHUB_TOKEN not found" in output
@@ -429,8 +432,7 @@ class TestGitLabelMappings:
             },
             "overall_ok": False,
         }
-        output = _format_section("GIT", result, self._symbols())
-        assert "=== GIT " in output
+        output = _render(_format_section(result, self._symbols()))
         assert "Git binary" in output
         assert "Signing enabled" in output
         assert "Signing key" in output
@@ -469,7 +471,7 @@ class TestAutoDeleteBranches:
             "auto_delete_branches": entry,
             "overall_ok": entry["ok"] is True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         expected_line = _format_row("Auto-delete branches", marker, value, indent=2)
         assert expected_line in output
 
@@ -480,7 +482,7 @@ class TestAutoDeleteBranches:
             "auto_delete_branches": {"ok": True, "value": "enabled"},
             "overall_ok": False,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert (
             _format_row("Auto-delete branches", "[OK]", "enabled", indent=2) in output
         )
@@ -524,7 +526,7 @@ class TestApiBaseUrlRendering:
             "token_configured": {"ok": True, "value": "configured"},
             "overall_ok": entry["ok"] is True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         expected_line = _format_row("API base URL", marker, value, indent=2)
         assert expected_line in output
         api_idx = output.find("API base URL")
@@ -573,7 +575,7 @@ class TestTokenFingerprintSuffix:
             "token_configured": entry,
             "overall_ok": True,
         }
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert "from ~/.mcp_coder/config.toml" in output
         if expected_in_suffix is None:
             assert "from ~/.mcp_coder/config.toml (" not in output
@@ -617,9 +619,9 @@ class TestPermissionProbes:
         """Each parametrized scenario renders the 6 perm_* rows correctly."""
         if scenario == "all-ok":
             result = self._all_ok_result()
-            output = _format_section("GITHUB", result, self._symbols())
+            output = _render(_format_section(result, self._symbols()))
             for label in _PERM_LABELS:
-                assert _format_row(label, "[OK]", "granted", indent=4) in output, (
+                assert _has_row(output, label, "[OK]", "granted"), (
                     f"Missing OK row for {label}"
                 )
         elif scenario == "one-missing":
@@ -629,13 +631,13 @@ class TestPermissionProbes:
                 "value": "denied",
                 "error": "https://docs.github.com/...#workflows",
             }
-            output = _format_section("GITHUB", result, self._symbols())
+            output = _render(_format_section(result, self._symbols()))
             assert "[ERR]" in output
             assert "https://docs.github.com/...#workflows" in output
             for label in _PERM_LABELS:
                 if label == "Actions: Read":
                     continue
-                assert _format_row(label, "[OK]", "granted", indent=4) in output, (
+                assert _has_row(output, label, "[OK]", "granted"), (
                     f"Missing OK row for {label}"
                 )
         else:
@@ -675,15 +677,16 @@ class TestPermissionProbes:
                 },
                 "overall_ok": False,
             }
-            output = _format_section("GITHUB", result, self._symbols())
+            output = _render(_format_section(result, self._symbols()))
             for label in _PERM_LABELS:
-                expected = _format_row(label, "[ERR]", f"not checked ({err})", indent=4)
-                assert expected in output, f"Missing ERR row for {label}"
+                expected = f"not checked ({err})"
+                assert _has_row(output, label, "[ERR]", expected), label
+        _assert_section_aligned(output)
 
     def test_header_appears_once_and_after_auto_delete_branches(self) -> None:
         """[Permissions] header appears exactly once and after Auto-delete branches."""
         result = self._all_ok_result()
-        output = _format_section("GITHUB", result, self._symbols())
+        output = _render(_format_section(result, self._symbols()))
         assert output.count("[Permissions]") == 1
         auto_idx = output.find("Auto-delete branches")
         header_idx = output.find("[Permissions]")
@@ -693,14 +696,7 @@ class TestPermissionProbes:
         assert last_perm_idx > auto_idx
 
     def test_perm_workflows_read_label_aligns_at_label_width(self) -> None:
-        """perm_* rows are rendered at indent=4 with the standard label width."""
-        result = self._all_ok_result()
-        output = _format_section("GITHUB", result, self._symbols())
-        expected_line = _format_row("Actions: Read", "[OK]", "granted", indent=4)
-        assert expected_line in output
-        for line in output.split("\n"):
-            if "Actions: Read" in line:
-                assert line == expected_line
-                break
-        else:
-            raise AssertionError("Actions: Read row not found in output")
+        """perm_* rows share the section's columns; Actions: Read sits at indent 4."""
+        output = _render(_format_section(self._all_ok_result(), self._symbols()))
+        assert _assert_section_aligned(output) == 7
+        assert any(line.startswith("    Actions: Read ") for line in output.split("\n"))

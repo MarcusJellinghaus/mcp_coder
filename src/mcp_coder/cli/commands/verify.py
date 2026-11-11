@@ -39,17 +39,17 @@ from ..utils import (
     resolve_mcp_config_path,
 )
 from .verify_formatting import (
-    _LABEL_WIDTH,
     STATUS_SYMBOLS,
+    Line,
+    Row,
     _format_claude_mcp_section,
     _format_mcp_section,
-    _format_row,
     _format_section,
     _format_tools_exposed_section,
     _looks_like_key,
-    _pad,
 )
 from .verify_jenkins import verify_jenkins
+from .verify_render import SectionBuilder
 
 # Bound as module globals on purpose: ``execute_verify`` resolves these names
 # here, so tests keep patching them at ``mcp_coder.cli.commands.verify.<name>``
@@ -80,7 +80,7 @@ def _run_mcp_edit_smoke_test(
     symbols: dict[str, str],
     env_vars: dict[str, str] | None = None,
     settings_file: str | None = None,
-) -> str:
+) -> Row:
     """Run MCP edit smoke test.
 
     Args:
@@ -93,7 +93,7 @@ def _run_mcp_edit_smoke_test(
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
 
     Returns:
-        Formatted output line for the smoke test result.
+        The smoke-test row.
     """
     label = "MCP edit smoke test"
     scratch_dir = project_dir / ".scratch"
@@ -102,11 +102,10 @@ def _run_mcp_edit_smoke_test(
     try:
         # mcp-workspace refuses gitignored paths, so the edit could never succeed
         if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
-            return _format_row(
+            return Row(
                 label,
                 symbols["warning"],
                 f"skipped: {_SMOKE_TEST_FILE} is gitignored",
-                indent=2,
             )
         scratch_dir.mkdir(exist_ok=True)
         write_lf_text(test_file, "A\n\nC\n")
@@ -122,20 +121,14 @@ def _run_mcp_edit_smoke_test(
         content = test_file.read_text(encoding="utf-8")
         pos_a, pos_b, pos_c = content.find("A"), content.find("B"), content.find("C")
         if pos_a < pos_b < pos_c:
-            return _format_row(label, symbols["success"], "edit verified", indent=2)
-        return _format_row(
+            return Row(label, symbols["success"], "edit verified")
+        return Row(
             label,
             symbols["warning"],
             "edit not verified (B not found between A and C)",
-            indent=2,
         )
     except Exception as exc:  # pylint: disable=broad-except
-        return _format_row(
-            label,
-            symbols["warning"],
-            f"edit not verified ({exc})",
-            indent=2,
-        )
+        return Row(label, symbols["warning"], f"edit not verified ({exc})")
     finally:
         test_file.unlink(missing_ok=True)
         if created_scratch:
@@ -153,13 +146,27 @@ def execute_verify(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 for success, 1 for failure)
     """
+    with SectionBuilder() as out:
+        return _run_verify(args, out)
+
+
+def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
+    """Body of execute_verify; writes sections through *out*.
+
+    Args:
+        args: Command line arguments, as for ``execute_verify``.
+        out: Builder every migrated section is written through.
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
     logger.info("Executing verify command")
     symbols = STATUS_SYMBOLS
-    _print_environment_section()
+    _print_environment_section(out)
 
     # 0. Config verification (first section) with TOML-style grouping
     config_result = verify_config()
-    print(_pad("CONFIG"))
+    out.open("CONFIG")
     status_symbol_map = {
         "ok": symbols["success"],
         "warning": symbols["warning"],
@@ -174,30 +181,31 @@ def execute_verify(args: argparse.Namespace) -> int:
         if label.startswith("["):
             if label != last_label:
                 if last_label is not None:
-                    print()  # blank line between groups
-                print(f"  {label}")
+                    out.add("")  # blank line between groups
+                out.add(f"  {label}")
                 last_label = label
             first, _sep, rest = value.partition(" ")
             if _looks_like_key(first) and rest:
-                print(_format_row(first, symbol, rest, indent=4))
+                out.add(Row(first, symbol, rest, 4))
             elif symbol.strip():
-                print(_format_row("", symbol, value, indent=4))
+                out.add(Row("", symbol, value, 4))
             else:
-                print(_format_row("", "", value, indent=4))
+                out.add(Row("", "", value, 4))
         else:
             # Top-level rows (Config file, Expected path, Hint, Parse error)
-            print(_format_row(label, symbol, value, indent=2))
+            out.add(Row(label, symbol, value))
 
     # 0a. Retired env vars — unconditional (outside both provider gates), since
     # a retired variable is ignored whatever the active provider is.
-    _print_retired_env_var_warning(symbols)
+    _print_retired_env_var_warning(symbols, out)
+    out.close()
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
     sys_prompt, proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
 
-    prompt_lines = [_pad("PROMPTS")]
+    prompt_lines: list[Line] = []
     # Lengths come from the content load_prompts already resolved — no re-read.
     # A configured path that did not resolve is an error, not an [OK] row
     # showing a path the run never actually used.
@@ -218,22 +226,18 @@ def execute_verify(args: argparse.Namespace) -> int:
         else:
             source_label = _prompt_source(configured, "shipped default")
             marker, value = symbols["success"], f"{source_label} ({len(content)} chars)"
-        prompt_lines.append(_format_row(label, marker, value, indent=2))
+        prompt_lines.append(Row(label, marker, value))
     mode = prompt_config.claude_system_prompt_mode
-    prompt_lines.append(_format_row("Claude mode", symbols["success"], mode, indent=2))
+    prompt_lines.append(Row("Claude mode", symbols["success"], mode))
     # Reporting only - the rows below must never feed verify_exit_code.
     # Walk from project_dir: that is where verify runs Claude, at both of its
     # LLM call sites.
-    prompt_lines.append(
-        _format_row("Claude cwd", symbols["success"], str(project_dir), indent=2)
-    )
+    prompt_lines.append(Row("Claude cwd", symbols["success"], str(project_dir)))
     context_hits = find_context_claude_md(project_dir)
     if not context_hits:
         # A project may legitimately have none - state the fact, do not warn.
         prompt_lines.append(
-            _format_row(
-                "Project instructions", symbols["success"], "none found", indent=2
-            )
+            Row("Project instructions", symbols["success"], "none found")
         )
     else:
         # Per-row annotation, not a verdict: an ancestor file is outside
@@ -242,46 +246,44 @@ def execute_verify(args: argparse.Namespace) -> int:
         for index, hit in enumerate(context_hits):
             outside = is_outside_project_dir(hit, project_dir)
             prompt_lines.append(
-                _format_row(
-                    # Continuation rows carry an empty label; _format_row pads
+                Row(
+                    # Continuation rows carry an empty label; the renderer pads
                     # it so the value column stays aligned.
                     "Project instructions" if index == 0 else "",
                     symbols["warning"] if outside else symbols["success"],
                     f"{hit} (outside project directory)" if outside else str(hit),
-                    indent=2,
                 )
             )
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):
             prompt_lines.append(
-                _format_row(
+                Row(
                     "Redundancy",
                     symbols["warning"],
                     "project prompt is CLAUDE.md (will skip for Claude)",
-                    indent=2,
                 )
             )
-    print("\n".join(prompt_lines))
+    out.section("PROMPTS", prompt_lines)
 
     # 0c. Project configuration section
-    project_ok = _print_project_section(project_dir, symbols)
+    project_ok = _print_project_section(project_dir, symbols, out)
 
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
-    print(_format_section("GIT", git_result, symbols))
+    out.section("GIT", _format_section(git_result, symbols))
 
     # 0e. GitHub verification section
     github_result = verify_github(project_dir)
-    print(_format_section("GITHUB", github_result, symbols))
-    _print_github_security_section(project_dir, symbols)
+    out.section("GITHUB", _format_section(github_result, symbols))
+    _print_github_security_section(project_dir, symbols, out)
 
     # 0f. Jenkins verification sections (both empty when [jenkins] is unset)
     jenkins_result, jenkins_jobs_result = verify_jenkins()
     if jenkins_result:
-        print(_format_section("JENKINS", jenkins_result, symbols))
+        out.section("JENKINS", _format_section(jenkins_result, symbols))
     if jenkins_jobs_result:
-        print(_format_section("JENKINS JOBS", jenkins_jobs_result, symbols))
+        out.section("JENKINS JOBS", _format_section(jenkins_jobs_result, symbols))
     # None keeps an unconfigured [jenkins] exit-neutral; CONFIG already reports
     # a missing required field.
     jenkins_ok: bool | None = None
@@ -295,38 +297,31 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 2. Claude CLI verification (conditional on provider)
     if active_provider == "claude":
         claude_result = verify_claude()
-        print(_format_section("BASIC VERIFICATION", claude_result, symbols))
+        out.section("BASIC VERIFICATION", _format_section(claude_result, symbols))
     else:
         # Quick binary check only
         claude_path = find_claude_executable(return_none_if_not_found=True)
         if claude_path:
-            print(f"\n  Claude CLI: available at {claude_path} (not active)")
+            out.add(f"\n  Claude CLI: available at {claude_path} (not active)")
         claude_result = {"overall_ok": True}  # neutral for exit code
 
     # 3. LangChain verification (only when provider is langchain)
     langchain_result: dict[str, Any] | None = None
-    print(_pad("LLM PROVIDER"))
-    print(
-        _format_row(
-            "Active provider",
-            symbols["success"],
-            f"{active_provider} (from {source})",
-            indent=2,
-        )
+    out.open("LLM PROVIDER")
+    out.add(
+        Row("Active provider", symbols["success"], f"{active_provider} (from {source})")
     )
     # The env var no longer silently wins over --llm-method, so an exported but
     # overridden value would otherwise leave no trace at all. When it IS the
     # source the row above already says so — add nothing. Exit-neutral.
     env_provider = os.environ.get(_PROVIDER_ENV_VAR)
     if env_provider and source != _PROVIDER_ENV_SOURCE:
-        print(
-            _format_row(
+        out.add(
+            Row(
                 _PROVIDER_ENV_VAR,
                 symbols["warning"],
                 f"set to '{env_provider}' but overridden by {source} "
                 f"— using '{active_provider}'",
-                indent=2,
-                label_width=max(_LABEL_WIDTH, len(_PROVIDER_ENV_VAR)),
             )
         )
     # 2a. Resolve MCP config for ALL providers (before provider branch)
@@ -338,6 +333,8 @@ def execute_verify(args: argparse.Namespace) -> int:
     )
 
     if active_provider == "langchain":
+        # Close before the slow verify_langchain call so the section streams.
+        out.close()
         check_models = getattr(args, "check_models", False)
         from ...llm.providers.langchain.verification import verify_langchain
 
@@ -350,13 +347,15 @@ def execute_verify(args: argparse.Namespace) -> int:
         # The empty marker is what renders the block without status symbols.
         effective_config = langchain_result.get("effective_config")
         if effective_config:
-            print(_pad("EFFECTIVE CONFIG"))
-            for label, value in effective_config:
-                print(_format_row(label, "", value, indent=2))
-        print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
+            out.section(
+                "EFFECTIVE CONFIG",
+                [Row(label, "", value) for label, value in effective_config],
+            )
+        out.section("LLM PROVIDER DETAILS", _format_section(langchain_result, symbols))
     else:
-        print("  (uses Claude CLI — see Basic Verification above)")
-        _print_langchain_readiness_warning(symbols)
+        out.add("  (uses Claude CLI — see Basic Verification above)")
+        _print_langchain_readiness_warning(symbols, out)
+        out.close()
 
     # 3a. MCP server health checks (provider-aware ordering)
     mcp_result: dict[str, Any] | None = None
@@ -382,8 +381,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             None: symbols["warning"],
             False: symbols["failure"],
         }[_ok]
-        print(_pad("MCP CONFIG"))
-        print(_format_row(".mcp.json", marker, _msg, indent=2))
+        out.section("MCP CONFIG", [Row(".mcp.json", marker, _msg)])
         mcp_config_ok = _ok is not False
 
     if mcp_config_resolved and mcp_config_ok is not False:
@@ -412,15 +410,15 @@ def execute_verify(args: argparse.Namespace) -> int:
         if active_provider == "claude":
             # Claude MCP section first (primary)
             if claude_mcp is not None:
-                print(
-                    _format_claude_mcp_section(
+                out.section(
+                    *_format_claude_mcp_section(
                         claude_mcp, symbols, for_completeness=False
                     )
                 )
             # LangChain MCP section second (for completeness)
             if mcp_result is not None:
-                print(
-                    _format_mcp_section(
+                out.section(
+                    *_format_mcp_section(
                         mcp_result,
                         symbols,
                         list_mcp_tools=list_mcp_tools,
@@ -428,21 +426,22 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
-                print(
-                    _format_row(
-                        "",
-                        symbols["warning"],
-                        "server health check skipped"
-                        " (langchain-mcp-adapters not installed)",
-                        indent=2,
-                    )
+                out.section(
+                    "MCP SERVERS (via langchain-mcp-adapters)",
+                    [
+                        Row(
+                            "",
+                            symbols["warning"],
+                            "server health check skipped"
+                            " (langchain-mcp-adapters not installed)",
+                        )
+                    ],
                 )
         else:
             # LangChain MCP section first (primary)
             if mcp_result is not None:
-                print(
-                    _format_mcp_section(
+                out.section(
+                    *_format_mcp_section(
                         mcp_result,
                         symbols,
                         list_mcp_tools=list_mcp_tools,
@@ -450,20 +449,21 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
-                print(
-                    _format_row(
-                        "",
-                        symbols["warning"],
-                        "server health check skipped"
-                        " (langchain-mcp-adapters not installed)",
-                        indent=2,
-                    )
+                out.section(
+                    "MCP SERVERS (via langchain-mcp-adapters)",
+                    [
+                        Row(
+                            "",
+                            symbols["warning"],
+                            "server health check skipped"
+                            " (langchain-mcp-adapters not installed)",
+                        )
+                    ],
                 )
             # Claude MCP section second (for completeness)
             if claude_mcp is not None:
-                print(
-                    _format_claude_mcp_section(
+                out.section(
+                    *_format_claude_mcp_section(
                         claude_mcp, symbols, for_completeness=claude_for_completeness
                     )
                 )
@@ -482,32 +482,28 @@ def execute_verify(args: argparse.Namespace) -> int:
     if mcp_config_resolved:
         warnings = mcp_warnings
         if warnings:
-            print(_pad("MCP CONFIG WARNINGS"))
-            section_label_width = max(
-                _LABEL_WIDTH, max(len(label) for label, _ in warnings)
+            out.section(
+                "MCP CONFIG WARNINGS",
+                [Row(label, symbols["warning"], value) for label, value in warnings],
             )
-            for label, value in warnings:
-                print(
-                    _format_row(
-                        label,
-                        symbols["warning"],
-                        value,
-                        indent=2,
-                        label_width=section_label_width,
-                    )
-                )
+
+    # LLM TEST holds the smoke test and the test prompt; it opens before either
+    # runs so its header streams while they execute.
+    if mcp_config_ok is not False:
+        out.open("LLM TEST")
 
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved and mcp_config_ok is not False:
-        smoke_line = _run_mcp_edit_smoke_test(
-            project_dir,
-            active_provider,
-            mcp_config_resolved,
-            symbols,
-            env_vars=env_vars,
-            settings_file=settings_file,
+        out.add(
+            _run_mcp_edit_smoke_test(
+                project_dir,
+                active_provider,
+                mcp_config_resolved,
+                symbols,
+                env_vars=env_vars,
+                settings_file=settings_file,
+            )
         )
-        print(smoke_line)
 
     # 3c. Unified test prompt (both providers)
     # Skipped on a malformed .mcp.json (mcp_config_ok is False): the MCP CONFIG
@@ -530,16 +526,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                 project_dir=str(project_dir),
                 inject_prompts=True,
             )
-            print(
-                _format_row("Test prompt", symbols["success"], "responded OK", indent=2)
-            )
+            out.add(Row("Test prompt", symbols["success"], "responded OK"))
             if active_provider == "claude":
                 raw_response = cast(dict[str, Any], response.get("raw_response", {}))
                 system_message = raw_response.get("system")
-                tools_lines, tools_exposed_ok = _format_tools_exposed_section(
+                tools_rows, tools_exposed_ok = _format_tools_exposed_section(
                     system_message, symbols
                 )
-                print("\n".join(tools_lines))
+                out.add(*tools_rows)
         except Exception as exc:  # pylint: disable=broad-except
             test_prompt_ok = False
             # Only classify connection-related exceptions
@@ -556,20 +550,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                     category = "Connection error"
             else:
                 category = f"{type(exc).__name__}: {exc}"
-            print(
-                _format_row(
-                    "Test prompt",
-                    symbols["failure"],
-                    f"FAILED ({category})",
-                    indent=2,
-                )
-            )
+            out.add(Row("Test prompt", symbols["failure"], f"FAILED ({category})"))
             logger.debug("Test prompt failure details: %s", exc, exc_info=True)
-            print("  Run with --debug for detailed diagnostics.")
+            out.add("  Run with --debug for detailed diagnostics.")
+    out.close()
 
     # 4. MLflow verification (now with since= to confirm logging)
     mlflow_result = verify_mlflow(since=timestamp)
-    print(_format_section("MLFLOW", mlflow_result, symbols))
+    out.section("MLFLOW", _format_section(mlflow_result, symbols))
 
     # 5. Collect and display install hints
     all_hints: list[str] = []
@@ -586,8 +574,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             if h.startswith("pip install")
         )
         if pip_packages:
-            print(_pad("INSTALL INSTRUCTIONS"))
-            print(f"  pip install {pip_packages}")
+            out.section("INSTALL INSTRUCTIONS", [f"  pip install {pip_packages}"])
 
     # 6. Compute and return exit code
     exit_code = verify_exit_code._compute_exit_code(

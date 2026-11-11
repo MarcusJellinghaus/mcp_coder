@@ -32,6 +32,7 @@ from .conftest import (
     _mcp_servers_ok,
     _minimal_llm_response,
     _mlflow_not_installed,
+    _render,
 )
 
 _JENKINS = "mcp_coder.cli.commands.verify_jenkins"
@@ -529,7 +530,7 @@ class TestJenkinsRendering:
             },
             "overall_ok": False,
         }
-        rendered = _format_section("JENKINS JOBS", jobs_result, STATUS_SYMBOLS)
+        rendered = _render(_format_section(jobs_result, STATUS_SYMBOLS))
         lines = rendered.splitlines()
 
         row_index = next(i for i, line in enumerate(lines) if "my-repo" in line)
@@ -544,7 +545,7 @@ class TestJenkinsRendering:
             "overall_read": {"ok": True, "value": "granted"},
             "overall_ok": True,
         }
-        rendered = _format_section("JENKINS", server_result, STATUS_SYMBOLS)
+        rendered = _render(_format_section(server_result, STATUS_SYMBOLS))
 
         assert "Server" in rendered
         assert "Authentication" in rendered
