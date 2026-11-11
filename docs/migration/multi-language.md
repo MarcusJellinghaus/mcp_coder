@@ -1,5 +1,7 @@
 # Migration: multi-language toolkit
 
+Configuration reference: [toolkits](../configuration/toolkits.md).
+
 > #1199 extends this note.
 
 ## Implement checks are a gate (#1389)

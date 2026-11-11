@@ -17,6 +17,8 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - Code quality CI checks
 - Development convenience scripts
 
+Non-Python repos: use a root `mcp-coder.toml` and the `command` toolkit ([Command toolkit](../configuration/toolkits.md#command-toolkit)).
+
 ## Quick Setup Checklist
 
 - [ ] Configure a GitHub token in `~/.mcp_coder/config.toml` ([Configuration Guide](../configuration/config.md)). The token's GitHub user is "you" for `vscodeclaude`: it only opens issues assigned to that user
@@ -29,6 +31,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
   - Labels advance and failures are commented on the issue by default. Set `update_issue_labels = false` or `post_issue_comments = false` for the repo to opt out
   - Optional: `auto_review_plan` and `auto_review_implementation` (default `false`) replace the interactive review with an automated one that hands over to you when it needs a human
   - Optional: `auto_merge` (default `false`) squash-merges the PR once CI is green on HEAD — read the [caveats](../configuration/config.md#auto-merge) first
+- [ ] Configure a toolkit in `[tool.mcp-coder.toolkit]` ([Toolkits](../configuration/toolkits.md#configure-a-toolkit))
 - [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
 ## Detail Documentation
@@ -78,6 +81,7 @@ The following files in this repository serve as references/templates for other p
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |
 | `docs/architecture/architecture.md` | G | Yes | No | Write your own — required by `/implementation_review` |
 | `pyproject.toml` | P | No | No | Use as a dependency/config reference, not a copy |
+| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Template: [toolkits.md](../configuration/toolkits.md#npm) |
 | `.python-version` | P | No | No | Pin to your Python version |
 | `.importlinter` | P | No | No | Package names, contract definitions |
 | `tach.toml` | P | No | No | Module boundaries for your package |

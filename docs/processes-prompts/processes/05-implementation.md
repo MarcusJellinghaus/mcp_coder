@@ -21,7 +21,7 @@ Tier: automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MA
 
 **Quality gates:**
 
-- All code changes are validated through **pylint** → **pytest** → **mypy**, by the LLM and by routine when implementation is done.
+- mcp-coder runs the configured toolkit bindings; the LLM runs the toolkit's checks.
 - Formatting with the project's configured formatter.
 - Git commits only after all checks pass.
 
@@ -37,7 +37,7 @@ Tier: automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MA
 - Updates `TASK_TRACKER.md` with implementation steps
 - Implements each step from the tracker
 - The LLM runs the project's quality checks after each step, as its prompt tells it to
-- After each task, mcp-coder runs the `implement_task` binding (`check@quick`); after the last task, the `implement_final` binding (`check@standard`, `test@quick`) as a gate. Each binding run gets up to 3 LLM fix turns; at the cap a task commits and continues, the final check fails the run. `[tool.mcp-coder.implement] check_type_hints = false` drops the `check@*` requests. Overrides: [migration note](../../migration/multi-language.md#implement-checks-are-a-gate-1389)
+- After each task, mcp-coder runs the `implement_task` binding (`check@quick`); after the last task, the `implement_final` binding (`check@standard`, `test@quick`) as a gate. Each binding run gets up to 3 LLM fix turns; at the cap a task commits and continues, the final check fails the run. Type-hint switch: [toolkits](../../configuration/toolkits.md#until-the-next-breaking-release). Overrides: [migration note](../../migration/multi-language.md#implement-checks-are-a-gate-1389) and [bindings](../../configuration/toolkits.md#bindings)
 - Formats code with the project's configured formatter
 - Commits changes with descriptive messages
 - Uses prompts ([prompts.md](../../../src/mcp_coder/prompts/prompts.md)):

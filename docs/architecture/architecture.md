@@ -6,7 +6,7 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
 
 ## 1. Introduction and Goals
 
-`mcp-coder` is a CLI and workflow orchestrator for LLM sessions. It drives a GitHub issue from planning through implementation and review to a pull request. The LLM does the creative work; mcp-coder owns the process around it. The label-driven workflow itself is language-agnostic, but Python is the supported ecosystem for now: `implement` runs checks, tests and formatting through the toolkit bindings, whose default toolkit is `mcp-tools-py`, and the installer and architecture enforcement assume a Python target repo. GitHub is the only supported forge.
+`mcp-coder` is a CLI and workflow orchestrator for LLM sessions. It drives a GitHub issue from planning through implementation and review to a pull request. The LLM does the creative work; mcp-coder owns the process around it. The label-driven workflow itself is language-agnostic: `implement` runs checks, tests and formatting through the bindings of the configured toolkit (`mcp-tools-py` for Python, `command` for other stacks). The installer and project setup still assume a Python target repo. GitHub is the only supported forge.
 
 **Quality goals**
 
@@ -23,8 +23,8 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
 
 - Python 3.11+; Claude Code CLI is the expected backend. Copilot CLI or a LangChain backend can replace it.
 - GitHub only. Issues, labels, PRs and CI status are GitHub concepts reached through `mcp-workspace`; GitLab and others are not supported, and there is no forge abstraction beyond the shim.
-- Target repos are Python projects for now. The `implement` workflow runs checks, tests and formatting through the toolkit bindings (default toolkit `mcp-tools-py`); the LLM runs the same tools and the import-layer checks through `mcp-tools-py`; and `mcp-coder install` provisions a Python venv. The setup guides separate general files from Python-only ones ([repository-setup](../repository-setup/README.md)), which is where other languages would plug in.
-- Git and GitHub access goes through the external `mcp-workspace` package; code-quality tools come from `mcp-tools-py`. Shared subprocess, logging and redaction helpers come from `mcp-coder-utils`. All three are reached only through local shim modules.
+- Target repos are set up as Python projects for now. The `implement` workflow runs checks, tests and formatting through the bindings of the configured toolkit (default `mcp-tools-py`). With the Python toolkit the LLM runs the same tools and the import-layer checks through `mcp-tools-py`; the `command` toolkit gives it exact `Bash(...)` grants instead. `mcp-coder install` provisions a Python venv. The setup guides separate general files from Python-only ones ([repository-setup](../repository-setup/README.md)), which is where other languages would plug in.
+- Git and GitHub access goes through the external `mcp-workspace` package; code-quality tools are reached through the configured toolkit. Shared subprocess, logging and redaction helpers and the toolkit contract come from `mcp-coder-utils`. All three are reached only through local shim modules.
 - GitHub labels are the workflow state machine, so the label set is a hard dependency. See [Development Process](../processes-prompts/development-process.md).
 - Dependency versions and tool configuration live in `pyproject.toml`.
 
@@ -44,8 +44,8 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
 - **GitHub** triggers work (status labels) and receives results (comments, labels, PRs).
 - **mcp-coder** decides what runs next, prepares context and records results.
 - **The LLM backend** reasons and writes: plans, code, reviews, PR text. Today that is Claude Code; other providers are supported through the same interface.
-- **MCP servers** give the LLM file access and quality checks. The LLM talks to them directly; mcp-coder configures them and, for checks, tests and formatting, runs the same tools itself through the toolkit bindings.
-- **Target repos** are the (currently Python) repositories mcp-coder works on. mcp-coder is installed once and pointed at them with `--project-dir`; it is not part of their code. A target repo supplies its own `.mcp.json` and `.claude/`, declares install extras and sibling pins in its `pyproject.toml`, and carries the status labels. `mcp-coder init` deploys skills, agents and the knowledge base into it. The contract is checked at launch; see [repository-setup](../repository-setup/README.md#target-repo-contracts). This file doubles as a model: `/implementation_review` expects each target repo to have its own `docs/architecture/architecture.md`.
+- **MCP servers** give the LLM file access and, with the Python toolkit, quality checks; the `command` toolkit grants exact `Bash(...)` commands instead. The LLM talks to them directly; mcp-coder configures them and, for checks, tests and formatting, runs the same tools itself through the toolkit bindings.
+- **Target repos** are the repositories mcp-coder works on (set up as Python projects for now). mcp-coder is installed once and pointed at them with `--project-dir`; it is not part of their code. A target repo supplies its own `.mcp.json` and `.claude/`, declares install extras and sibling pins in its `pyproject.toml`, and carries the status labels. `mcp-coder init` deploys skills, agents and the knowledge base into it. The contract is checked at launch; see [repository-setup](../repository-setup/README.md#target-repo-contracts). This file doubles as a model: `/implementation_review` expects each target repo to have its own `docs/architecture/architecture.md`.
 
 ---
 
@@ -57,7 +57,7 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
   - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every poll and routes conflicts, failing CI, code-scanning alerts and review comments back to a workflow or a human.
 
   Diagram and per-label behaviour: [Development Process](../processes-prompts/development-process.md). Setup: [Label Setup](../getting-started/label-setup.md).
-- **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` runs the `implement_task` binding after each task and the `implement_final` binding after the last one, each with a capped LLM fix loop, and the final one is a gate (`[tool.mcp-coder.implement] check_type_hints = false` drops their `check@*` requests). The commit step runs the formatter (`format_code`, on by default), and `rebase` compares checks before and after the rebase. All of these go through the bindings of the configured toolkit (`[tool.mcp-coder.toolkit]`). The LLM also runs pylint, pytest and mypy during each task, as its prompt tells it to.
+- **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` runs the `implement_task` binding after each task and the `implement_final` binding after the last one, each with a capped LLM fix loop, and the final one is a gate (type-hint switch: [toolkits](../configuration/toolkits.md#until-the-next-breaking-release)). The commit step runs the formatter (`format_code`, on by default), and `rebase` compares checks before and after the rebase. All of these go through [the bindings of the configured toolkit](../configuration/toolkits.md#bindings) (`[tool.mcp-coder.toolkit]`). The LLM also runs the toolkit's checks during each task, as its prompt tells it to. See [toolkits](../configuration/toolkits.md) and the [toolkit interface](toolkit-interface.md).
 - **One LLM interface, Claude Code first.** Callers use `llm.interface`; provider specifics stay in `llm/providers/`. Claude Code is the primary provider and drives the design (project-dir anchoring, session logs, MCP configuration). Other providers are kept working behind the same interface but are less exercised.
 - **Thin top, reusable bottom.** Workflows only sequence; composed steps and primitives sit below and are shared (see section 5).
 - **Architecture is enforced, not just described.** Layers, sibling independence and library wrappers are CI checks.
@@ -93,7 +93,8 @@ Inside the orchestration band the order is also fixed: `workflows` on top, then 
 | `prompts`, `prompt_manager` | Prompt templates and the system and project prompts layered on them. |
 | `install` | Provisions a target environment for `mcp-coder install`. Reads policy from the target's `pyproject.toml`. |
 | `utils` | Technical helpers and shims for shared libraries. |
-| shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`, `mcp_tools_py`. |
+| shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`, `mcp_tools_py` (re-exports only `resolve_steps`), `utils/toolkit` (mcp-coder-utils toolkit contract). |
+| `toolkits` | Toolkits shipped with mcp-coder (`command`). tach `tools` layer, depends only on `mcp_coder.utils`. The `toolkits_isolation` contracts in `.importlinter` forbid core imports; core reaches them only through the `mcp_coder.toolkits` entry points. |
 | `config`, `constants` | Foundation. No internal dependencies. |
 
 ### LangChain model layer

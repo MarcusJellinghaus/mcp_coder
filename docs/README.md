@@ -19,7 +19,7 @@ Complete documentation for MCP Coder.
 - **[Installation Guide](getting-started/installation.md)** - Install paths (PyPI, editable dev, pinned GitHub ref, CI / worker provisioning)
 - **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
-- **[Command Toolkit](configuration/command-toolkit.md)** - Run your own format / check / test commands on any stack (npm, …)
+- **[Toolkits](configuration/toolkits.md)** - Select and configure the toolkit that formats, checks and tests a repo; bindings; the mcp-tools-py and command toolkits
 - **[Claude Code Configuration](configuration/claude-code.md)** - Installing Claude Code and the Windows launcher
 - **[Copilot CLI Setup](repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration
@@ -41,6 +41,7 @@ Developing MCP Coder itself: see [CONTRIBUTING.md](CONTRIBUTING.md).
 ### Architecture & Design
 
 - **[Architecture Overview](architecture/architecture.md)** - System architecture and design decisions
+- **[Toolkit Interface](architecture/toolkit-interface.md)** - What mcp-coder does with a toolkit, and how to write one
 - **[Architecture Enforcement](architecture/enforcement.md)** - Why the architecture rules are enforced mechanically
 - **[Architecture Maintenance](architecture/architecture-maintenance.md)** - What belongs in the architecture overview and when to update it
 - **[Dependency Graphs](architecture/dependencies/readme.md)** - Generated views of the import structure
