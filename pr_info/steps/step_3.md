@@ -24,8 +24,10 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
 1. "Quality gates on every step" bullet: drop "mcp-coder re-checks mypy itself
    once all steps are done" and replace "pylint, mypy and pytest run after each
    implementation step" with: the LLM is told to run the project's checks, and
-   mcp-coder runs the configured toolkit's checks and tests after each step and
-   as a final gate. Keep "every plan step carries its own tests…".
+   mcp-coder runs the configured bindings (after each task and as a final
+   gate). Don't claim tests run after each step: by default `implement_task`
+   binds only `check@quick`; tests run in the `implement_final` gate. Keep
+   "every plan step carries its own tests…".
 2. "The LLM reaches files, git, GitHub and the quality checks only through
    [MCP] servers (…)" bullet: files, git and GitHub through `mcp-workspace`;
    quality checks through the configured toolkit — `mcp-tools-py` is the Python

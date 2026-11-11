@@ -161,7 +161,9 @@ run the verification searches; fix until all pass
 ## DATA — verification (replaces tests)
 
 - `search_files(glob="docs/architecture/toolkit-interface.md", pattern="(?i)proposed|planned|will be|until |#1199")`
-  → no match except `#until-the-next-breaking-release` link anchors.
+  → no match except links to the transitional section (the
+  `#until-the-next-breaking-release` anchor and link text such as "Until the
+  next breaking release").
 - `search_files(glob="docs/architecture/toolkit-interface.md", pattern="#\\d+")`
   → only `#1194` in the authoring guide's opening line.
 - Both mcp-coder-utils URLs present; every relative link resolves to an existing

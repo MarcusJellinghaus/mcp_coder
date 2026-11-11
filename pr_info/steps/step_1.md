@@ -49,7 +49,10 @@ don't add it now.)
 line, in `pyproject.toml` or (non-Python repos) a root `mcp-coder.toml`. Show
 both one-liners (`toolkit = "mcp-tools-py"`, `toolkit = "command"`), link to
 `#examples`, `#command-toolkit`, and to the transitional section for what
-happens when nothing is configured. Check with `mcp-coder verify`.
+happens when nothing is configured. State that `toolkit = "command"` alone is
+not enough: it also needs its `[tool.mcp-coder.toolkit.command]` step tables,
+at least `format`, or `verify` fails and actions return `error`; link that
+sentence to `#command-toolkit` and `#npm`. Check with `mcp-coder verify`.
 
 **`## [tool.mcp-coder.toolkit]`** (source: `src/mcp_coder/utils/toolkit_runner.py`
 `load_toolkit_config`, `_RESERVED_KEYS`, `_PER_ACTION_KEYS`, `_validate_params`, `load_toolkit`):
@@ -153,6 +156,9 @@ level down, with exactly these corrections:
 Move the npm example out of this section into `## Examples` and link to it.
 The npm template's anchor is therefore `toolkits.md#npm`: #1198's npm template
 link (follow-up after merge) must target `#npm`, not `#command-toolkit`.
+Record this in the commit body (for the PR description): the npm template
+anchor is `toolkits.md#npm`, not `#command-toolkit` as the issue states, so the
+#1198 follow-up links to `#npm`.
 
 **`## Examples`.**
 - `### Python` (`pyproject.toml`):
@@ -201,7 +207,8 @@ run the verification searches; fix until all pass
 - `search_files(pattern="command-toolkit\\.md")` → matches only under `pr_info/`.
 - `search_files(glob="docs/configuration/toolkits.md", pattern="^## (Configure a toolkit|Command toolkit)$")` → 2 matches.
 - `search_files(glob="docs/configuration/toolkits.md", pattern="(?i)proposed|will be|until ")`
-  → only the `## Until the next breaking release` heading.
+  → only the `## Until the next breaking release` heading and links to it
+  (e.g. link text "Until the next breaking release").
 - `search_files(glob="docs/configuration/toolkits.md", pattern="(?i)planned|#1199")`
   → only inside the transitional section.
 - `check_file_size` passes.
