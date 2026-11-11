@@ -28,7 +28,7 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.mcp-coder.install]` | mcp-coder install process (`pyproject_config.py`) | `extras`, `post_install_checks` |
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
 | `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
-| `[tool.mcp-coder.toolkit]` | mcp-coder (`utils/toolkit_runner.py`) | Toolkit selection (`toolkit`, default `"mcp-tools-py"`), workflow `bindings` and action `params`. In `pyproject.toml`, else a root `mcp-coder.toml` |
+| [`[tool.mcp-coder.toolkit]`](../configuration/toolkits.md) | mcp-coder (`utils/toolkit_runner.py`) | Toolkit selection (`toolkit`, default `"mcp-tools-py"`), workflow `bindings` and action `params`. In `pyproject.toml`, else a root `mcp-coder.toml` |
 
 **mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads the `[tool.mcp-coder]` rows above (`format_code`, `implement`, `install`, `install-from-github`, `prompts`). Label configuration (`labels-config`) is read by [`config/label_config.py`](../../src/mcp_coder/config/label_config.py).
 

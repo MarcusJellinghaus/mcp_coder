@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Point the existing docs at the toolkit pages
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: edit the seven existing docs to link the toolkit pages; run the whole-issue "Done when" checks
-- [ ] Quality checks (file size, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: edit the seven existing docs to link the toolkit pages; run the whole-issue "Done when" checks
+- [x] Quality checks (file size, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
