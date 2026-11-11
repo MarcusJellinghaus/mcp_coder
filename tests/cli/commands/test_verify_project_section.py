@@ -19,7 +19,11 @@ from mcp_coder.cli.commands.verify_sections import (
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit import VerifyItem
 from mcp_coder.utils.toolkit_runner import verify_toolkit
-from tests.cli.commands.conftest import _make_args, _make_verify_mocks
+from tests.cli.commands.conftest import (
+    _assert_section_aligned,
+    _make_args,
+    _make_verify_mocks,
+)
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 _VERIFY_TOOLKIT = "mcp_coder.cli.commands.verify_sections.verify_toolkit"
@@ -240,6 +244,16 @@ class TestToolkitRows:
         row = _row(lines, "Toolkit")
         assert "[ERR]" in row
         assert "boom" in row
+
+    @pytest.mark.usefixtures("toolkit_with_ruff")
+    def test_toolkit_item_row_aligns_with_section(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _, lines = _run(tmp_path, "[tool.black]\n", capsys)
+        assert _row(lines, "ruff").startswith("      ruff ")
+        assert _row(lines, "format_code").startswith("    format_code ")
+        assert _row(lines, "pyproject.toml").startswith("  pyproject.toml ")
+        assert _assert_section_aligned("\n".join(lines)) >= 3
 
     def test_mcp_coder_toml_without_pyproject(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

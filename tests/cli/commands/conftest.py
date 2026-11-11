@@ -18,6 +18,7 @@ from mcp_coder.cli.commands.verify_formatting import (
 )
 from mcp_coder.cli.commands.verify_render import SectionBuilder, _render_rows
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.toolkit import VerifyItem
 
 _SMOKE_ROW = Row("MCP edit smoke test", "[OK]", "edit verified")
 
@@ -251,6 +252,27 @@ def _mock_print_project_section() -> Generator[MagicMock, None, None]:
         side_effect=_header,
     ) as mock:
         yield mock
+
+
+@pytest.fixture
+def toolkit_with_ruff() -> Generator[None, None, None]:
+    """Stub the toolkit so a non-formatter item (ruff) renders at indent 6."""
+    from mcp_tools_py.toolkit import PythonToolkit
+
+    with (
+        patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: PythonToolkit,
+        ),
+        patch(
+            "mcp_coder.cli.commands.verify_sections.verify_toolkit",
+            lambda _l, _p, _a: [
+                VerifyItem("formatter", "ok"),
+                VerifyItem("ruff", "ok"),
+            ],
+        ),
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)

@@ -184,6 +184,10 @@ _._mock_verify_github_security
 # CONFIG section width does not depend on the developer's environment
 _._clear_retired_env_vars
 
+# cli/commands/conftest.py - Opt-in fixture adding a toolkit item row (indent 6),
+# pulled in via usefixtures("toolkit_with_ruff")
+_.toolkit_with_ruff
+
 # test_verify_github_security_probe.py - Set to None on a mock repo so the real
 # upstream verify_github_security probe reads it as absent
 _.security_and_analysis

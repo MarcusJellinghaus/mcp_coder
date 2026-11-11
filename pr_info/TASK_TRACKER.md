@@ -73,9 +73,9 @@ See [step_7.md](./steps/step_7.md)
 ### Step 8: Per-section alignment tests, including indent 6
 See [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (tests + any production fix they expose)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + any production fix they expose)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
