@@ -27,9 +27,9 @@ toolkit = "command"
 ```
 
 `toolkit = "command"` alone is not enough: the [command toolkit](#command-toolkit)
-also needs its `[tool.mcp-coder.toolkit.command]` step tables, at least `format`,
-or `mcp-coder verify` fails and actions return `error`. Start from the
-[npm example](#npm).
+also needs its `[tool.mcp-coder.toolkit.command]` step tables, at least `format`
+unless [formatting is off](#formatting-off), or `mcp-coder verify` fails and
+actions return `error`. Start from the [npm example](#npm).
 
 - Full configs: [Examples](#examples).
 - No table configured: see
