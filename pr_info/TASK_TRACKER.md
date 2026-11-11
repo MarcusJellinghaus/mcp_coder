@@ -21,6 +21,63 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Label renames
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Row model and per-section width formula in `verify_formatting`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Renderer and `SectionBuilder` (new `verify_render.py`) + shared test helpers
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, lint-imports, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Formatters return rows; `execute_verify` drives a `SectionBuilder`
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `verify_sections` helpers write through the builder; drop `_VALUE_COLUMN_INDENT`
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: `verify.py` inline sections write through the builder; smoke test returns `Row`; drop `label_width` from `_format_row`
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: New `=== LLM TEST` section + docs + streaming test
+See [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (tests + production code + `docs/cli-reference.md`)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: Per-section alignment tests, including indent 6
+See [step_8.md](./steps/step_8.md)
+
+- [ ] Implementation (tests + any production fix they expose)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch, address findings
+- [ ] PR summary prepared
