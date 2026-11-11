@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: `docs/configuration/toolkits.md` (fold in and delete `command-toolkit.md`)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: create `toolkits.md`, fold in and delete `command-toolkit.md`, replace the `docs/README.md` entry; run the step's verification searches
-- [ ] Quality checks (file size, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `toolkits.md`, fold in and delete `command-toolkit.md`, replace the `docs/README.md` entry; run the step's verification searches
+- [x] Quality checks (file size, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `docs/architecture/toolkit-interface.md` (mcp-coder's side and authoring guide)
 See [step_2.md](./steps/step_2.md)
