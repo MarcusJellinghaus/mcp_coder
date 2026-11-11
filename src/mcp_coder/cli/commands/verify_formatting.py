@@ -126,7 +126,7 @@ _LABEL_MAP: dict[str, str] = {
     "langgraph": "LangGraph",
     # Ollama section
     "ollama_daemon": "Local Ollama daemon",
-    "ollama_tools_capability": "Tool-calling capability",
+    "ollama_tools_capability": "Tool-call capability",
     # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",
@@ -168,7 +168,7 @@ _LABEL_MAP: dict[str, str] = {
     "git_repo": "Repository",
     "user_identity": "Git identity",
     "signing_intent": "Signing enabled",
-    "signing_consistency": "Signing config consistent",
+    "signing_consistency": "Signing consistency",
     "signing_format": "Signing format",
     "signing_key": "Signing key",
     "signing_binary": "Signing binary",
@@ -372,7 +372,7 @@ def _format_tools_exposed_section(
     system_message: dict[str, Any] | None,
     symbols: dict[str, str],
 ) -> tuple[list[str], bool | None]:
-    """Build the "MCP tools exposed to model" row(s) + exit signal.
+    """Build the "Tools exposed to model" row(s) + exit signal.
 
     Reads the init event captured by the Claude provider and reports how many
     ``mcp__*`` tools were actually exposed to the model, mirroring the runtime
@@ -395,7 +395,7 @@ def _format_tools_exposed_section(
         same outcome as all-connected (subject to the 0-tools check), with
         the connectors listed on an extra labeled info line.
     """
-    label = "MCP tools exposed to model"
+    label = "Tools exposed to model"
     if system_message is None:
         return (
             [
