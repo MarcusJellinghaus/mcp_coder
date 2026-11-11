@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Renderer and `SectionBuilder` (new `verify_render.py`) + shared test helpers
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports, vulture) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports, vulture) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Formatters return rows; `execute_verify` drives a `SectionBuilder`
 See [step_4.md](./steps/step_4.md)

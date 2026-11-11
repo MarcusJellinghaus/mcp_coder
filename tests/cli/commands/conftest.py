@@ -1,7 +1,8 @@
 """Shared test fixtures for CLI commands tests."""
 
 import argparse
-from collections.abc import Generator
+import re
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -11,9 +12,12 @@ import pytest
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
+    STATUS_SYMBOLS,
+    Line,
     _format_row,
     _pad,
 )
+from mcp_coder.cli.commands.verify_render import _render_rows
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
@@ -41,6 +45,48 @@ def _assert_value_at_column(line: str, expected_col: int) -> None:
     assert not line[expected_col].isspace(), (
         f"value missing at col {expected_col} (expected non-space): {line!r}"
     )
+
+
+def _render(lines: Sequence[Line]) -> str:
+    """Render a section's lines to text (test helper)."""
+    return "\n".join(_render_rows(lines))
+
+
+_MARKER_RE = re.compile("|".join(re.escape(s) for s in STATUS_SYMBOLS.values()))
+
+
+def _assert_section_aligned(text: str) -> int:
+    """All marker-bearing rows share marker column and value column; return row count."""
+    first: tuple[int, int] | None = None
+    count = 0
+    for line in text.splitlines():
+        m = _MARKER_RE.search(line)
+        rest = line[m.end() :] if m else ""
+        if m is None or not rest.strip():
+            continue  # hints, marker-less rows, freeform
+        value_col = len(line) - len(rest.lstrip())
+        if first is None:
+            first = (m.start(), value_col)
+        assert m.start() == first[0], (
+            f"marker at col {m.start()}, expected {first[0]}: {line!r}"
+        )
+        _assert_value_at_column(line, first[1])
+        count += 1
+    return count
+
+
+def _assert_sections_aligned(output: str) -> None:
+    """Apply ``_assert_section_aligned`` to each '=== ' section of ``output``.
+
+    Asserts at least one row was checked overall.
+    """
+    chunks: list[list[str]] = [[]]
+    for line in output.splitlines():
+        if line.startswith("=== "):
+            chunks.append([])
+        chunks[-1].append(line)
+    total = sum(_assert_section_aligned("\n".join(chunk)) for chunk in chunks)
+    assert total > 0, f"no marker-bearing rows found in output: {output!r}"
 
 
 @pytest.fixture
