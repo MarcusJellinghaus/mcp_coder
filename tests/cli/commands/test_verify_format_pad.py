@@ -5,7 +5,6 @@ import pytest
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
-    _VALUE_COLUMN_INDENT,
     Line,
     Row,
     _format_row,
@@ -84,8 +83,7 @@ class TestFormatRowHelpers:
         """All markers produce equal-length prefixes derived from constants."""
         prefix = _format_row_prefix("x", marker, indent=2)
         expected_len = 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-        assert len(prefix) == expected_len
-        assert expected_len == _VALUE_COLUMN_INDENT
+        assert len(prefix) == expected_len == 32
 
     def test_prefix_lengths_match_across_markers(self) -> None:
         """Prefix lengths are identical for [OK], [WARN], [ERR]."""
@@ -167,4 +165,3 @@ class TestPerSectionColumnRule:
     def test_hint_text_starts_at_value_column(self) -> None:
         out = _format_row(*_hint("-> x")[:3], indent=2)
         assert out.index("-> x") == 32
-        assert out.index("-> x") == _VALUE_COLUMN_INDENT

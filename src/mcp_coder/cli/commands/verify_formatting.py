@@ -128,9 +128,6 @@ def _format_row(
     ).rstrip()
 
 
-_VALUE_COLUMN_INDENT: int = len(_format_row_prefix("", "", indent=2))
-
-
 def _pad(title: str) -> str:
     r"""Return a section header line padded to 75 chars with '='."""
     prefix = f"=== {title} "

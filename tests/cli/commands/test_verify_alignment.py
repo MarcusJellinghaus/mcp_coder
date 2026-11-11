@@ -32,6 +32,7 @@ from mcp_coder.cli.commands.verify_formatting import (
     _format_mcp_section,
     _format_section,
 )
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _print_environment_section,
     _print_project_section,
@@ -171,7 +172,7 @@ class TestPerFormatterAlignment:
     def test_print_environment_section(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         captured = capsys.readouterr().out
         _assert_aligned_by_indent(captured)
 
@@ -184,7 +185,7 @@ class TestPerFormatterAlignment:
     ) -> None:
         if has_pyproject:
             (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
-        _print_project_section(tmp_path, _symbols())
+        _print_project_section(tmp_path, _symbols(), SectionBuilder())
         captured = capsys.readouterr().out
         _assert_aligned_by_indent(captured)
 

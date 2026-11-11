@@ -182,12 +182,13 @@ class TestRetiredEnvVarWarning:
     ) -> None:
         """The label is wider than _LABEL_WIDTH; the row widens to match."""
         from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+        from mcp_coder.cli.commands.verify_render import SectionBuilder
         from mcp_coder.cli.commands.verify_sections import (
             _print_retired_env_var_warning,
         )
 
         with patch.dict("os.environ", {self._OLD: "https://relay.example/v1"}):
-            _print_retired_env_var_warning(STATUS_SYMBOLS)
+            _print_retired_env_var_warning(STATUS_SYMBOLS, SectionBuilder())
         line = capsys.readouterr().out.rstrip("\n")
 
         assert line.startswith(f"  {self._OLD} ")

@@ -14,10 +14,10 @@ from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
-    _VALUE_COLUMN_INDENT,
     _format_row,
     _looks_like_key,
 )
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _print_environment_section,
     _print_project_section,
@@ -281,7 +281,7 @@ class TestVerifyGithubTokenSource:
         ):
             execute_verify(_make_args())
         output = capsys.readouterr().out
-        expected_line = f"{' ' * _VALUE_COLUMN_INDENT}from GITHUB_TOKEN env var"
+        expected_line = f"{' ' * _expected_value_column()}from GITHUB_TOKEN env var"
         assert expected_line in output.splitlines()
         assert "configured (scopes: repo, workflow)" in output
 
@@ -321,7 +321,7 @@ class TestVerifyGithubTokenSource:
         ):
             execute_verify(_make_args())
         output = capsys.readouterr().out
-        expected_line = f"{' ' * _VALUE_COLUMN_INDENT}from ~/.mcp_coder/config.toml"
+        expected_line = f"{' ' * _expected_value_column()}from ~/.mcp_coder/config.toml"
         assert expected_line in output.splitlines()
         assert "configured (scopes: repo, workflow)" in output
 
@@ -330,11 +330,11 @@ class TestEnvironmentSection:
     """Tests for the _print_environment_section helper."""
 
     def test_section_header_present(self, capsys: pytest.CaptureFixture[str]) -> None:
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         assert "=== ENVIRONMENT" in capsys.readouterr().out
 
     def test_python_version_row(self, capsys: pytest.CaptureFixture[str]) -> None:
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
         assert "Python version" in out
         assert f"{sys.version_info.major}.{sys.version_info.minor}" in out
@@ -345,7 +345,7 @@ class TestEnvironmentSection:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.delenv("PYTHONPATH", raising=False)
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         assert "(not set)" in capsys.readouterr().out
 
     def test_missing_package_shows_err_not_installed(
@@ -363,7 +363,7 @@ class TestEnvironmentSection:
         monkeypatch.setattr(
             "mcp_coder.cli.commands.verify_sections.version", fake_version
         )
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
         assert _format_row("mcp-tools-py", "[ERR]", "not installed", indent=2) in out
 
@@ -374,7 +374,7 @@ class TestEnvironmentSection:
     ) -> None:
         monkeypatch.setattr(sys, "prefix", "/usr")
         monkeypatch.setattr(sys, "base_prefix", "/usr")
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         assert "(none)" in capsys.readouterr().out
 
     def test_value_column_aligned_across_rows(
@@ -390,14 +390,13 @@ class TestEnvironmentSection:
         monkeypatch.setattr(
             "mcp_coder.cli.commands.verify_sections.version", fake_version
         )
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         python_line = next(line for line in lines if "Python version" in line)
         mcp_coder_line = next(
             line for line in lines if line.lstrip().startswith("mcp-coder ")
         )
         expected_col = _expected_value_column()
-        assert expected_col == _VALUE_COLUMN_INDENT
         for line in (python_line, mcp_coder_line):
             _assert_value_at_column(line, expected_col)
 
@@ -417,7 +416,7 @@ class TestEnvironmentSection:
         monkeypatch.setattr(
             "mcp_coder.cli.commands.verify_sections.version", fake_version
         )
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         python_line = next(line for line in lines if "Python version" in line)
         err_line = next(line for line in lines if "mcp-tools-py" in line)
@@ -659,7 +658,7 @@ class TestProjectSection:
             encoding="utf-8",
         )
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols)
+        _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
         assert "=== PROJECT" in out
         assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
@@ -676,7 +675,7 @@ class TestProjectSection:
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols)
+        _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
         assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
         assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
@@ -696,7 +695,7 @@ class TestProjectSection:
             encoding="utf-8",
         )
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols)
+        _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
         assert (
             _format_row(
@@ -715,7 +714,7 @@ class TestProjectSection:
     ) -> None:
         """No pyproject.toml shows [WARN] not found and (none detected)."""
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols)
+        _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
         assert _format_row("pyproject.toml", "[WARN]", "not found", indent=2) in out
         assert _format_row("Language", "[OK]", "(none detected)", indent=2) in out
@@ -731,13 +730,12 @@ class TestProjectSection:
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols)
+        _print_project_section(tmp_path, symbols, SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         format_code_line = next(line for line in lines if "format_code" in line)
         check_type_hints_line = next(
             line for line in lines if "check_type_hints" in line
         )
         expected_col = _expected_value_column()
-        assert expected_col == _VALUE_COLUMN_INDENT
         for line in (format_code_line, check_type_hints_line):
             _assert_value_at_column(line, expected_col)

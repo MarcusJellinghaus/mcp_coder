@@ -170,7 +170,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
     """
     logger.info("Executing verify command")
     symbols = STATUS_SYMBOLS
-    _print_environment_section()
+    _print_environment_section(out)
 
     # 0. Config verification (first section) with TOML-style grouping
     config_result = verify_config()
@@ -205,7 +205,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
 
     # 0a. Retired env vars — unconditional (outside both provider gates), since
     # a retired variable is ignored whatever the active provider is.
-    _print_retired_env_var_warning(symbols)
+    _print_retired_env_var_warning(symbols, out)
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
@@ -280,7 +280,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
     print("\n".join(prompt_lines))
 
     # 0c. Project configuration section
-    project_ok = _print_project_section(project_dir, symbols)
+    project_ok = _print_project_section(project_dir, symbols, out)
 
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
@@ -371,7 +371,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
         out.section("LLM PROVIDER DETAILS", _format_section(langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
-        _print_langchain_readiness_warning(symbols)
+        _print_langchain_readiness_warning(symbols, out)
 
     # 3a. MCP server health checks (provider-aware ordering)
     mcp_result: dict[str, Any] | None = None

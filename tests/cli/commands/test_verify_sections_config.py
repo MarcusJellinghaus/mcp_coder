@@ -13,6 +13,7 @@ import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_environment_section
 
 from .conftest import (
@@ -244,7 +245,7 @@ class TestTlsProxySummaryRow:
             monkeypatch.delenv(var, raising=False)
 
     def _row(self, capsys: pytest.CaptureFixture[str]) -> str:
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
         return next(line for line in out.splitlines() if self._LABEL in line)
 
@@ -280,7 +281,7 @@ class TestTlsProxySummaryRow:
         self._clear_proxy(monkeypatch)
         monkeypatch.setenv(var, secret)
 
-        _print_environment_section()
+        _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
 
         row = next(line for line in out.splitlines() if self._LABEL in line)

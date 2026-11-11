@@ -15,9 +15,8 @@ from mcp_coder.cli.commands.verify_formatting import (
     STATUS_SYMBOLS,
     Line,
     _format_row,
-    _pad,
 )
-from mcp_coder.cli.commands.verify_render import _render_rows
+from mcp_coder.cli.commands.verify_render import SectionBuilder, _render_rows
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
@@ -235,13 +234,13 @@ def _mock_print_project_section() -> Generator[MagicMock, None, None]:
     it directly import from verify_sections and are unaffected.
     """
 
-    def _print_header(*_args: Any, **_kwargs: Any) -> bool:
-        print(_pad("PROJECT"))
+    def _header(_project_dir: Any, _symbols: Any, out: SectionBuilder) -> bool:
+        out.section("PROJECT", [])
         return True
 
     with patch(
         "mcp_coder.cli.commands.verify._print_project_section",
-        side_effect=_print_header,
+        side_effect=_header,
     ) as mock:
         yield mock
 
