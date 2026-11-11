@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `docs/architecture/toolkit-interface.md` (mcp-coder's side and authoring guide)
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: create `toolkit-interface.md`, add it to `docs/README.md`, link it from the `toolkits.md` intro; run the step's verification searches
-- [ ] Quality checks (file size, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `toolkit-interface.md`, add it to `docs/README.md`, link it from the `toolkits.md` intro; run the step's verification searches
+- [x] Quality checks (file size, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Point the existing docs at the toolkit pages
 See [step_3.md](./steps/step_3.md)

@@ -41,6 +41,7 @@ Developing MCP Coder itself: see [CONTRIBUTING.md](CONTRIBUTING.md).
 ### Architecture & Design
 
 - **[Architecture Overview](architecture/architecture.md)** - System architecture and design decisions
+- **[Toolkit Interface](architecture/toolkit-interface.md)** - What mcp-coder does with a toolkit, and how to write one
 - **[Architecture Enforcement](architecture/enforcement.md)** - Why the architecture rules are enforced mechanically
 - **[Architecture Maintenance](architecture/architecture-maintenance.md)** - What belongs in the architecture overview and when to update it
 - **[Dependency Graphs](architecture/dependencies/readme.md)** - Generated views of the import structure

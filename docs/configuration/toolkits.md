@@ -4,6 +4,9 @@ Workflows never name tools: they request `action@depth` (`format`, `check` or
 `test`) from the configured toolkit. Two toolkits ship: `mcp-tools-py` (Python,
 `PythonToolkit`) and `command` (any stack; runs the project's own commands).
 
+mcp-coder's side of the interface and how to write a toolkit:
+[Toolkit interface](../architecture/toolkit-interface.md).
+
 ## Configure a toolkit
 
 Add the `[tool.mcp-coder.toolkit]` table with one `toolkit` line, in
