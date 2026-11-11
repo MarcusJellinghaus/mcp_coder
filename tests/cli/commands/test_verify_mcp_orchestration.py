@@ -18,6 +18,7 @@ from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 from .conftest import (
     _LC_VERIFY,
+    _SMOKE_ROW,
     _VERIFY,
     _claude_ok,
     _github_ok_default,
@@ -87,7 +88,7 @@ class TestVerifyMcpAllProviders:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK] edit verified",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.parse_claude_mcp_list")
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
@@ -124,7 +125,7 @@ class TestVerifyMcpAllProviders:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK] edit verified",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.parse_claude_mcp_list")
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
@@ -176,7 +177,7 @@ class TestVerifyMcpAllProviders:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK] edit verified",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.parse_claude_mcp_list")
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
@@ -239,7 +240,7 @@ class TestVerifyMcpAllProviders:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
         mock_mcp_servers.return_value = _mcp_servers_ok()
-        mock_smoke_test.return_value = "  MCP edit smoke test  ✓ edit verified"
+        mock_smoke_test.return_value = _SMOKE_ROW
 
         execute_verify(_make_args(mcp_config=".mcp.json"))
 
@@ -249,7 +250,7 @@ class TestVerifyMcpAllProviders:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK] edit verified",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
     @patch(
@@ -475,7 +476,7 @@ class TestMcpConfigWarnings:
             ("srv-b / LIBPATH", "${MCPC_TEST_C} not set"),
         ]
 
-    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value=_SMOKE_ROW)
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -515,7 +516,7 @@ class TestMcpConfigWarnings:
         output = capsys.readouterr().out
         assert "MCP CONFIG WARNINGS" not in output
 
-    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value=_SMOKE_ROW)
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -565,7 +566,7 @@ class TestMcpConfigWarnings:
         assert "mcp-tools-py / PYTHONPATH" in output
         assert "${MCPC_TEST_A} not set" in output
 
-    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value=_SMOKE_ROW)
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -633,7 +634,7 @@ class TestMcpConfigWarningsDynamicWidth:
         with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
             yield
 
-    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value=_SMOKE_ROW)
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)

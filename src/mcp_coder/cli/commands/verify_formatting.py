@@ -101,15 +101,13 @@ def _format_row_prefix(
     return f"{' ' * indent}{label.ljust(field)} {marker.ljust(_MARKER_SLOT_WIDTH)} "
 
 
-def _format_row(
-    label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
-) -> str:
+def _format_row(label: str, marker: str, value: str, *, indent: int) -> str:
     """Render a tabular row (labeled or label-less) as a one-row section.
 
     Composed on top of ``_format_row_prefix``; appends the value and
     rstrips trailing whitespace. Label-less rows pass ``label=""``;
     the empty label is padded so the value column aligns with
-    neighbouring labeled rows. A label too long for ``label_width``
+    neighbouring labeled rows. A label too long for ``_LABEL_WIDTH``
     widens this row's columns instead of overrunning the marker.
 
     Args:
@@ -117,12 +115,11 @@ def _format_row(
         marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
         value: Row value text.
         indent: Number of leading spaces.
-        label_width: Minimum label width (at indent 2).
 
     Returns:
         Formatted row string with trailing whitespace stripped.
     """
-    width = max(label_width, _section_label_width([Row(label, marker, value, indent)]))
+    width = _section_label_width([Row(label, marker, value, indent)])
     return (
         _format_row_prefix(label, marker, indent=indent, label_width=width) + value
     ).rstrip()

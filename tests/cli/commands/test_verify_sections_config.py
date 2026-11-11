@@ -19,6 +19,7 @@ from mcp_coder.cli.commands.verify_sections import _print_environment_section
 from .conftest import (
     _LC_VERIFY,
     _VERIFY,
+    _assert_section_aligned,
     _assert_value_at_column,
     _claude_ok,
     _expected_value_column,
@@ -190,13 +191,19 @@ class TestProviderEnvVarVisibility:
     def test_warning_row_aligns_with_active_provider_row(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """The long label gets an explicit label_width so the columns line up."""
+        """The provider row and the Active provider row share the value column."""
         monkeypatch.setenv(self._LABEL, "claude")
         _result, output = self._run(
             ("langchain", "cli argument"), capsys, llm_method="langchain"
         )
 
-        warn_row = next(iter(self._env_rows(output)))
+        start = output.index("=== LLM PROVIDER ")
+        end = output.index("\n=== ", start)
+        chunk = output[start:end]
+        assert "Active provider" in chunk
+        assert self._LABEL in chunk
+        assert _assert_section_aligned(chunk) == 2
+        warn_row = next(iter(self._env_rows(chunk)))
         _assert_value_at_column(
             warn_row, _expected_value_column(label_width=len(self._LABEL))
         )

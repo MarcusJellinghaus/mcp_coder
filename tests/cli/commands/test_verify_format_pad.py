@@ -104,12 +104,6 @@ class TestFormatRowHelpers:
         prefix = _format_row_prefix("x", "[OK]", indent=2, label_width=30)
         assert len(prefix) == 2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1
 
-    def test_custom_label_width_value_column(self) -> None:
-        """_format_row honours label_width when computing the value column."""
-        out = _format_row("longish label", "[OK]", "Z", indent=2, label_width=30)
-        expected_col = 2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1
-        assert out.index("Z") == expected_col
-
 
 class TestPerSectionColumnRule:
     """Tests for the indent-independent column rule and the Row model."""

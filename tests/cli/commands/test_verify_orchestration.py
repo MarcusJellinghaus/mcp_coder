@@ -11,6 +11,7 @@ from mcp_coder.cli.commands.verify import execute_verify
 
 from .conftest import (
     _LC_VERIFY,
+    _SMOKE_ROW,
     _VERIFY,
     _claude_ok,
     _github_ok_default,
@@ -393,7 +394,7 @@ class TestVerifyOrchestration:
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
-        return_value="  MCP edit smoke test  [OK]",
+        return_value=_SMOKE_ROW,
     )
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")

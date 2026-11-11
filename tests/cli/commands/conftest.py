@@ -14,10 +14,12 @@ from mcp_coder.cli.commands.verify_formatting import (
     _MARKER_SLOT_WIDTH,
     STATUS_SYMBOLS,
     Line,
-    _format_row,
+    Row,
 )
 from mcp_coder.cli.commands.verify_render import SectionBuilder, _render_rows
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+
+_SMOKE_ROW = Row("MCP edit smoke test", "[OK]", "edit verified")
 
 
 def _expected_value_column(*, label_width: int = _LABEL_WIDTH) -> int:
@@ -160,6 +162,12 @@ def _mock_resolve_claude_settings_path() -> Generator[None, None, None]:
                 patch(f"{mod}.resolve_claude_settings_path", return_value=None)
             )
         yield
+
+
+@pytest.fixture(autouse=True)
+def _clear_retired_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep CONFIG width independent of the developer's environment."""
+    monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_ENDPOINT", raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -324,7 +332,7 @@ def _make_verify_mocks() -> Generator[dict[str, MagicMock], None, None]:
     claude_mcp_statuses = [
         ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
     ]
-    smoke_row = _format_row("MCP edit smoke test", "[OK]", "edit verified", indent=2)
+    smoke_row = _SMOKE_ROW
 
     with (
         patch(
