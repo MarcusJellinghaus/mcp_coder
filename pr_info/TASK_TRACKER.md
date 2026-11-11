@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Formatters return rows; `execute_verify` drives a `SectionBuilder`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `verify_sections` helpers write through the builder; drop `_VALUE_COLUMN_INDENT`
 See [step_5.md](./steps/step_5.md)

@@ -25,6 +25,7 @@ from mcp_coder.cli.commands.verify_formatting import (
     STATUS_SYMBOLS,
     _format_section,
 )
+from mcp_coder.cli.commands.verify_render import _render_rows
 from mcp_coder.llm.providers.langchain._config_diagnostics import ResolvedTarget
 from mcp_coder.llm.providers.langchain._provider_checks import _mask_api_key
 from mcp_coder.llm.providers.langchain.verification import verify_langchain
@@ -110,8 +111,8 @@ def _row(result: dict[str, Any], key: str) -> str:
     """
     label = _LABEL_MAP.get(key, key)
     prefix = f"{' ' * 2}{label:<{_LABEL_WIDTH}s} "
-    section = _format_section("LLM PROVIDER DETAILS", result, STATUS_SYMBOLS)
-    matches = [line for line in section.splitlines() if line.startswith(prefix)]
+    section = _render_rows(_format_section(result, STATUS_SYMBOLS))
+    matches = [line for line in section if line.startswith(prefix)]
     assert len(matches) == 1, f"expected exactly one {label!r} row, got {matches!r}"
     return matches[0]
 

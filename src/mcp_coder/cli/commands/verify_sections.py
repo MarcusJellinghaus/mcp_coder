@@ -39,6 +39,7 @@ from .verify_formatting import (
     _format_section,
     _pad,
 )
+from .verify_render import SectionBuilder
 
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
@@ -283,7 +284,9 @@ def _map_security_row(key: str, row: Mapping[str, Any] | None) -> dict[str, Any]
     return entry
 
 
-def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -> None:
+def _print_github_security_section(
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+) -> None:
     """Merge local-file and API-backed security rows, print GITHUB SECURITY.
 
     The five API-backed rows come from ``verify_github_security``, each
@@ -310,7 +313,7 @@ def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -
             "code_scanning_alerts", api.get("code_scanning_alerts")
         ),
     }
-    print(_format_section("GITHUB SECURITY", github_security_result, symbols))
+    out.section("GITHUB SECURITY", _format_section(github_security_result, symbols))
 
 
 def _print_environment_section() -> None:

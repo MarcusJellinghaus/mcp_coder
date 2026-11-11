@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _check_codeql_workflow,
     _check_dependabot_config,
@@ -380,7 +381,7 @@ def test_section_missing_code_scanning_key_renders_warn(
     del api["code_scanning_alerts"]
     _mock_verify_github_security.return_value = api
 
-    _print_github_security_section(tmp_path, STATUS_SYMBOLS)
+    _print_github_security_section(tmp_path, STATUS_SYMBOLS, SectionBuilder())
     output = capsys.readouterr().out
 
     line = next(line for line in output.splitlines() if "Code scanning alerts" in line)

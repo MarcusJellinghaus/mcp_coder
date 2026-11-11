@@ -10,6 +10,8 @@ from mcp_coder.cli.commands.verify_formatting import (
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
+from .conftest import _assert_value_at_column, _expected_value_column, _render
+
 
 class TestFormatMcpSection:
     """Tests for _format_mcp_section tool name rendering."""
@@ -30,7 +32,8 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols())
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output = _render(lines)
         assert "2 tools: alpha, beta" in output
         assert "[OK]" in output
 
@@ -50,9 +53,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols())
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output = _render(lines)
         output_lines = output.split("\n")
-        # Should have more than just header + 1 line (wrapping occurred)
+        # Should have more than just 1 line (wrapping occurred)
         content_lines = [
             line
             for line in output_lines
@@ -60,8 +64,26 @@ class TestFormatMcpSection:
         ]
         assert len(content_lines) >= 2, f"Expected wrapping, got: {output}"
         # All content lines should be <= 80 chars
-        for line in output_lines[1:]:  # skip header
+        for line in output_lines:
             assert len(line) <= 80, f"Line too long ({len(line)}): {line!r}"
+
+    def test_wrapped_continuation_starts_at_value_column(self) -> None:
+        """Non-list mode: many tools wrap at 80; continuations start at value column."""
+        names = [(f"tool_number_{i:02d}", "") for i in range(30)]
+        mcp_results: dict[str, Any] = {
+            "servers": {"srv": {"ok": True, "value": "", "tool_names": names}},
+            "overall_ok": True,
+        }
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output_lines = _render(lines).split("\n")
+        assert len(output_lines) > 2
+        col = _expected_value_column()
+        _assert_value_at_column(output_lines[0], col)
+        for line in output_lines:
+            assert len(line) <= 80, f"Line too long ({len(line)}): {line!r}"
+        for line in output_lines[1:]:
+            assert line[:col].isspace(), f"continuation not indented: {line!r}"
+            _assert_value_at_column(line, col)
 
     def test_no_tool_names_falls_back_to_value(self) -> None:
         """Server without tool_names key shows value string."""
@@ -75,7 +97,8 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols())
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output = _render(lines)
         assert "3 tools available" in output
         assert "[OK]" in output
 
@@ -91,7 +114,8 @@ class TestFormatMcpSection:
             },
             "overall_ok": False,
         }
-        output = _format_mcp_section(mcp_results, self._symbols())
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output = _render(lines)
         assert "connection refused" in output
         assert "[WARN]" in output
 
@@ -108,7 +132,8 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols())
+        _title, lines = _format_mcp_section(mcp_results, self._symbols())
+        output = _render(lines)
         assert "0 tools available" in output
 
     def test_list_mcp_tools_shows_per_tool_lines(self) -> None:
@@ -124,7 +149,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=True
+        )
+        output = _render(rows)
         assert "alpha" in output
         assert "Alpha tool" in output
         assert "beta" in output
@@ -155,8 +183,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
-        lines = output.split("\n")
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=True
+        )
+        lines = _render(rows).split("\n")
         # Find the description start positions — they should be aligned
         desc_positions = []
         for line in lines:
@@ -183,8 +213,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
-        lines = output.split("\n")
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=True
+        )
+        lines = _render(rows).split("\n")
         no_desc_line = [line for line in lines if "tool_no_desc" in line][0]
         # Should end with the tool name (stripped), no trailing spaces or placeholder
         assert no_desc_line == no_desc_line.rstrip()
@@ -208,7 +240,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": False,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=True
+        )
+        output = _render(rows)
         assert "good_tool" in output
         assert "Works fine" in output
         assert "connection refused" in output
@@ -227,8 +262,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=False)
-        assert "2 tools: alpha, beta" in output
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=False
+        )
+        assert "2 tools: alpha, beta" in _render(rows)
 
     def test_list_mcp_tools_all_servers_failed(self) -> None:
         """All servers failed — no crash, no tool lines rendered."""
@@ -247,7 +284,10 @@ class TestFormatMcpSection:
             },
             "overall_ok": False,
         }
-        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        _title, rows = _format_mcp_section(
+            mcp_results, self._symbols(), list_mcp_tools=True
+        )
+        output = _render(rows)
         assert "timeout" in output
         assert "connection refused" in output
         # No tool detail lines (lines starting with 4 spaces of indentation for tools)
@@ -272,7 +312,8 @@ class TestFormatClaudeMcpSection:
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
             ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
         ]
-        output = _format_claude_mcp_section(statuses, self._symbols())
+        _title, lines = _format_claude_mcp_section(statuses, self._symbols())
+        output = _render(lines)
         assert "mcp-tools-py" in output
         assert "mcp-workspace" in output
         assert output.count("[OK]") == 2
@@ -285,7 +326,8 @@ class TestFormatClaudeMcpSection:
                 name="mcp-tools-py", status_text="Failed to start", ok=False
             ),
         ]
-        output = _format_claude_mcp_section(statuses, self._symbols())
+        _title, lines = _format_claude_mcp_section(statuses, self._symbols())
+        output = _render(lines)
         assert "[ERR]" in output
         assert "Failed to start" in output
 
@@ -294,29 +336,28 @@ class TestFormatClaudeMcpSection:
         statuses = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
-        output = _format_claude_mcp_section(statuses, self._symbols())
-        assert "MCP SERVERS (via Claude Code)" in output
-        assert "for completeness" not in output
+        title, _lines = _format_claude_mcp_section(statuses, self._symbols())
+        assert title == "MCP SERVERS (via Claude Code)"
 
     def test_section_title_for_completeness(self) -> None:
         """for_completeness=True adds 'for completeness' to title."""
         statuses = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
-        output = _format_claude_mcp_section(
+        title, _lines = _format_claude_mcp_section(
             statuses, self._symbols(), for_completeness=True
         )
-        assert "for completeness" in output
-        assert "via Claude Code" in output
+        assert "for completeness" in title
+        assert "via Claude Code" in title
 
     def test_server_names_left_aligned(self) -> None:
         """Server names use _LABEL_WIDTH (22) alignment."""
         statuses = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
-        output = _format_claude_mcp_section(statuses, self._symbols())
+        _title, rows = _format_claude_mcp_section(statuses, self._symbols())
         # Name should be padded to 22 chars
-        lines = output.split("\n")
+        lines = _render(rows).split("\n")
         server_line = [line for line in lines if "mcp-tools-py" in line][0]
         # "  mcp-tools-py" + padding (10 spaces) + " [OK] Connected"
         assert "mcp-tools-py          " in server_line
@@ -341,11 +382,11 @@ class TestFormatMcpSectionForCompleteness:
             },
             "overall_ok": True,
         }
-        output = _format_mcp_section(
+        title, _lines = _format_mcp_section(
             mcp_results, self._symbols(), for_completeness=True
         )
-        assert "for completeness" in output
-        assert "via langchain-mcp-adapters" in output
+        assert "for completeness" in title
+        assert "via langchain-mcp-adapters" in title
 
 
 class TestFormatToolsExposedSectionNeedsAuth:
@@ -362,7 +403,7 @@ class TestFormatToolsExposedSectionNeedsAuth:
             "tools": ["mcp__tools__a"],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is True
         assert STATUS_SYMBOLS["success"] in text
         assert "unauthenticated account connector" in text
@@ -382,10 +423,10 @@ class TestFormatToolsExposedSectionNeedsAuth:
             "tools": [],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is None
         assert STATUS_SYMBOLS["warning"] in text
-        pending_line = lines[0]
+        pending_line = text.split("\n")[0]
         assert "mcp-tools-py" in pending_line
         assert "claude.ai Google Drive" not in pending_line
 
@@ -399,6 +440,6 @@ class TestFormatToolsExposedSectionNeedsAuth:
             "tools": [],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is False
         assert STATUS_SYMBOLS["failure"] in text

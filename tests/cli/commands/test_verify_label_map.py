@@ -6,6 +6,7 @@ from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_MAP,
     _LABEL_WIDTH,
     STATUS_SYMBOLS,
+    Row,
     _format_tools_exposed_section,
 )
 
@@ -21,4 +22,5 @@ def test_renamed_labels() -> None:
     assert _LABEL_MAP["signing_consistency"] == "Signing consistency"
     assert _LABEL_MAP["ollama_tools_capability"] == "Tool-call capability"
     lines, _ = _format_tools_exposed_section(None, STATUS_SYMBOLS)
-    assert lines[0].startswith("  Tools exposed to model ")
+    assert isinstance(lines[0], Row)
+    assert lines[0].label == "Tools exposed to model"

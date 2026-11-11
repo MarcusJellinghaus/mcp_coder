@@ -42,6 +42,7 @@ from .conftest import (
     _assert_value_at_column,
     _expected_value_column,
     _make_verify_mocks,
+    _render,
 )
 
 _GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.\-]*\]\s*$")
@@ -130,7 +131,7 @@ class TestPerFormatterAlignment:
         ],
     )
     def test_format_section(self, result: dict[str, Any]) -> None:
-        output = _format_section("TEST", result, _symbols())
+        output = _render(_format_section(result, _symbols()))
         _assert_aligned_by_indent(output)
 
     @pytest.mark.parametrize("list_mcp_tools", [False, True])
@@ -152,10 +153,10 @@ class TestPerFormatterAlignment:
             },
             "overall_ok": False,
         }
-        output = _format_mcp_section(
+        _title, lines = _format_mcp_section(
             mcp_results, _symbols(), list_mcp_tools=list_mcp_tools
         )
-        _assert_aligned_by_indent(output)
+        _assert_aligned_by_indent(_render(lines))
 
     def test_format_claude_mcp_section(self) -> None:
         statuses = [
@@ -164,8 +165,8 @@ class TestPerFormatterAlignment:
                 name="broken-server", status_text="Failed to start", ok=False
             ),
         ]
-        output = _format_claude_mcp_section(statuses, _symbols())
-        _assert_aligned_by_indent(output)
+        _title, lines = _format_claude_mcp_section(statuses, _symbols())
+        _assert_aligned_by_indent(_render(lines))
 
     def test_print_environment_section(
         self, capsys: pytest.CaptureFixture[str]

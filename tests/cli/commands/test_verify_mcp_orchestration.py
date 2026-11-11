@@ -171,8 +171,8 @@ class TestVerifyMcpAllProviders:
         """_format_mcp_section header contains library name."""
         symbols = {"success": "✓", "failure": "✗", "warning": "⚠"}
         mcp_result = _mcp_servers_ok()
-        output = _format_mcp_section(mcp_result, symbols)
-        assert "MCP SERVERS (via langchain-mcp-adapters)" in output
+        title, _lines = _format_mcp_section(mcp_result, symbols)
+        assert "MCP SERVERS (via langchain-mcp-adapters)" in title
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",

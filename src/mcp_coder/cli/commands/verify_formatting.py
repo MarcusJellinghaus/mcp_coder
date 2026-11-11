@@ -7,7 +7,6 @@ back into ``verify.py`` (one-directional edge ``verify.py -> verify_formatting``
 
 import keyword
 import re
-import textwrap
 from collections.abc import Iterable
 from typing import Any, NamedTuple, cast
 
@@ -244,18 +243,17 @@ _BRANCH_PROTECTION_CHILDREN = frozenset(
 )
 
 
-def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str]) -> str:
-    """Format a verification section for terminal output.
+def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Line]:
+    """Build the rows of a verification section.
 
     Args:
-        title: Section title (e.g. "BASIC VERIFICATION")
         result: Dict from a domain verify function
         symbols: Dict with 'success', 'failure', 'warning' keys
 
     Returns:
-        Formatted multi-line string for the section.
+        The section's lines (without the title header), ready for rendering.
     """
-    lines: list[str] = [_pad(title)]
+    lines: list[Line] = []
     bp_ok: bool | None = None  # track branch_protection parent state
     permissions_header_emitted: bool = False
     # NOTE: relies on dict insertion order — branch_protection must precede its
@@ -275,7 +273,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             if bp_ok is not True:
                 continue  # suppress children when parent failed or is unverifiable
             if key == "strict_mode":
-                lines.append(_format_row(label, "", value, indent=4))
+                lines.append(Row(label, "", value, 4))
             else:
                 if ok is True:
                     symbol = symbols["success"]
@@ -287,7 +285,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
                 error = entry.get("error")
                 if error and ok is not True:
                     row_value = f"{value} ({error})"
-                lines.append(_format_row(label, symbol, row_value, indent=4))
+                lines.append(Row(label, symbol, row_value, 4))
             continue
         if key.startswith("perm_") and not permissions_header_emitted:
             lines.append("")
@@ -304,7 +302,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         if error and (ok is False or (ok is None and key == "branch_protection")):
             row_value = f"{value} ({error})"
         indent = 4 if key.startswith("perm_") else 2
-        lines.append(_format_row(label, symbol, row_value, indent=indent))
+        lines.append(Row(label, symbol, row_value, indent))
         if key == "token_configured" and entry.get("token_source"):
             src = entry["token_source"]
             suffix = (
@@ -313,10 +311,10 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             fingerprint = entry.get("token_fingerprint")
             if fingerprint:
                 suffix = f"{suffix} ({fingerprint})"
-            lines.append(f"{' ' * _VALUE_COLUMN_INDENT}from {suffix}")
+            lines.append(_hint(f"from {suffix}"))
         if ok is False and "install_hint" in entry:
-            lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
-    return "\n".join(lines)
+            lines.append(_hint(f"-> {entry['install_hint']}"))
+    return lines
 
 
 def _format_mcp_section(
@@ -325,8 +323,8 @@ def _format_mcp_section(
     *,
     list_mcp_tools: bool = False,
     for_completeness: bool = False,
-) -> str:
-    """Format MCP server health check results.
+) -> tuple[str, list[Line]]:
+    """Build the MCP server health check section.
 
     Args:
         mcp_results: Dict containing server health check results.
@@ -336,10 +334,11 @@ def _format_mcp_section(
         for_completeness: If True, append "for completeness" to section title.
 
     Returns:
-        Formatted multi-line string for the MCP servers section.
+        ``(title, lines)`` for the MCP servers section.
     """
     title_suffix = " — for completeness" if for_completeness else ""
-    lines: list[str] = [_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")]
+    title = f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})"
+    lines: list[Line] = []
     servers = mcp_results["servers"]
 
     if list_mcp_tools:
@@ -359,18 +358,14 @@ def _format_mcp_section(
             symbol = symbols["success"] if ok else symbols["failure"]
             tool_names = entry.get("tool_names")
             if tool_names:
-                lines.append(
-                    _format_row(
-                        name, symbol, f"{len(tool_names)} tools available", indent=2
-                    )
-                )
+                lines.append(Row(name, symbol, f"{len(tool_names)} tools available"))
                 for tool_name, desc in tool_names:
                     if desc:
                         lines.append(f"    {tool_name:<{max_name + 2}s} {desc}")
                     else:
                         lines.append(f"    {tool_name}")
             else:
-                lines.append(_format_row(name, symbol, value, indent=2))
+                lines.append(Row(name, symbol, value))
     else:
         for name, entry in servers.items():
             ok = entry.get("ok")
@@ -378,19 +373,12 @@ def _format_mcp_section(
             symbol = symbols["success"] if ok else symbols["failure"]
             tool_names = entry.get("tool_names")
             if tool_names:
-                prefix = _format_row_prefix(name, symbol, indent=2)
                 names_only = [n for n, _d in tool_names]
                 tools_text = f"{len(tool_names)} tools: {', '.join(names_only)}"
-                wrapped = textwrap.wrap(
-                    tools_text,
-                    width=80,
-                    initial_indent=prefix,
-                    subsequent_indent=" " * len(prefix),
-                )
-                lines.extend(wrapped)
+                lines.append(Row(name, symbol, tools_text, wrap=True))
             else:
-                lines.append(_format_row(name, symbol, value, indent=2))
-    return "\n".join(lines)
+                lines.append(Row(name, symbol, value))
+    return title, lines
 
 
 def _format_claude_mcp_section(
@@ -398,8 +386,8 @@ def _format_claude_mcp_section(
     symbols: dict[str, str],
     *,
     for_completeness: bool = False,
-) -> str:
-    """Format MCP server connection status from ``claude mcp list``.
+) -> tuple[str, list[Line]]:
+    """Build the MCP server connection section from ``claude mcp list``.
 
     Args:
         statuses: Parsed connection statuses.
@@ -407,20 +395,20 @@ def _format_claude_mcp_section(
         for_completeness: If True, append "for completeness" to section title.
 
     Returns:
-        Formatted multi-line string.
+        ``(title, lines)`` for the section.
     """
     title_suffix = " — for completeness" if for_completeness else ""
-    lines: list[str] = [_pad(f"MCP SERVERS (via Claude Code{title_suffix})")]
-    for status in statuses:
-        symbol = symbols["success"] if status.ok else symbols["failure"]
-        lines.append(_format_row(status.name, symbol, status.status_text, indent=2))
-    return "\n".join(lines)
+    lines: list[Line] = [
+        Row(s.name, symbols["success"] if s.ok else symbols["failure"], s.status_text)
+        for s in statuses
+    ]
+    return f"MCP SERVERS (via Claude Code{title_suffix})", lines
 
 
 def _format_tools_exposed_section(
     system_message: dict[str, Any] | None,
     symbols: dict[str, str],
-) -> tuple[list[str], bool | None]:
+) -> tuple[list[Line], bool | None]:
     """Build the "Tools exposed to model" row(s) + exit signal.
 
     Reads the init event captured by the Claude provider and reports how many
@@ -433,7 +421,7 @@ def _format_tools_exposed_section(
         symbols: Dict with 'success', 'failure', 'warning' keys.
 
     Returns:
-        ``(lines, ok)`` where ``ok`` mirrors the runtime guard:
+        ``(rows, ok)`` where ``ok`` mirrors the runtime guard:
           - ``True``  -> connected with >=1 tool exposed
           - ``None``  -> a server is pending (WARN only; never fails the build)
           - ``False`` -> a server is fatal (failed/unknown) OR
@@ -446,17 +434,7 @@ def _format_tools_exposed_section(
     """
     label = "Tools exposed to model"
     if system_message is None:
-        return (
-            [
-                _format_row(
-                    label,
-                    symbols["warning"],
-                    "unavailable (no init event)",
-                    indent=2,
-                )
-            ],
-            None,
-        )
+        return [Row(label, symbols["warning"], "unavailable (no init event)")], None
     guard_msg = cast(Any, system_message)
     fatal = find_fatal_mcp_servers(guard_msg)
     unavailable = find_unavailable_mcp_servers(guard_msg)
@@ -496,13 +474,13 @@ def _format_tools_exposed_section(
             f"{len(tools)} ({', '.join(names)})",
         )
 
-    lines = [_format_row(label, marker, value, indent=2)]
+    lines: list[Line] = [Row(label, marker, value)]
     if hint is not None:
-        lines.append(f"{' ' * _VALUE_COLUMN_INDENT}{hint}")
+        lines.append(_hint(hint))
     if needs_auth:
         note = (
             "-> unauthenticated account connector(s), "
             f"not part of health assessment: {sorted(needs_auth)}"
         )
-        lines.append(f"{' ' * _VALUE_COLUMN_INDENT}{note}")
+        lines.append(_hint(note))
     return lines, ok

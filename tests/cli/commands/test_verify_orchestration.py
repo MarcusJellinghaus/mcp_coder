@@ -424,7 +424,7 @@ class TestVerifyOrchestration:
         mock_mcp_servers.return_value = _mcp_servers_ok()
 
         with patch(f"{_VERIFY}._format_mcp_section") as mock_fmt:
-            mock_fmt.return_value = "mocked"
+            mock_fmt.return_value = ("MCP SERVERS", ["mocked"])
             execute_verify(_make_args(list_mcp_tools=True, mcp_config=".mcp.json"))
             mock_fmt.assert_called_once()
             call_kwargs = mock_fmt.call_args

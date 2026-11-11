@@ -5,6 +5,8 @@ from mcp_coder.cli.commands.verify_formatting import (
     _format_tools_exposed_section,
 )
 
+from .conftest import _render
+
 
 class TestFormatToolsExposedSection:
     """Tests for the _format_tools_exposed_section helper."""
@@ -19,7 +21,7 @@ class TestFormatToolsExposedSection:
             "tools": ["mcp__tools__a", "mcp__workspace__b", "ToolSearch"],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is True
         assert STATUS_SYMBOLS["success"] in text
         assert "2" in text
@@ -34,7 +36,7 @@ class TestFormatToolsExposedSection:
             "tools": [],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is False
         assert STATUS_SYMBOLS["failure"] in text
         assert "alwaysLoad" in text
@@ -46,7 +48,7 @@ class TestFormatToolsExposedSection:
             "tools": [],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is None
         assert STATUS_SYMBOLS["warning"] in text
         assert "alwaysLoad" not in text
@@ -58,7 +60,7 @@ class TestFormatToolsExposedSection:
             "tools": [],
         }
         lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is False
         assert STATUS_SYMBOLS["failure"] in text
         assert "alwaysLoad" not in text
@@ -67,6 +69,6 @@ class TestFormatToolsExposedSection:
     def test_none_system_message_warn(self) -> None:
         """None (no init event) -> [WARN], ok None."""
         lines, ok = _format_tools_exposed_section(None, STATUS_SYMBOLS)
-        text = "\n".join(lines)
+        text = _render(lines)
         assert ok is None
         assert STATUS_SYMBOLS["warning"] in text

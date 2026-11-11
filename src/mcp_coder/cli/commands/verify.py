@@ -50,6 +50,7 @@ from .verify_formatting import (
     _pad,
 )
 from .verify_jenkins import verify_jenkins
+from .verify_render import SectionBuilder
 
 # Bound as module globals on purpose: ``execute_verify`` resolves these names
 # here, so tests keep patching them at ``mcp_coder.cli.commands.verify.<name>``
@@ -149,6 +150,20 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     Args:
         args: Command line arguments (expects args.check_models: bool)
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    with SectionBuilder() as out:
+        return _run_verify(args, out)
+
+
+def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
+    """Body of execute_verify; writes sections through *out*.
+
+    Args:
+        args: Command line arguments, as for ``execute_verify``.
+        out: Builder every migrated section is written through.
 
     Returns:
         Exit code (0 for success, 1 for failure)
@@ -269,19 +284,19 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
-    print(_format_section("GIT", git_result, symbols))
+    out.section("GIT", _format_section(git_result, symbols))
 
     # 0e. GitHub verification section
     github_result = verify_github(project_dir)
-    print(_format_section("GITHUB", github_result, symbols))
-    _print_github_security_section(project_dir, symbols)
+    out.section("GITHUB", _format_section(github_result, symbols))
+    _print_github_security_section(project_dir, symbols, out)
 
     # 0f. Jenkins verification sections (both empty when [jenkins] is unset)
     jenkins_result, jenkins_jobs_result = verify_jenkins()
     if jenkins_result:
-        print(_format_section("JENKINS", jenkins_result, symbols))
+        out.section("JENKINS", _format_section(jenkins_result, symbols))
     if jenkins_jobs_result:
-        print(_format_section("JENKINS JOBS", jenkins_jobs_result, symbols))
+        out.section("JENKINS JOBS", _format_section(jenkins_jobs_result, symbols))
     # None keeps an unconfigured [jenkins] exit-neutral; CONFIG already reports
     # a missing required field.
     jenkins_ok: bool | None = None
@@ -295,7 +310,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 2. Claude CLI verification (conditional on provider)
     if active_provider == "claude":
         claude_result = verify_claude()
-        print(_format_section("BASIC VERIFICATION", claude_result, symbols))
+        out.section("BASIC VERIFICATION", _format_section(claude_result, symbols))
     else:
         # Quick binary check only
         claude_path = find_claude_executable(return_none_if_not_found=True)
@@ -353,7 +368,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             print(_pad("EFFECTIVE CONFIG"))
             for label, value in effective_config:
                 print(_format_row(label, "", value, indent=2))
-        print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
+        out.section("LLM PROVIDER DETAILS", _format_section(langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
         _print_langchain_readiness_warning(symbols)
@@ -412,15 +427,15 @@ def execute_verify(args: argparse.Namespace) -> int:
         if active_provider == "claude":
             # Claude MCP section first (primary)
             if claude_mcp is not None:
-                print(
-                    _format_claude_mcp_section(
+                out.section(
+                    *_format_claude_mcp_section(
                         claude_mcp, symbols, for_completeness=False
                     )
                 )
             # LangChain MCP section second (for completeness)
             if mcp_result is not None:
-                print(
-                    _format_mcp_section(
+                out.section(
+                    *_format_mcp_section(
                         mcp_result,
                         symbols,
                         list_mcp_tools=list_mcp_tools,
@@ -441,8 +456,8 @@ def execute_verify(args: argparse.Namespace) -> int:
         else:
             # LangChain MCP section first (primary)
             if mcp_result is not None:
-                print(
-                    _format_mcp_section(
+                out.section(
+                    *_format_mcp_section(
                         mcp_result,
                         symbols,
                         list_mcp_tools=list_mcp_tools,
@@ -462,8 +477,8 @@ def execute_verify(args: argparse.Namespace) -> int:
                 )
             # Claude MCP section second (for completeness)
             if claude_mcp is not None:
-                print(
-                    _format_claude_mcp_section(
+                out.section(
+                    *_format_claude_mcp_section(
                         claude_mcp, symbols, for_completeness=claude_for_completeness
                     )
                 )
@@ -536,10 +551,10 @@ def execute_verify(args: argparse.Namespace) -> int:
             if active_provider == "claude":
                 raw_response = cast(dict[str, Any], response.get("raw_response", {}))
                 system_message = raw_response.get("system")
-                tools_lines, tools_exposed_ok = _format_tools_exposed_section(
+                tools_rows, tools_exposed_ok = _format_tools_exposed_section(
                     system_message, symbols
                 )
-                print("\n".join(tools_lines))
+                out.add(*tools_rows)
         except Exception as exc:  # pylint: disable=broad-except
             test_prompt_ok = False
             # Only classify connection-related exceptions
@@ -569,7 +584,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 4. MLflow verification (now with since= to confirm logging)
     mlflow_result = verify_mlflow(since=timestamp)
-    print(_format_section("MLFLOW", mlflow_result, symbols))
+    out.section("MLFLOW", _format_section(mlflow_result, symbols))
 
     # 5. Collect and display install hints
     all_hints: list[str] = []

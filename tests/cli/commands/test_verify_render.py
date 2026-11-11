@@ -1,10 +1,18 @@
 """Tests for the per-section renderer and SectionBuilder (verify_render)."""
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import Row, _format_row, _hint, _pad
+from mcp_coder.cli.commands.verify_formatting import (
+    STATUS_SYMBOLS,
+    Row,
+    _format_row,
+    _format_section,
+    _hint,
+    _pad,
+)
 from mcp_coder.cli.commands.verify_render import SectionBuilder
 
 from .conftest import (
@@ -199,3 +207,23 @@ class TestSectionBuilder:
         _assert_value_at_column(lines[b_idx + 1], _WIDE_COL)
         _assert_value_at_column(lines[b_idx + 2], _WIDE_COL)
         _assert_sections_aligned(output)
+
+
+def test_github_permissions_section_aligned_with_token_hint() -> None:
+    """GITHUB widens to fit "Commit statuses: Read" at indent 4; hint follows."""
+    granted = {"ok": True, "value": "granted"}
+    result: dict[str, Any] = {
+        "token_configured": {"ok": True, "value": "YES", "token_source": "env"},
+        "repo_accessible": {"ok": True, "value": "owner/repo"},
+        **{f"perm_{k}_read": dict(granted) for k in ("contents", "statuses")},
+        "overall_ok": True,
+    }
+    text = _render(_format_section(result, STATUS_SYMBOLS))
+    col = _expected_value_column(label_width=23)
+    assert col == 33
+    assert _assert_section_aligned(text) == 4
+    for line in text.splitlines():
+        if "[OK]" in line:
+            _assert_value_at_column(line, col)
+    hint = next(line for line in text.splitlines() if "GITHUB_TOKEN" in line)
+    assert hint == " " * col + "from GITHUB_TOKEN env var"
