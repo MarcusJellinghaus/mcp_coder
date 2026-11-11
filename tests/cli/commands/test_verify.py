@@ -396,7 +396,7 @@ class TestEnvironmentSection:
         mcp_coder_line = next(
             line for line in lines if line.lstrip().startswith("mcp-coder ")
         )
-        expected_col = _expected_value_column(indent=2)
+        expected_col = _expected_value_column()
         assert expected_col == _VALUE_COLUMN_INDENT
         for line in (python_line, mcp_coder_line):
             _assert_value_at_column(line, expected_col)
@@ -421,7 +421,7 @@ class TestEnvironmentSection:
         lines = capsys.readouterr().out.splitlines()
         python_line = next(line for line in lines if "Python version" in line)
         err_line = next(line for line in lines if "mcp-tools-py" in line)
-        expected_col = _expected_value_column(indent=2)
+        expected_col = _expected_value_column()
         for line in (python_line, err_line):
             _assert_value_at_column(line, expected_col)
 
@@ -737,7 +737,7 @@ class TestProjectSection:
         check_type_hints_line = next(
             line for line in lines if "check_type_hints" in line
         )
-        expected_col = _expected_value_column(indent=4)
-        assert expected_col == _VALUE_COLUMN_INDENT + 2
+        expected_col = _expected_value_column()
+        assert expected_col == _VALUE_COLUMN_INDENT
         for line in (format_code_line, check_type_hints_line):
             _assert_value_at_column(line, expected_col)

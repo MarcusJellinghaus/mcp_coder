@@ -8,7 +8,8 @@ back into ``verify.py`` (one-directional edge ``verify.py -> verify_formatting``
 import keyword
 import re
 import textwrap
-from typing import Any, cast
+from collections.abc import Iterable
+from typing import Any, NamedTuple, cast
 
 from ...llm.providers.claude.claude_mcp_guard import (
     MCP_NEEDS_AUTH_STATUS,
@@ -25,7 +26,52 @@ STATUS_SYMBOLS: dict[str, str] = {
 }
 
 _MARKER_SLOT_WIDTH: int = max(len(v) for v in STATUS_SYMBOLS.values())
-_LABEL_WIDTH: int = 22  # global minimum label slot; sections may widen via label_width=
+_LABEL_WIDTH: int = 22  # minimum label width; sections widen automatically
+
+
+class Row(NamedTuple):
+    """One tabular row; label and/or marker may be empty."""
+
+    label: str
+    marker: str
+    value: str
+    indent: int = 2
+    wrap: bool = False
+
+
+Line = Row | str  # str = freeform line (group header, blank, notice), printed as-is
+
+
+def _hint(text: str) -> Row:
+    """Hint/continuation line: starts at the section's value column.
+
+    Args:
+        text: Hint text.
+
+    Returns:
+        A label-less, marker-less ``Row`` that never widens its section.
+    """
+    return Row("", "", text)
+
+
+def _section_label_width(lines: Iterable[Line]) -> int:
+    """Return the label width of a section: the default, widened to fit.
+
+    Each ``Row`` needs ``len(label) + indent - 2`` so that its label fits in
+    the field left over after its extra indent; ``str`` items are ignored.
+
+    Args:
+        lines: The section's lines.
+
+    Returns:
+        ``max(_LABEL_WIDTH, len(label) + indent - 2)`` over the ``Row`` items.
+    """
+    return max(
+        [
+            _LABEL_WIDTH,
+            *(len(r.label) + r.indent - 2 for r in lines if isinstance(r, Row)),
+        ]
+    )
 
 
 def _format_row_prefix(
@@ -35,15 +81,16 @@ def _format_row_prefix(
 
     Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
     starts at the same horizontal position regardless of marker presence.
-    Labels longer than ``label_width`` overrun (no truncation) — keep
-    labels concise, or pass a wider ``label_width`` for sections whose
-    labels are known to exceed the default.
+    The label field is ``label_width - (indent - 2)``, so the prefix is
+    ``label_width + 10`` long at every indent: rows of one section share
+    their marker and value columns. Callers size ``label_width`` with
+    ``_section_label_width`` so no label exceeds its field.
 
     Args:
         label: Row label (may be empty for label-less rows).
         marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
         indent: Number of leading spaces.
-        label_width: Minimum width of the label column.
+        label_width: Label width of the section (at indent 2).
 
     Returns:
         ``indent + label_field + " " + marker_field + " "`` WITHOUT
@@ -51,32 +98,34 @@ def _format_row_prefix(
         preserved. Used directly by callers that need the prefix without
         a value (e.g. ``textwrap.wrap`` continuation indent).
     """
-    return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
+    field = label_width - (indent - 2)
+    return f"{' ' * indent}{label.ljust(field)} {marker.ljust(_MARKER_SLOT_WIDTH)} "
 
 
 def _format_row(
     label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
 ) -> str:
-    """Render a tabular row (labeled or label-less).
+    """Render a tabular row (labeled or label-less) as a one-row section.
 
     Composed on top of ``_format_row_prefix``; appends the value and
     rstrips trailing whitespace. Label-less rows pass ``label=""``;
     the empty label is padded so the value column aligns with
-    neighbouring labeled rows.
+    neighbouring labeled rows. A label too long for ``label_width``
+    widens this row's columns instead of overrunning the marker.
 
     Args:
         label: Row label (may be empty for label-less rows).
         marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
         value: Row value text.
         indent: Number of leading spaces.
-        label_width: Minimum width of the label column.
+        label_width: Minimum label width (at indent 2).
 
     Returns:
         Formatted row string with trailing whitespace stripped.
     """
+    width = max(label_width, _section_label_width([Row(label, marker, value, indent)]))
     return (
-        _format_row_prefix(label, marker, indent=indent, label_width=label_width)
-        + value
+        _format_row_prefix(label, marker, indent=indent, label_width=width) + value
     ).rstrip()
 
 

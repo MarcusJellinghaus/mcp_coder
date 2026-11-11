@@ -17,14 +17,16 @@ from mcp_coder.cli.commands.verify_formatting import (
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
-def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
+def _expected_value_column(*, label_width: int = _LABEL_WIDTH) -> int:
     """Return the 0-indexed column where the value SHOULD begin.
 
-    Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
-    Computed purely from layout constants; does NOT inspect any line.
-    Use ``_assert_value_at_column`` to verify a real line against this.
+    Layout: [indent][label.ljust(label_width - (indent - 2))][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
+    The label field shrinks as the indent grows, so the value column is
+    the same at every indent. Computed purely from layout constants; does
+    NOT inspect any line. Use ``_assert_value_at_column`` to verify a real
+    line against this.
     """
-    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
+    return 2 + label_width + 1 + _MARKER_SLOT_WIDTH + 1
 
 
 def _assert_value_at_column(line: str, expected_col: int) -> None:

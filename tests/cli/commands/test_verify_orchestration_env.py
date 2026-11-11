@@ -192,7 +192,7 @@ class TestRetiredEnvVarWarning:
 
         assert line.startswith(f"  {self._OLD} ")
         _assert_value_at_column(
-            line, _expected_value_column(2, label_width=len(self._OLD))
+            line, _expected_value_column(label_width=len(self._OLD))
         )
 
 

@@ -76,14 +76,14 @@ def _content_lines(output: str) -> list[str]:
         indent = len(line) - len(line.lstrip(" "))
         if indent not in (2, 4):
             continue
-        if len(line) <= _expected_value_column(indent):
+        if len(line) <= _expected_value_column():
             continue
         result.append(line)
     return result
 
 
 def _assert_aligned_by_indent(output: str) -> None:
-    """Assert each indent's value column matches ``_expected_value_column(indent)``."""
+    """Assert each indent's value column matches ``_expected_value_column()``."""
     by_indent: dict[int, list[str]] = defaultdict(list)
     for line in _content_lines(output):
         indent = len(line) - len(line.lstrip(" "))
@@ -91,8 +91,8 @@ def _assert_aligned_by_indent(output: str) -> None:
 
     assert by_indent, f"no tabular content lines parsed from output: {output!r}"
 
-    for indent, lines_at_indent in by_indent.items():
-        expected_col = _expected_value_column(indent)
+    for lines_at_indent in by_indent.values():
+        expected_col = _expected_value_column()
         for line in lines_at_indent:
             _assert_value_at_column(line, expected_col)
 
@@ -218,7 +218,7 @@ class TestExecuteVerifyAlignmentSmoke:
             indent = len(line) - len(stripped)
             if indent not in (2, 4):
                 continue
-            expected_col = _expected_value_column(indent)
+            expected_col = _expected_value_column()
             _assert_value_at_column(line, expected_col)
             accepted_any = True
 

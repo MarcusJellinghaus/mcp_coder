@@ -197,7 +197,7 @@ class TestProviderEnvVarVisibility:
 
         warn_row = next(iter(self._env_rows(output)))
         _assert_value_at_column(
-            warn_row, _expected_value_column(2, label_width=len(self._LABEL))
+            warn_row, _expected_value_column(label_width=len(self._LABEL))
         )
 
     def test_env_set_and_is_the_source_adds_no_row(
@@ -306,7 +306,7 @@ class TestTlsProxySummaryRow:
 
         row = self._row(capsys)
         assert not any(symbol in row for symbol in STATUS_SYMBOLS.values())
-        _assert_value_at_column(row, _expected_value_column(2))
+        _assert_value_at_column(row, _expected_value_column())
 
     def test_row_uses_the_real_predicates(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
