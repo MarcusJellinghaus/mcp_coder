@@ -68,6 +68,11 @@ class TestIntegration:
         reason="Log capture behaves differently on Linux",
     )
     @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value=None,
+    )
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
         "mcp_coder.workflows.implement.core.get_full_status",
         return_value={"staged": [], "modified": [], "untracked": []},
     )
@@ -103,6 +108,8 @@ class TestIntegration:
         _mock_check_mypy: MagicMock,
         _mock_run_formatters: MagicMock,
         _mock_core_status: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        _mock_get_branch: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test complete workflow execution from start to finish."""
