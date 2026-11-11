@@ -111,6 +111,9 @@ Use the conftest helpers from step 3 (`_render`, `_assert_section_aligned`).
   Add: non-list mode with many tools → all lines ≤ 80 chars and continuation
   lines start at the section's value column.
 - `test_verify_tools_exposed.py`: `text = _render(lines)`.
+- `test_verify_label_map.py::test_renamed_labels` (added in step 1): it calls
+  `.startswith("  Tools exposed to model ")` on the first returned line, which
+  is now a `Row`; assert `lines[0].label == "Tools exposed to model"` instead.
 - `test_verify_alignment.py`: per-formatter tests feed `_render(...)` of the new
   return values into the existing `_assert_aligned_by_indent` (rewritten in step 8).
 - `test_verify_jenkins.py` (~532, ~547): `rendered = _render(_format_section(..., STATUS_SYMBOLS))`.

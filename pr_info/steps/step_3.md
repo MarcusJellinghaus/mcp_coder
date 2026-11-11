@@ -76,7 +76,8 @@ __exit__(exc_type, ...):
 
 ## Tests (write first) — `tests/cli/commands/test_verify_render.py`
 
-Renderer (`_render_rows`):
+Renderer (`_render_rows`; tests that check text call it through the conftest
+helper `_render(...)`, so `_render` is used from this step on):
 - width = max(22, longest label + indent offset): a 30-char label at indent 2
   puts every row's value at column 40.
 - rows at indents 2/4/6 share the marker column and the value column.
@@ -102,6 +103,10 @@ Builder (`SectionBuilder`, use `capsys`):
   `verify_render._render_rows` to raise `ValueError` after adding a row, raise
   `RuntimeError` in the body → the `RuntimeError` propagates.
 - normal exit closes the open section.
+- `out.section("A", [Row("a", "[OK]", "x")])` then
+  `out.section("B", [Row("b" * 30, "[OK]", "y"), Row("c", "[WARN]", "z", 4)])`:
+  each header is followed by its rows, and `_assert_sections_aligned(output)`
+  passes even though A and B have different value columns (32 vs 40).
 
 ## Shared test helpers — `tests/cli/commands/conftest.py`
 
@@ -135,6 +140,11 @@ return count
 Add a test in `test_verify_render.py` that `_assert_section_aligned` fails
 (`pytest.raises(AssertionError)`) on two rows whose values sit at different
 columns.
+
+Vulture (`tools/vulture_check.sh` scans `src tests` at confidence 60) must not
+report anything new in this step: every helper and method added here —
+`_render`, `_assert_section_aligned`, `_assert_sections_aligned`,
+`SectionBuilder.open/add/close/section` — is called by at least one test above.
 
 ## DATA
 
