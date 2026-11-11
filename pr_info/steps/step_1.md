@@ -151,6 +151,8 @@ level down, with exactly these corrections:
    for the Bash timeout and the auto-approval of read-only commands.
 
 Move the npm example out of this section into `## Examples` and link to it.
+The npm template's anchor is therefore `toolkits.md#npm`: #1198's npm template
+link (follow-up after merge) must target `#npm`, not `#command-toolkit`.
 
 **`## Examples`.**
 - `### Python` (`pyproject.toml`):

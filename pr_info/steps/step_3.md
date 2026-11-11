@@ -49,6 +49,11 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
    scope Python statements to the Python toolkit; the LLM gets quality checks
    through mcp-tools-py only with the Python toolkit, the `command` toolkit uses
    `Bash(...)` grants. Keep that the installer provisions a Python venv.
+   In §1 (architecture.md:9), drop or rescope "the installer and architecture
+   enforcement assume a Python target repo" the same way README edit 4 does:
+   architecture checks run only through `PythonToolkit`'s `check@full`, so only
+   the installer (and project setup) still assume Python. The two pages must not
+   contradict each other.
 2. §2 shims bullet ("code-quality tools come from `mcp-tools-py`"): quality
    tools are reached through the configured toolkit; mcp-coder-utils adds the
    toolkit contract.
@@ -59,7 +64,11 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
 4. §4 "Orchestrator vs. worker": link "the bindings of the configured toolkit"
    to `../configuration/toolkits.md#bindings`; "The LLM also runs pylint, pytest
    and mypy during each task" → "The LLM also runs the toolkit's checks during
-   each task, as its prompt tells it to."
+   each task, as its prompt tells it to." Replace the clause
+   "(`[tool.mcp-coder.implement] check_type_hints = false` drops their
+   `check@*` requests)" with a link to
+   `../configuration/toolkits.md#until-the-next-breaking-release`; don't
+   restate the fact.
 5. §5 building blocks table: add a row `toolkits` — toolkits shipped with
    mcp-coder (`command`); tach `tools` layer, depends only on `mcp_coder.utils`;
    the `toolkits_isolation` contracts in `.importlinter` forbid core imports;
@@ -88,7 +97,8 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
    the Detail table): use a root `mcp-coder.toml` and the `command` toolkit
    ([Command toolkit](../configuration/toolkits.md#command-toolkit)).
 3. "Files Shared With Other Projects" table: add a row
-   `| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Template: [toolkits.md](../configuration/toolkits.md#command-toolkit) |`.
+   `| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Template: [toolkits.md](../configuration/toolkits.md#npm) |`
+   (the npm example lives under `## Examples` → `### npm` after Step 1).
 
 **`docs/processes-prompts/processes/05-implementation.md`**
 1. Quality gates bullet "All code changes are validated through **pylint** →
@@ -96,7 +106,11 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
    done." → mcp-coder runs the configured bindings; the LLM runs the toolkit's
    checks.
 2. Process bullet ending "Overrides: [migration note](…)": add
-   "and [bindings](../../configuration/toolkits.md#bindings)".
+   "and [bindings](../../configuration/toolkits.md#bindings)". In the same
+   bullet, replace "`[tool.mcp-coder.implement] check_type_hints = false` drops
+   the `check@*` requests." with a link to
+   `../../configuration/toolkits.md#until-the-next-breaking-release`; don't
+   restate the fact.
 
 **`docs/migration/multi-language.md`** — add one line under the title:
 "Configuration reference: [toolkits](../configuration/toolkits.md)."
@@ -110,8 +124,8 @@ Relative link prefixes: from repo root `docs/configuration/toolkits.md`; from
 - Use `mcp__mcp-workspace__edit_file` with the exact current sentence as
   `old_string`; read the surrounding lines first.
 - Anchors used: `#configure-a-toolkit`, `#command-toolkit`, `#bindings`,
-  `#until-the-next-breaking-release` — confirm each heading exists in
-  `toolkits.md` (`search_files` for `^## `).
+  `#npm`, `#until-the-next-breaking-release` — confirm each heading exists in
+  `toolkits.md` (`search_files` for `^##+ `; `#npm` is a `###` heading).
 
 ## ALGORITHM
 

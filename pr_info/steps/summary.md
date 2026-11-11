@@ -53,7 +53,8 @@ None in code. The documentation architecture changes:
 | Facts that change with #1199 scattered | One transitional section in `toolkits.md` ("Today" vs "Planned (#1199)"); #1199 replaces it |
 
 Stable anchors created for other issues: `toolkits.md#configure-a-toolkit`
-(#1199's error message) and `toolkits.md#command-toolkit` (#1198's template).
+(#1199's error message), `toolkits.md#command-toolkit` (command toolkit
+reference) and `toolkits.md#npm` (the npm template; #1198's template links).
 
 ## Files
 
