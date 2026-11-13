@@ -34,6 +34,21 @@ def venv_search_path(project_dir: Path) -> str:
     return str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
 
 
+def venv_python(venv_root: Path) -> Path | None:
+    """Return the venv's interpreter if it is a file.
+
+    Args:
+        venv_root: Root of the virtual environment.
+
+    Returns:
+        ``Scripts/python.exe`` on win32, ``bin/python`` elsewhere, or None
+        when that file does not exist.
+    """
+    name = "python.exe" if sys.platform == "win32" else "python"
+    python = get_bin_dir(venv_root) / name
+    return python if python.is_file() else None
+
+
 def resolve_executable(
     argv0: str, project_dir: Path, path: str | None = None
 ) -> str | None:

@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.executable import resolve_executable, venv_search_path
+from mcp_coder.utils.executable import (
+    resolve_executable,
+    venv_python,
+    venv_search_path,
+)
 
 
 def _touch(path: Path, mode: int = 0o755) -> Path:
@@ -173,3 +177,38 @@ class TestVenvSearchPath:
         monkeypatch.setenv("PATH", "existing")
         expected = str(project_dir / ".venv" / subdir) + os.pathsep + "existing"
         assert venv_search_path(project_dir) == expected
+
+
+class TestVenvPython:
+    """`venv_python` finds the venv's interpreter."""
+
+    @pytest.mark.parametrize(
+        ("platform", "rel"),
+        [("linux", Path("bin") / "python"), ("win32", Path("Scripts") / "python.exe")],
+    )
+    def test_interpreter_found(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        platform: str,
+        rel: Path,
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", platform)
+        venv = tmp_path / ".venv"
+        python = _touch(venv / rel)
+        assert venv_python(venv) == python
+
+    @pytest.mark.parametrize("platform", ["linux", "win32"])
+    def test_missing_is_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, platform: str
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", platform)
+        assert venv_python(tmp_path / ".venv") is None
+
+    def test_directory_is_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", "linux")
+        venv = tmp_path / ".venv"
+        (venv / "bin" / "python").mkdir(parents=True)
+        assert venv_python(venv) is None

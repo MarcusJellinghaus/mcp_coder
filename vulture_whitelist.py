@@ -597,3 +597,9 @@ _.fixture_prompt_llm
 # usefixtures and injected by pytest.
 _.fixture_python_perms
 _.fixture_command_perms
+
+# tests/cli/commands/test_verify_setup.py - fixtures pulled in via usefixtures
+# (no_venv, with_venv) and an autouse fixture stubbing verify_toolkit.
+_.no_venv
+_.with_venv
+_._no_toolkit_verify
