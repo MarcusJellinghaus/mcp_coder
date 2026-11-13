@@ -55,6 +55,7 @@ Host platform: implement runs on Windows agents, so POSIX-mode tests must not de
 
 - POSIX: project-relative script found; non-executable file not found; bare name found in a PATH dir; bare name in cwd only → None; relative PATH entry skipped; explicit `path=` argument used instead of `os.environ`.
 - Windows (monkeypatch `sys.platform="win32"`, `PATHEXT=".COM;.EXE;.BAT;.CMD"`): `./mvnw` → `mvnw.cmd`; `./gradlew` → `gradlew.bat`; only extensionless `mvnw` present → None; `PATHEXT` order respected (`x.exe` beats `x.cmd`); bare `npm` → `npm.cmd` in a PATH dir; `tool.exe` used as-is; backslash path treated as path-like.
+- Windows-only path shapes: the backslash-path test, and any test that resolves a Windows-absolute `argv0` (e.g. `C:\...`), are marked `pytest.mark.skipif(sys.platform != "win32")`. Monkeypatching `sys.platform` does not change `Path`, which stays `PosixPath` on Linux CI, where a backslash is part of the file name.
 
 ## DATA
 
