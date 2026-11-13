@@ -80,9 +80,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 9: Linux Jenkins templates run `mcp-coder setup`
 [step_9.md](./steps/step_9.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: Documentation
 [step_10.md](./steps/step_10.md)
