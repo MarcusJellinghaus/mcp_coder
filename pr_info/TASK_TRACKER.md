@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Executable bit on `tools/jenkins_download_log.sh` (human action)
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code): write `pr_info/.blocked.txt`; human runs `git add --chmod=+x tools/jenkins_download_log.sh`
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): write `pr_info/.blocked.txt`; human runs `git add --chmod=+x tools/jenkins_download_log.sh`
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
