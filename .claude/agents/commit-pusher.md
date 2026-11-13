@@ -24,7 +24,8 @@ On top of that process:
 - **Scope** — only the files named in your launch prompt may be modified. Confirm with
   `mcp__mcp-workspace__git` `"status"` before committing; if anything else changed, stop and
   report back without committing. Call `mcp__mcp-workspace__git_commit` with `paths` = the
-  files named in your launch prompt.
+  files named in your launch prompt. For a renamed file, its old path is in scope too: put
+  both the old and the new path in `paths`.
 - **Message** — use the one from your launch prompt.
 - **Report** the commit SHA, the files committed, and the push result.
 

@@ -112,6 +112,11 @@ scoped and self-expiring but breaks whenever the user is consulted.
 - **The launch-prompt scope check** — `commit-pusher` compares `git status` against the file
   list in its prompt and refuses if anything else changed. A check against observable state,
   not an assertion, and it bounds what a bad launch can do.
+- **The git-write tools' own guardrails** — `git_commit` never amends or bypasses hooks
+  (`--no-verify`); `git_push` and `git_push_force` refuse the default branch and a detached
+  HEAD, and `git_push_force` uses only `--force-with-lease --force-if-includes`, never plain
+  `--force`. These guardrails, plus `commit-pusher` having no `Bash`, are why keeping
+  `bypassPermissions` on it is safe.
 - **A `PreToolUse` hook** would be the only real enforcement of `issue-approver`'s shell limit:
   hooks fire regardless of permission mode, and their input carries `agent_id` /
   `agent_type`, so one can be scoped to a single agent. **None is configured today** — a
