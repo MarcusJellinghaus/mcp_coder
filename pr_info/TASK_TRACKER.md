@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: New tool `tools/jenkins_download_log.py` (+ `.sh` / `.bat`), tests and docs
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code): `tests/tools/test_jenkins_download_log.py`, `tools/jenkins_download_log.py` / `.sh` / `.bat`, docs and config edits (`internal.md`, `.claude/CLAUDE.md`, `.claude/settings.local.json`, `tools/jenkins_status_check.md`)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `tests/tools/test_jenkins_download_log.py`, `tools/jenkins_download_log.py` / `.sh` / `.bat`, docs and config edits (`internal.md`, `.claude/CLAUDE.md`, `.claude/settings.local.json`, `tools/jenkins_status_check.md`)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Executable bit on `tools/jenkins_download_log.sh` (human action)
 See [step_3.md](./steps/step_3.md)

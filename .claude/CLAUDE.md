@@ -134,7 +134,8 @@ mcp-coder gh-tool set-status <label>
 - Status check of recent runs: follow `tools/jenkins_status_check.md`.
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
-- Without `--job`, both default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
+- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must not be gitignored (e.g. not under `logs/`) — `read_file` refuses gitignored paths; `.scratch/` works, delete it afterwards.
+- Without `--job`, `jenkins_builds` and `jenkins_download_logs` default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
 - `--name-pattern` matches the build display name before `--limit` applies; workflow builds are labelled like `mcp_coder - #1346 - implement - #2559` (`" - #\d+$"`).
 - Analyse failures: `tools/jenkins_classify_logs.sh [--logdir .scratch/jenkins_logs]` tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.
 

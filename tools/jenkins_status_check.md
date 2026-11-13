@@ -35,7 +35,11 @@ If a Jenkins call fails, run `mcp-coder verify` (JENKINS sections) first.
    - `bot_busy` (`03`, `06`, `09`, `14i`, `17i`, `72`, `82`) → a build must be running, otherwise the label is stuck
    - `bot_pickup` (`02`, `05`, `08`, `14`, `17`) → a build starts on the next poll, unless `blocked` / `wait` is set; then check the blocker
    - `status-01`, Overview and human-action labels → not expected to run. `71` / `81` come from the coordinator's PR checks, not from a build
-4. **Find the cause** for every issue that needs action. Read the failure comment on the issue first (Category / Stage / Error). If that doesn't settle it, download the logs: `tools/jenkins_download_logs.sh --limit N --name-pattern ' - #\d+$' --outdir .scratch/jenkins_logs`, then `tools/jenkins_classify_logs.sh --logdir .scratch/jenkins_logs`. Deciding lines:
+4. **Find the cause** for every issue that needs action. Read the failure comment on the issue first (Category / Stage / Error). If that doesn't settle it, download the logs:
+   - **One build:** `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. From the failure comment's `Build` URL (`…/job/<a>/job/<b>/<n>/`): take the `/job/<name>` segments, URL-decode each once and join them with `/` → `<job_path>`; the trailing number → `<number>`. Same rule as `job_path_from_build_url` in `src/mcp_coder/utils/jenkins_operations/diagnostics.py`; `get_console_output` re-encodes. Read the file directly with `read_file`; don't pass it to `jenkins_classify_logs.sh`, which only reads the `index.csv` written by `jenkins_download_logs.py`. The output path must not be gitignored (e.g. not under `logs/`), because `read_file` refuses gitignored paths; `.scratch/` works and is deleted afterwards.
+   - **Many builds:** `tools/jenkins_download_logs.sh --limit N --name-pattern ' - #\d+$' --outdir .scratch/jenkins_logs`, then `tools/jenkins_classify_logs.sh --logdir .scratch/jenkins_logs`.
+
+   Deciding lines:
    - `Blocked marker found:` — implement refused; the reason follows
    - `REVIEW HANDED OFF` and its `Reason:` line
    - `Successfully updated issue #N label:` — the label the step set

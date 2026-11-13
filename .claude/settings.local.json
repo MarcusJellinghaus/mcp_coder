@@ -5,6 +5,8 @@
       "Bash(start docs/architecture/dependency_graph.html)",
       "Bash(tools/jenkins_builds.bat:*)",
       "Bash(tools/jenkins_builds.sh:*)",
+      "Bash(tools/jenkins_download_log.bat:*)",
+      "Bash(tools/jenkins_download_log.sh:*)",
       "Bash(tools/jenkins_download_logs.bat:*)",
       "Bash(tools/jenkins_download_logs.sh:*)",
       "mcp__mcp-tools-py__find_references",
