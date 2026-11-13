@@ -180,6 +180,8 @@ mcp-coder setup [--project-dir PATH] [--refresh] [--skip-overrides]
 
 Steps run in order; the first failure stops the run. In a git repository, setup also fails when it changed tracked files or created untracked files that are not ignored. Exits 0 on success, 1 on a missing project directory, an invalid setup table, a failed step or changed files.
 
+Schema, defaults and examples: [Project setup](configuration/setup.md).
+
 ---
 
 ### verify

@@ -87,9 +87,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 10: Documentation
 [step_10.md](./steps/step_10.md)
 
-- [ ] Implementation (documentation only)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (documentation only)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

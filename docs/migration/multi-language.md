@@ -15,6 +15,17 @@ Configuration reference: [toolkits](../configuration/toolkits.md).
 - **pylint required.** `check@standard` needs pylint in the project env. A missing tool is `error` and aborts `implement_final` without a fix turn.
 - **Repos without mypy** abort at the per-task `check@quick` with `error`. Set `[tool.mcp-coder.implement] check_type_hints = false`, which drops `check@*` from both implement bindings. `implement_task = []` alone isn't enough, because `check@standard` also runs mypy.
 - **Test budget.** Check the `test@quick` budget against the suite: mcp-tools-py's default is 300 s, and a timeout is `error`. Raise it with `pytest-timeout` in `[tool.mcp-tools-py]` (overrides every depth; this repo uses 1800).
-- **Paths without the project venv.** Windows `implement.bat` activates the tool env, and the Linux executor has no project venv until #1204 / AutoRunner#59. Where project dependencies aren't installed, collection failures become findings and the run fails at the cap, or at once as `general` if `conftest.py` can't import.
+- **Paths without the project venv.** Windows `implement.bat` activates the tool env until AutoRunner#59. Where project dependencies aren't installed, collection failures become findings and the run fails at the cap, or at once as `general` if `conftest.py` can't import.
 - **Missing fix fragments.** A toolkit without a `fix.check` or `fix.test` fragment (missing or empty) no longer just disables that fix loop: its findings fail `implement_final` at once.
 - **Undeclared actions or depths.** A toolkit that doesn't declare a requested action or depth (e.g. a command toolkit with no `test.quick`) now aborts: `run_request` returns `error`, and `quick` has no lower depth to fall back to. Override `implement_task` / `implement_final` to match the declared depths.
+
+## Project setup is declared per repo (#1204)
+
+Reference: [Project setup](../configuration/setup.md).
+
+- **One command.** The session launcher and the Linux implement, fix-ci, fix-conflict and review-implementation templates run `mcp-coder setup`. It runs the repo's `[tool.mcp-coder.setup]` steps; without the table a repo with a `pyproject.toml` gets `{ builtin = "python" }` (the previous `mcp-coder install --source local --use-sync`). `mcp-coder install` is unchanged.
+- **Linux Python repos are now provisioned** into `.venv` on every run, and checks run there. Repos whose dev extras lack their check tools now fail.
+- **Track or ignore `uv.lock`.** Setup fails on files it changed or created; `uv sync` creates a missing `uv.lock` and rewrites a stale one.
+- **`VIRTUAL_ENV` only with a venv.** Sessions and Linux templates set it only when `<repo>/.venv` has an interpreter, and drop an inherited one otherwise. A non-Python repo's `.mcp*.json` must not reference `${VIRTUAL_ENV}`.
+- **`MCP_CODER_VENV_DIR` names the tool env** in sessions too (it was `<repo>/.venv`), which changes how `${MCP_CODER_VENV_DIR}` expands in a session's `.mcp.json`.
+- **Linux Docker image.** It installs `mcp-coder` at build time; rebuild it before a coordinator with this change dispatches Linux jobs, or `mcp-coder setup` is not found.

@@ -201,7 +201,7 @@ This caused flaky `caplog` + `pytest-xdist` failures: a known Python 3.11 bug fi
 
 When the project IS mcp-coder, the tool env already has all project dependencies. A separate project `.venv` is redundant — the tool env's pytest can execute the project's tests directly (with `PYTHONPATH` pointing to `src/`).
 
-However, the current scripts always create a project `.venv` via `uv sync --extra dev`, which installs a second copy of everything. This is wasteful but not harmful (except for the Python version mismatch above).
+However, `mcp-coder setup` still creates a project `.venv` through its default `python` built-in (`uv sync` with the `[tool.mcp-coder.install] extras`), which installs a second copy of everything. This is wasteful but not harmful (except for the Python version mismatch above).
 
 ## Project Environment Location
 

@@ -22,7 +22,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection ([`[tool.mcp-coder.toolkit]`](toolkits.md): `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection ([`[tool.mcp-coder.toolkit]`](toolkits.md): `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`), project setup steps ([`[tool.mcp-coder.setup]`](setup.md); same lookup, by `utils/setup_config.py`) |
 
 With the Python toolkit (`mcp-tools-py`), the formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections). Other toolkits format through their own `format` action ([toolkits](toolkits.md)).
 
@@ -950,8 +950,10 @@ The default test command performs the following checks:
 
 #### 5. Virtual Environment
 
-- Activates project virtual environment
-- Re-verifies `mcp-coder` from within venv
+- Activates the project virtual environment if `.venv` exists (non-Python repos have none)
+- Re-verifies `mcp-coder`
+
+The test template does not run `mcp-coder setup`; the implement, fix-ci, fix-conflict and review-implementation templates do ([Project setup](setup.md)).
 
 ### Test Command Script
 
@@ -963,19 +965,24 @@ which mcp-coder && mcp-coder --version
 which mcp-tools-py && mcp-tools-py --help
 which mcp-workspace && mcp-workspace --help
 mcp-coder verify
+export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
 # Claude CLI verification
 which claude
-claude mcp list
-claude -p "What is 1 + 1?"
+claude --mcp-config .mcp.json --strict-mcp-config mcp list
+claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 # MCP Coder functionality test
-mcp-coder --log-level debug prompt "What is 1 + 1?"
+mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, ..." --project-dir /workspace/repo --mcp-config .mcp.json
 # Project environment verification
-source .venv/bin/activate
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 which mcp-coder && mcp-coder --version
 ```
+
+Source of truth: `DEFAULT_TEST_COMMAND` in `cli/commands/coordinator/command_templates.py` (the prompt is shortened here).
 
 ### Customization
 
@@ -983,7 +990,7 @@ which mcp-coder && mcp-coder --version
 
 ## Dependency Architecture for Automated Workflows
 
-When using mcp-coder in automated Jenkins workflows, there are two separate Python environments:
+When using mcp-coder in automated Jenkins workflows, there are two separate environments:
 
 ### Two-Environment Model
 
@@ -994,20 +1001,23 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 │  mcp-workspace, claude CLI, pytest, mypy, pylint            │
 └─────────────────────────────────────────────────────────────┘
                            │
-                           │ mcp-coder install --use-sync (in repo/)
+                           │ mcp-coder setup --project-dir repo/
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Project Environment (repo/.venv)                           │
-│  Per-run: project dependencies + type stubs, per the        │
-│  target repo's own [tool.mcp-coder.install] extras          │
+│  Project dependencies, per [tool.mcp-coder.setup]           │
+│  Python: repo/.venv with the target repo's own              │
+│  [tool.mcp-coder.install] extras (python built-in)          │
+│  Other stacks: whatever the steps install (node_modules, …) │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+`mcp-coder setup` runs the repo's declared steps; Python repos without a setup table get the `python` built-in. See [Project setup](setup.md).
 
 ### Why Type Stubs Are the Target Repo's Responsibility
 
 The MCP tools-py server runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-tabulate`) must be installed in the project's `.venv`, not the execution environment.
 
-There is no separate per-run sync step for this. The Jenkins provisioning step (`mcp-coder install --source local --local-path <repo> --use-sync --refresh`) installs the target repo and its dependencies in one pass, honoring both `[tool.mcp-coder.install-from-github]` overrides and the target repo's own `[tool.mcp-coder.install] extras`. Whatever extras that setting names — including `types`, if the target repo defines one — are installed then; nothing afterwards re-syncs or reverts that result.
+There is no separate per-run sync step for this. The `python` setup built-in (`mcp-coder install --source local --local-path <repo> --use-sync`, run by `mcp-coder setup`) installs the target repo and its dependencies in one pass, honoring both `[tool.mcp-coder.install-from-github]` overrides and the target repo's own `[tool.mcp-coder.install] extras`. Whatever extras that setting names — including `types`, if the target repo defines one — are installed then; nothing afterwards re-syncs or reverts that result.
 
 ### Configuring Your Project for Automated Workflows
 
@@ -1327,6 +1337,7 @@ docker run -v ~/.mcp_coder:/root/.mcp_coder my-container
 
 - **[Repository Setup](../repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
 - **[CLI Reference](../cli-reference.md)** - Complete command documentation
+- **[Project Setup](setup.md)** - `[tool.mcp-coder.setup]` and `mcp-coder setup`
 - **[Development Process](../processes-prompts/development-process.md)** - Detailed workflow methodology
 
 ### Technical Documentation

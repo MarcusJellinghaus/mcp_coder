@@ -53,11 +53,11 @@ Yellow: you, in an interactive Claude session opened by `vscodeclaude` (or appro
 | Level | What |
 |---|---|
 | Works well | Python projects, GitHub, Claude Code |
-| Experimental | GitHub Copilot CLI, LangChain backends (OpenAI, Gemini, Anthropic API, Ollama, …); other stacks via the `command` toolkit (project setup still assumes Python) |
+| Experimental | GitHub Copilot CLI, LangChain backends (OpenAI, Gemini, Anthropic API, Ollama, …); other stacks via the `command` toolkit and declared [setup steps](docs/configuration/setup.md) |
 | Prototype | [`iCoder`](docs/iCoder.md), an alternative interactive terminal interface |
 | Planned | General LLM support |
 
-The label-driven process itself is language-agnostic. The installer and project setup still assume Python. GitHub is the only supported forge.
+The label-driven process itself is language-agnostic. Each repo declares its setup steps, which `mcp-coder setup` runs ([Project setup](docs/configuration/setup.md)); Python repos without them get a `uv.lock`-honoring install. mcp-coder's own installer is Python-only. GitHub is the only supported forge.
 
 ## Getting started
 
