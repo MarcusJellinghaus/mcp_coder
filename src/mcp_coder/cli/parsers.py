@@ -297,6 +297,29 @@ def add_init_parser(subparsers: Any) -> None:
     )
 
 
+def add_setup_parser(subparsers: Any) -> None:
+    """Add the setup command parser."""
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help=COMMAND_DESCRIPTIONS["setup"],
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(
+        setup_parser, help="Project directory to set up (default: current directory)"
+    )
+    setup_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Pass --refresh to uv in the python built-in step.",
+    )
+    setup_parser.add_argument(
+        "--skip-overrides",
+        action="store_true",
+        help="Skip the [tool.mcp-coder.install-from-github] step in the python "
+        "built-in step.",
+    )
+
+
 def add_install_parser(subparsers: Any) -> None:
     """Add the install command parser."""
     install_parser = subparsers.add_parser(

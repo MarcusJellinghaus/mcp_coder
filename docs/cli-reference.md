@@ -14,6 +14,7 @@ For the complete option list of any command, run `mcp-coder <command> --help`. T
 |---------|-------------|
 | [`init`](#init) | Initialize project: create config and deploy Claude skills |
 | [`install`](#install) | Install mcp-coder into a target environment |
+| [`setup`](#setup-1) | Set up the project as declared in [tool.mcp-coder.setup] |
 | [`verify`](#verify) | Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers |
 
 ### Background development
@@ -162,6 +163,22 @@ mcp-coder install ~/src/mcp_coder --source local --local-path ~/src/mcp_coder
 ```
 
 See the [Installation Guide](getting-started/installation.md) for which form to pick.
+
+---
+
+### setup
+
+Run the project's setup steps: the ordered `steps` list of `[tool.mcp-coder.setup]` in `pyproject.toml` (else root `mcp-coder.toml`), each a command line or a built-in. Without the table, a project with a `pyproject.toml` gets the `python` built-in: a local, `uv.lock`-honoring install into `<project>/.venv`.
+
+```bash
+mcp-coder setup [--project-dir PATH] [--refresh] [--skip-overrides]
+```
+
+- `--project-dir PATH`: the project to set up (default: current directory). Need not be a git repository.
+- `--refresh`: pass `--refresh` to uv in the `python` built-in, bypassing cached git clones.
+- `--skip-overrides`: skip the `[tool.mcp-coder.install-from-github]` step in the `python` built-in.
+
+Steps run in order; the first failure stops the run. In a git repository, setup also fails when it changed tracked files or created untracked files that are not ignored. Exits 0 on success, 1 on a missing project directory, an invalid setup table, a failed step or changed files.
 
 ---
 
