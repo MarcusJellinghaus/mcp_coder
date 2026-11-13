@@ -523,6 +523,16 @@ _._stub_uv_lookup
 # auto-install it.
 _._require_system_uv
 
+# tests/install/test_project_setup.py - autouse fixture unsetting UV_GIT_SHALLOW
+# (restored afterwards) so run_setup's default is observable.
+_._no_uv_git_shallow
+
+# tests/utils/test_executable.py and tests/toolkits/command/test_toolkit_run.py -
+# autouse fixtures pinning sys.platform so resolve_executable's rules are
+# tested independently of the host.
+_._posix
+_._windows
+
 # tests/cli/commands/coordinator/test_vscodeclaude_cli.py - autouse fixture
 # stubbing check_pr_health so CLI handler tests never run real PR-health checks.
 _._no_pr_health
@@ -587,3 +597,9 @@ _.fixture_prompt_llm
 # usefixtures and injected by pytest.
 _.fixture_python_perms
 _.fixture_command_perms
+
+# tests/cli/commands/test_verify_setup.py - fixtures pulled in via usefixtures
+# (no_venv, with_venv) and an autouse fixture stubbing verify_toolkit.
+_.no_venv
+_.with_venv
+_._no_toolkit_verify

@@ -15,6 +15,7 @@ import sys
 import traceback
 from pathlib import Path
 
+from ...utils.executable import venv_python
 from .types import SessionSpec, read_session_spec
 
 # MCP tool timeout (ms) forwarded to subprocesses. See
@@ -53,51 +54,56 @@ def _mcp_coder_exe(spec: SessionSpec) -> Path:
     return _venv_bin_dir(Path(spec.mcp_coder_install_path) / ".venv") / exe
 
 
-def build_subprocess_env(spec: SessionSpec, cwd: Path) -> dict[str, str]:
-    """Build the environment shared by every subprocess of the session.
+def build_subprocess_env(
+    spec: SessionSpec, cwd: Path, *, with_project_venv: bool = True
+) -> dict[str, str]:
+    """Build the environment for the session's subprocesses.
 
     Starts from a full copy of the current environment (preserving
     ``USERPROFILE``/``SystemRoot``/``TEMP`` etc. required for ``.mcp.json``
-    interpolation), then overlays the four MCP vars, a PATH prepend
-    (coordinator venv bin, then project venv bin), and the pinned
-    ``MCP_TIMEOUT`` / ``UV_GIT_SHALLOW`` values.
+    interpolation), then overlays the MCP vars, a PATH prepend (coordinator
+    venv bin first), and the pinned ``MCP_TIMEOUT`` / ``UV_GIT_SHALLOW``
+    values. ``MCP_CODER_VENV_DIR`` names the coordinator (tool) venv.
 
-    Invariant preserved: ``VIRTUAL_ENV == <cwd>/.venv == target``.
+    An inherited ``VIRTUAL_ENV`` is always dropped. ``VIRTUAL_ENV`` and the
+    project venv bin on PATH are set only when ``with_project_venv`` is true
+    and ``<cwd>/.venv`` has an interpreter. The setup call passes
+    ``with_project_venv=False``.
 
     Args:
         spec: The session spec carrying ``mcp_coder_install_path``.
         cwd: The session/project directory (launcher's ``%CD%`` / ``$PWD``).
+        with_project_venv: Overlay the project venv when it exists.
 
     Returns:
         A full environment dict with the session overlay applied.
     """
     env = os.environ.copy()
-    coder_bin = _venv_bin_dir(Path(spec.mcp_coder_install_path) / ".venv")
-    project_venv = cwd / ".venv"
-    project_bin = _venv_bin_dir(project_venv)
+    tool_venv = Path(spec.mcp_coder_install_path) / ".venv"
+    coder_bin = _venv_bin_dir(tool_venv)
 
     env["MCP_CODER_VENV_PATH"] = str(coder_bin)
     env["MCP_CODER_PROJECT_DIR"] = str(cwd)
-    env["MCP_CODER_VENV_DIR"] = str(project_venv)
-    env["VIRTUAL_ENV"] = str(project_venv)
+    env["MCP_CODER_VENV_DIR"] = str(tool_venv)
     env["MCP_TIMEOUT"] = MCP_TIMEOUT_MS
     env["UV_GIT_SHALLOW"] = "0"
-    env["PATH"] = (
-        str(coder_bin)
-        + os.pathsep
-        + str(project_bin)
-        + os.pathsep
-        + env.get("PATH", "")
-    )
+    env.pop("VIRTUAL_ENV", None)
+
+    prefix = [coder_bin]
+    project_venv = cwd / ".venv"
+    if with_project_venv and venv_python(project_venv) is not None:
+        env["VIRTUAL_ENV"] = str(project_venv)
+        prefix.append(_venv_bin_dir(project_venv))
+    env["PATH"] = os.pathsep.join([*map(str, prefix), env.get("PATH", "")])
     return env
 
 
 def build_install_argv(spec: SessionSpec, cwd: Path) -> list[str]:
-    """Build the argv that provisions the project venv via ``mcp-coder install``.
+    """Build the argv that sets up the project via ``mcp-coder setup``.
 
-    Extras are the target project's business — the installer reads them from
-    the target's ``pyproject.toml`` — so no ``--extras`` is emitted here.
-    Appends ``--skip-overrides`` iff ``spec.skip_github_install`` is set.
+    The steps are the target project's business — ``setup`` reads them from
+    its ``[tool.mcp-coder.setup]`` table. Appends ``--skip-overrides`` iff
+    ``spec.skip_github_install`` is set.
 
     Args:
         spec: The session spec carrying ``mcp_coder_install_path`` and
@@ -105,18 +111,14 @@ def build_install_argv(spec: SessionSpec, cwd: Path) -> list[str]:
         cwd: The session/project directory.
 
     Returns:
-        The argv list to invoke ``install`` with the coordinator's
+        The argv list to invoke ``setup`` with the coordinator's
         ``mcp-coder`` executable.
     """
     argv = [
         str(_mcp_coder_exe(spec)),
-        "install",
+        "setup",
+        "--project-dir",
         str(cwd),
-        "--source",
-        "local",
-        "--local-path",
-        str(cwd),
-        "--use-sync",
         "--refresh",
     ]
     if spec.skip_github_install:
@@ -349,15 +351,21 @@ def orchestrate(spec: SessionSpec, cwd: Path, env: dict[str, str]) -> None:
 
 
 def run_session(cwd: Path) -> None:
-    """Read the spec, print the banner, provision the venv, then orchestrate.
+    """Read the spec, print the banner, set up the project, then orchestrate.
+
+    The session env is built after setup, so a venv created by setup is
+    picked up.
 
     Args:
         cwd: The session/project directory (the launcher's ``%CD%`` / ``$PWD``).
     """
     spec = read_session_spec(cwd)
     print(render_banner(spec))
+    setup_env = build_subprocess_env(spec, cwd, with_project_venv=False)
+    subprocess.run(
+        build_install_argv(spec, cwd), env=setup_env, cwd=str(cwd), check=True
+    )
     env = build_subprocess_env(spec, cwd)
-    subprocess.run(build_install_argv(spec, cwd), env=env, cwd=str(cwd), check=True)
     orchestrate(spec, cwd, env)
 
 

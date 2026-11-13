@@ -39,6 +39,7 @@ from .commands.install import execute_install
 from .commands.prompt import execute_prompt
 from .commands.rebase import execute_rebase
 from .commands.review import execute_review_implementation, execute_review_plan
+from .commands.setup import execute_setup
 from .commands.verify import execute_verify
 from .gh_parsers import add_gh_tool_parsers, add_git_tool_parsers
 from .interactive_parsers import add_icoder_parser, add_vscodeclaude_parsers
@@ -50,6 +51,7 @@ from .parsers import (
     add_init_parser,
     add_install_parser,
     add_prompt_parser,
+    add_setup_parser,
     add_verify_parser,
 )
 from .workflow_parsers import (
@@ -146,6 +148,7 @@ def create_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("help", help=argparse.SUPPRESS)
     add_init_parser(subparsers)
     add_install_parser(subparsers)
+    add_setup_parser(subparsers)
     add_verify_parser(subparsers)
 
     # Add command parsers from parsers module
@@ -344,6 +347,8 @@ def main() -> int:
             return execute_init(args)
         elif args.command == "install":
             return execute_install(args)
+        elif args.command == "setup":
+            return execute_setup(args)
         elif args.command == "verify":
             return execute_verify(args)
         elif args.command == "prompt":

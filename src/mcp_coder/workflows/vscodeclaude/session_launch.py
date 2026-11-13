@@ -21,7 +21,9 @@ from ...utils.pyproject_config import (
     get_install_extras,
     get_post_install_checks,
 )
+from ...utils.setup_config import load_setup_config
 from ...utils.subprocess_runner import launch_process
+from ...utils.toml_utils import TomlReadError
 from ...utils.user_config import get_cache_refresh_minutes
 from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
@@ -88,10 +90,12 @@ __all__ = [
 def validate_target_repo(folder_path: Path) -> None:
     """Validate the launch-time contract of a target repo.
 
-    Only the MCP config row is fatal. The remaining rows describe policy the
-    target repo is expected to declare for itself; each missing one is logged
-    as a warning and the launch continues. A ``pyproject.toml`` that cannot be
-    read is warned about as exactly that, rather than as absent policy.
+    Only the MCP config row is fatal. The Python rows describe policy the
+    target repo is expected to declare for itself, and only apply when the
+    resolved ``[tool.mcp-coder.setup]`` steps include the ``python`` built-in.
+    Each missing one is logged as a warning and the launch continues. A setup
+    table or ``pyproject.toml`` that cannot be read is warned about as exactly
+    that, rather than as absent policy.
 
     Args:
         folder_path: Working folder holding the checked-out target repo.
@@ -101,6 +105,32 @@ def validate_target_repo(folder_path: Path) -> None:
     """  # noqa: DOC502 - raised by validate_mcp_json, part of the contract
     validate_mcp_json(folder_path)
 
+    try:
+        uses_python = load_setup_config(folder_path).uses_python()
+    except TomlReadError as exc:
+        logger.warning(
+            "%s cannot be read; `mcp-coder setup` will abort on the same file:\n%s",
+            exc.path,
+            exc,
+        )
+        return
+    except ValueError as exc:
+        logger.warning(
+            "%s: invalid [tool.mcp-coder.setup]; `mcp-coder setup` will fail on it:\n%s",
+            folder_path,
+            exc,
+        )
+        return
+    if uses_python:
+        _warn_python_policy(folder_path)
+
+
+def _warn_python_policy(folder_path: Path) -> None:
+    """Warn about missing or unreadable Python policy of a target repo.
+
+    Args:
+        folder_path: Working folder holding the checked-out target repo.
+    """
     pyproject = folder_path / "pyproject.toml"
 
     try:
@@ -326,9 +356,9 @@ def prepare_and_launch_session(
             untrusted_body=untrusted,
         )
 
-        # Launch VSCode (MCP environment variables are now set directly in startup script)
-        # This ensures MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR point to the session's
-        # working directory, not the mcp-coder installation directory
+        # Launch VSCode (MCP environment variables are set by session_setup):
+        # MCP_CODER_PROJECT_DIR points to the session's working directory,
+        # MCP_CODER_VENV_DIR to the mcp-coder (tool) venv
         pid = launch_vscode(workspace_file, folder_path)
 
         # Build and save session

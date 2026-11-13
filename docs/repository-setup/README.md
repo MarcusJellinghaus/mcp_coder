@@ -17,7 +17,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - Code quality CI checks
 - Development convenience scripts
 
-Non-Python repos: use a root `mcp-coder.toml` and the `command` toolkit ([Command toolkit](../configuration/toolkits.md#command-toolkit)).
+Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command toolkit](../configuration/toolkits.md#command-toolkit)) and a `[tool.mcp-coder.setup]` table ([Project setup](../configuration/setup.md)).
 
 ## Quick Setup Checklist
 
@@ -32,6 +32,7 @@ Non-Python repos: use a root `mcp-coder.toml` and the `command` toolkit ([Comman
   - Optional: `auto_review_plan` and `auto_review_implementation` (default `false`) replace the interactive review with an automated one that hands over to you when it needs a human
   - Optional: `auto_merge` (default `false`) squash-merges the PR once CI is green on HEAD — read the [caveats](../configuration/config.md#auto-merge) first
 - [ ] Configure a toolkit in `[tool.mcp-coder.toolkit]` ([Toolkits](../configuration/toolkits.md#configure-a-toolkit))
+- [ ] Declare the setup steps in `[tool.mcp-coder.setup]`, or rely on the Python default, and check them with `mcp-coder setup` ([Project setup](../configuration/setup.md))
 - [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
 ## Detail Documentation
@@ -81,7 +82,7 @@ The following files in this repository serve as references/templates for other p
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |
 | `docs/architecture/architecture.md` | G | Yes | No | Write your own — required by `/implementation_review` |
 | `pyproject.toml` | P | No | No | Use as a dependency/config reference, not a copy |
-| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Template: [toolkits.md](../configuration/toolkits.md#npm) |
+| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Templates: [toolkits.md](../configuration/toolkits.md#npm), [setup.md](../configuration/setup.md#examples) |
 | `.python-version` | P | No | No | Pin to your Python version |
 | `.importlinter` | P | No | No | Package names, contract definitions |
 | `tach.toml` | P | No | No | Module boundaries for your package |
@@ -103,17 +104,18 @@ The following files in this repository serve as references/templates for other p
 
 ## Target-Repo Contracts
 
-What a repo must declare about itself to be installed into and driven by mcp-coder. `validate_target_repo` checks all five rows at VSCodeClaude launch.
+What a repo must declare about itself to be installed into and driven by mcp-coder. `validate_target_repo` checks these rows at VSCodeClaude launch; the Python rows only when the setup steps include the `python` built-in.
 
 | Contract | Declared / enforced by | Fails how |
 |---|---|---|
 | ships `.mcp.json` (+ `.mcp.linux.json` on POSIX) | `workspace._MCP_CONFIG_FILES`, `validate_mcp_json` | `FileNotFoundError` at launch — fatal |
+| setup steps | [`[tool.mcp-coder.setup]`](../configuration/setup.md), default `python` built-in when `pyproject.toml` exists | invalid table warned at launch; `mcp-coder setup` fails |
 | extras to install | `[tool.mcp-coder.install] extras`, default `dev` | `uv sync` error — warn |
 | `[tool.mcp-coder.install-from-github]` for sibling pinning | `pyproject_config.get_github_install_config` | silently no overrides — warn |
 | venv at `<repo>/.venv` | installer, `uv sync`, `session_setup` | two venvs / empty venv — warn |
 | post-install checks | `[tool.mcp-coder.install] post_install_checks`, optional | install exits 1; malformed value warned at launch |
 
-A `uv.lock` is **not** required — mcp_coder itself tracks none, so `uv sync` resolves fresh.
+Python repos must **track or ignore `uv.lock`**: `uv sync` creates a missing one and rewrites a stale one, and `mcp-coder setup` fails on files it changed or created ([Changed files](../configuration/setup.md#changed-files)).
 
 ## Testing Your Setup
 

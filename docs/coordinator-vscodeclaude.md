@@ -128,7 +128,7 @@ This covers *authors* of PRs and notes. For *issue body editors* only the token 
 
 1. **Workspace Setup**: Creates folder like `mcp-coder_123` in workspace base
 2. **Git Clone/Pull**: Clones repository or pulls latest changes
-3. **Dependency Installation**: Installs complete development environment with `uv sync --extra dev` (includes test utilities, type stubs, and development tools)
+3. **Project Setup**: At launch the session runs `mcp-coder setup --project-dir <folder> --refresh` with the coordinator's `mcp-coder`, i.e. the steps in the repo's `[tool.mcp-coder.setup]` (Python repos without the table: `uv sync` with the project's extras). The session env is built afterwards: `MCP_CODER_VENV_DIR` names the coordinator's tool env; `VIRTUAL_ENV` is set only when `<folder>/.venv` has an interpreter
 4. **VS Code Launch**: Opens workspace with auto-run task
 5. **Claude Session**: Starts appropriate Claude Code command based on issue status
 

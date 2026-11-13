@@ -39,6 +39,7 @@ from .verify_formatting import (
     _hint,
 )
 from .verify_render import SectionBuilder
+from .verify_setup import setup_rows
 
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
@@ -507,6 +508,7 @@ def _print_project_section(
             project_dir, symbols, out, indent=2
         )
         ok = _toolkit_rows(project_dir, symbols, out, indent=2) and ok
+        ok = setup_rows(project_dir, symbols, out, indent=2) and ok
         out.close()
         return ok
     out.add(Row("pyproject.toml", symbols["success"], "found"))
@@ -517,6 +519,7 @@ def _print_project_section(
     if _uses_mcp_tools_py(project_dir):
         ok = _formatter_row(project_dir, symbols, out) and ok
     ok = _toolkit_rows(project_dir, symbols, out) and ok
+    ok = setup_rows(project_dir, symbols, out) and ok
     if has_legacy_format_code_key(project_dir):
         out.add(
             Row(

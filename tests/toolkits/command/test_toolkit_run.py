@@ -1,6 +1,7 @@
 """Tests for `CommandToolkit.describe` and `CommandToolkit.run`."""
 
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -8,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.toolkits.command import CommandToolkit
-from mcp_coder.toolkits.command.toolkit import _resolve_exe
+from mcp_coder.utils.executable import resolve_executable
 from mcp_coder.utils.subprocess_runner import CommandResult
 from mcp_coder.utils.toolkit import ActionRequest, ActionResult
 
@@ -56,21 +57,27 @@ def project_dir(tmp_path: Path) -> Path:
 
 
 class TestResolveExe:
-    """argv[0] resolution."""
+    """argv[0] resolution through `resolve_executable`."""
+
+    @pytest.fixture(autouse=True)
+    def _posix(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "platform", "linux")
 
     def test_project_relative(self, project_dir: Path) -> None:
-        with patch(
-            "mcp_coder.toolkits.command.toolkit.shutil.which", return_value="x"
-        ) as which:
-            assert _resolve_exe("tools/lint", project_dir) == "x"
-        which.assert_called_once_with(str(project_dir / "tools/lint"))
+        lint = project_dir / "tools" / "lint"
+        lint.parent.mkdir()
+        lint.write_text("", encoding="utf-8")
+        lint.chmod(0o755)
+        assert resolve_executable("tools/lint", project_dir) == str(lint)
 
-    def test_bare_name(self, project_dir: Path) -> None:
-        with patch(
-            "mcp_coder.toolkits.command.toolkit.shutil.which", return_value=None
-        ) as which:
-            assert _resolve_exe("npm", project_dir) is None
-        which.assert_called_once_with("npm")
+    def test_bare_name(self, project_dir: Path, tmp_path: Path) -> None:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        npm = bin_dir / "npm"
+        npm.write_text("", encoding="utf-8")
+        npm.chmod(0o755)
+        assert resolve_executable("npm", project_dir, path=str(bin_dir)) == str(npm)
+        assert resolve_executable("npm", project_dir, path=str(project_dir)) is None
 
 
 class TestDescribe:

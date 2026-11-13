@@ -6,12 +6,11 @@ into findings; the `exit-code` parser reports one finding per failed step.
 """
 
 import logging
-import os
-import shutil
 from pathlib import Path
 from xml.etree import ElementTree  # noqa: S405  # nosec B405
 
 from mcp_coder.toolkits.command.config import Step, parse_config
+from mcp_coder.utils.executable import resolve_executable
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.utils.toolkit import (
     ActionRequest,
@@ -102,7 +101,7 @@ class CommandToolkit(Toolkit):
                 continue
             for depth, steps in depths.items():
                 for step in steps:
-                    if _resolve_exe(step.argv[0], project_dir) is None:
+                    if resolve_executable(step.argv[0], project_dir) is None:
                         items.append(
                             VerifyItem(
                                 name=f"{step_action}.{depth}",
@@ -203,17 +202,6 @@ def _steps_text(steps: list[Step]) -> str:
     return "\n".join(lines)
 
 
-def _resolve_exe(argv0: str, project_dir: Path) -> str | None:
-    """Resolve argv[0]: project-relative when it has a directory part, else PATH.
-
-    Returns:
-        The executable path, or None when it is not found.
-    """
-    if "/" in argv0 or os.sep in argv0:
-        return shutil.which(str(project_dir / argv0))
-    return shutil.which(argv0)
-
-
 def _run_step(step: Step, project_dir: Path) -> ActionResult:
     """Run one step and map its exit code to a status.
 
@@ -221,7 +209,7 @@ def _run_step(step: Step, project_dir: Path) -> ActionResult:
         The step's result; `fix_text` is set for `findings` and `error`.
     """
     label = step.label
-    exe = _resolve_exe(step.argv[0], project_dir)
+    exe = resolve_executable(step.argv[0], project_dir)
     if exe is None:
         message = f"{label}: {step.argv[0]!r} not found"
         return ActionResult(status="error", summary=message, fix_text=message)

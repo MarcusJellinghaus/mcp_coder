@@ -203,7 +203,7 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.unit
         run: |
-          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
+          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not langchain_integration and not llm_integration and not setup_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -236,7 +236,7 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.integration
         run: |
-          pytest --version && pytest -m 'git_integration or install_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
+          pytest --version && pytest -m 'git_integration or install_integration or setup_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -356,11 +356,11 @@ jobs:
           fi
 
   # Backup checks: run on PR, main push and dispatch.
-  # Exercises the install sequence that vscodeclaude sessions run at launch.
+  # Exercises the setup sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
-  # (session_setup shells out to `mcp-coder install`; see #695). This job
-  # mirrors that argv so a break in the installer contract surfaces here.
+  # (session_setup shells out to `mcp-coder setup`; see #695, #1204). This job
+  # mirrors that argv so a break in the setup contract surfaces here.
   # Not a matrix entry because it uses an activated project venv (not
   # --system) and pulls siblings at HEAD via
   # [tool.mcp-coder.install-from-github] — see #969.
@@ -386,8 +386,8 @@ jobs:
           set -euo pipefail
 
           # Bootstrap mcp-coder into the SYSTEM Python, not ./.venv:
-          # `mcp-coder install . --use-sync` runs `uv sync`, which rewrites
-          # ./.venv mid-run and would wipe a bootstrap installed there.
+          # `mcp-coder setup` runs the `python` built-in (`uv sync`), which
+          # rewrites ./.venv mid-run and would wipe a bootstrap installed there.
           #
           # Siblings come from GitHub HEAD, exactly as every other job does: the
           # PyPI copies of mcp-workspace / mcp-coder-utils are too old for
@@ -397,13 +397,9 @@ jobs:
           uv pip install --system "${SPECS[@]}" .
 
           # Mirror the argv session_setup.build_install_argv produces:
-          mcp-coder install . \
-            --source local \
-            --local-path . \
-            --use-sync \
-            --refresh
+          mcp-coder setup --project-dir . --refresh
 
-          # Activate the venv `mcp-coder install` created, smoke-check end-to-end.
+          # Activate the venv `mcp-coder setup` created, smoke-check end-to-end.
           # shellcheck disable=SC1091
           source .venv/bin/activate
           mcp-coder --version

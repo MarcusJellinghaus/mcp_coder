@@ -1,8 +1,9 @@
 """Toolkit configuration and runner.
 
 Reads ``[tool.mcp-coder.toolkit]`` from ``pyproject.toml``, else from a root
-``mcp-coder.toml``. Every config problem raises ``ValueError`` naming the file
-and the offending key or value; callers map it to their own error.
+``mcp-coder.toml`` (via ``toml_utils.find_mcp_coder_table``). Every config
+problem raises ``ValueError`` naming the file and the offending key or value;
+callers map it to their own error.
 
 The runner part looks the toolkit up in the ``mcp_coder.toolkits`` entry-point
 group, validates the configured params against its schema, and runs
@@ -19,7 +20,7 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
-from .toml_utils import load_toml
+from .toml_utils import find_mcp_coder_table
 from .toolkit import (
     ActionRequest,
     ActionResult,
@@ -59,7 +60,6 @@ _FORBIDDEN_REQUESTS: dict[str, frozenset[str]] = {
 }
 
 _REQUEST_RE = re.compile(r"^[a-z][a-z0-9_-]*@[a-z][a-z0-9_-]*$")
-_CONFIG_FILES = ("pyproject.toml", "mcp-coder.toml")
 _TABLE = "[tool.mcp-coder.toolkit]"
 _RESERVED_KEYS = frozenset({"toolkit", "bindings", "params"})
 # Per-action keys are reserved for a later version of the config format
@@ -173,29 +173,11 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
         ValueError: If a config file is malformed, both files define the
             table, or the table is invalid. The message names the file.
     """
-    tables: dict[str, Any] = {}
-    for file_name in _CONFIG_FILES:
-        data: Any = load_toml(project_dir / file_name, strict=True)
-        for key in ("tool", "mcp-coder"):
-            data = data.get(key, {})
-            if not isinstance(data, dict):
-                raise ValueError(
-                    f"Invalid {key!r} in {file_name}: expected a table, "
-                    f"got {type(data).__name__}: {data!r}"
-                )
-        table = data.get("toolkit")
-        if table is not None:
-            tables[file_name] = table
-
-    if len(tables) == 2:
-        raise ValueError(
-            f"Both {' and '.join(_CONFIG_FILES)} in {project_dir} define "
-            f"{_TABLE}; keep one"
-        )
-    if not tables:
+    found = find_mcp_coder_table(project_dir, "toolkit")
+    if found is None:
         return ToolkitConfig(DEFAULT_TOOLKIT, dict(DEFAULT_BINDINGS), {}, {}, None)
 
-    source, table = next(iter(tables.items()))
+    source, table = found
     if not isinstance(table, dict):
         raise ValueError(
             f"Invalid {_TABLE} in {source}: expected a table, "

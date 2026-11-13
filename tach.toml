@@ -243,6 +243,7 @@ layer = "domain"
 # GitHub overrides. Reads the target project's pyproject.toml via utils.
 depends_on = [
     { path = "mcp_coder.utils" }, # pyproject_config (extras + GitHub overrides)
+    { path = "mcp_coder.mcp_workspace_git" }, # `mcp-coder setup` changed-files check
 ]
 
 # =============================================================================

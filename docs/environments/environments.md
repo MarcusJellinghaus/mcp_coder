@@ -54,7 +54,7 @@ There are two paths that set up environment variables: batch launchers (for inte
 
 | Entry point | Sets tool env how | Sets project env how | Two-env aware? |
 |---|---|---|---|
-| `.vscodeclaude_start.bat` (coordinator) | `MCP_CODER_VENV_PATH` on PATH | activates project `.venv`, sets `VIRTUAL_ENV` | **Yes** |
+| `.vscodeclaude_start.bat` (coordinator) → `session_setup` | `MCP_CODER_VENV_PATH` on PATH, `MCP_CODER_VENV_DIR` = tool env | runs `mcp-coder setup`; sets `VIRTUAL_ENV` only when `.venv` has an interpreter | **Yes** |
 | `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from a pre-set value or `sys.prefix` (the running mcp-coder interpreter) | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg; project Python reaches the servers via `${VIRTUAL_ENV}` in `.mcp.json` | **Yes** — tool env tracks the runtime, not the active venv |
@@ -63,20 +63,13 @@ There are two paths that set up environment variables: batch launchers (for inte
 
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
 
-This is the most complete implementation. It already separates the two environments:
+The thin launcher runs `python -m mcp_coder.workflows.vscodeclaude.session_setup <CWD>` with the tool env's Python. `session_setup` then:
 
-```batch
-REM Tool env: added to PATH for mcp-coder CLI and MCP server executables
-set "MCP_CODER_VENV_PATH=C:\Jenkins\environments\mcp-coder-dev\.venv\Scripts"
-set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
-
-REM Project env: activated, sets VIRTUAL_ENV
-call .venv\Scripts\activate.bat
-```
-
-Result:
-- `VIRTUAL_ENV` → project env (`.venv`, Python 3.11)
-- `PATH` → tool env first (Jenkins, Python 3.13), then project env
+1. Runs `mcp-coder setup --project-dir <CWD> --refresh` (the tool env's `mcp-coder`). Its env has the tool env bin first on `PATH` and **no** `VIRTUAL_ENV` — an inherited one is dropped.
+2. Builds the session env **after** setup, so a venv that setup created is picked up:
+   - `MCP_CODER_VENV_DIR` → tool env venv root; `MCP_CODER_VENV_PATH` → its bin dir
+   - `VIRTUAL_ENV` → `<CWD>/.venv`, and its bin dir second on `PATH` — only when `.venv` has an interpreter (non-Python repos get neither)
+   - `PATH` → tool env first (Jenkins, Python 3.13), then project env
 
 The coordinator knows the tool env path because it **runs from it** — `get_mcp_coder_install_path()` in `workspace.py` detects the installation directory at generation time and bakes it into the startup script.
 
@@ -208,7 +201,7 @@ This caused flaky `caplog` + `pytest-xdist` failures: a known Python 3.11 bug fi
 
 When the project IS mcp-coder, the tool env already has all project dependencies. A separate project `.venv` is redundant — the tool env's pytest can execute the project's tests directly (with `PYTHONPATH` pointing to `src/`).
 
-However, the current scripts always create a project `.venv` via `uv sync --extra dev`, which installs a second copy of everything. This is wasteful but not harmful (except for the Python version mismatch above).
+However, `mcp-coder setup` still creates a project `.venv` through its default `python` built-in (`uv sync` with the `[tool.mcp-coder.install] extras`), which installs a second copy of everything. This is wasteful but not harmful (except for the Python version mismatch above).
 
 ## Project Environment Location
 

@@ -6,6 +6,7 @@ session-id threading, non-fatal middle steps, and ``main``'s graceful exit-0.
 """
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,6 @@ _MCP_VARS = (
     "MCP_CODER_VENV_PATH",
     "MCP_CODER_PROJECT_DIR",
     "MCP_CODER_VENV_DIR",
-    "VIRTUAL_ENV",
 )
 
 
@@ -94,10 +94,19 @@ def _patch_run(monkeypatch: pytest.MonkeyPatch, fake: _FakeRun) -> _FakeRun:
     return fake
 
 
-def _is_install(argv: list[str]) -> bool:
+def _is_setup(argv: list[str]) -> bool:
     # Positional: the subcommand always follows the mcp-coder executable, so a
     # spec command that merely contains the token cannot be mistaken for it.
-    return len(argv) > 1 and argv[1] == "install"
+    return len(argv) > 1 and argv[1] == "setup"
+
+
+def _make_venv_python(cwd: Path) -> None:
+    """Create the interpreter file of ``<cwd>/.venv`` for the host platform."""
+    python = cwd / ".venv" / "Scripts" / "python.exe"
+    if sys.platform != "win32":
+        python = cwd / ".venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("", encoding="utf-8")
 
 
 def _is_claude(argv: list[str]) -> bool:
@@ -275,27 +284,47 @@ class TestEnvPropagation:
                 assert var in env
             assert kwargs["cwd"] == str(tmp_path)
 
-    def test_install_env_virtual_env_is_project_venv(
+    def test_setup_env_has_no_virtual_env(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        """Setup runs without the project venv overlay or an inherited one."""
         fake = _FakeRun()
         _patch_run(monkeypatch, fake)
+        monkeypatch.setenv("VIRTUAL_ENV", "/inherited/venv")
+        _make_venv_python(tmp_path)
         write_session_spec(tmp_path, _make_spec(commands=[]))
         session_setup.run_session(tmp_path)
 
-        install_calls = [
-            (argv, kwargs) for argv, kwargs in fake.calls if _is_install(argv)
-        ]
-        assert len(install_calls) == 1
-        _argv, kwargs = install_calls[0]
-        assert kwargs["env"]["VIRTUAL_ENV"] == str(tmp_path / ".venv")
+        setup_calls = [(argv, kwargs) for argv, kwargs in fake.calls if _is_setup(argv)]
+        assert len(setup_calls) == 1
+        _argv, kwargs = setup_calls[0]
+        assert "VIRTUAL_ENV" not in kwargs["env"]
         assert kwargs["check"] is True
+
+    def test_session_env_built_after_setup(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A venv created by setup is overlaid on the orchestrate env."""
+        fake = _FakeRun()
+
+        def _run(argv: list[str], **kwargs: Any) -> "subprocess.CompletedProcess[str]":
+            if _is_setup(argv):
+                _make_venv_python(tmp_path)
+            return fake(argv, **kwargs)
+
+        monkeypatch.setattr(_RUN_TARGET, _run)
+        write_session_spec(tmp_path, _make_spec(commands=["mcp-coder implement"]))
+        session_setup.run_session(tmp_path)
+
+        assert len(fake.calls) == 2
+        assert "VIRTUAL_ENV" not in fake.calls[0][1]["env"]
+        assert fake.calls[1][1]["env"]["VIRTUAL_ENV"] == str(tmp_path / ".venv")
 
 
 class TestRunSessionProvisioning:
-    """``run_session`` provisions the venv before orchestrating."""
+    """``run_session`` sets up the project before orchestrating."""
 
-    def test_install_runs_first(
+    def test_setup_runs_first(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         fake = _FakeRun()
@@ -303,7 +332,7 @@ class TestRunSessionProvisioning:
         write_session_spec(tmp_path, _make_spec(commands=["mcp-coder implement"]))
         session_setup.run_session(tmp_path)
 
-        assert _is_install(fake.argvs()[0])
+        assert _is_setup(fake.argvs()[0])
         assert _is_claude(fake.argvs()[1])
 
 

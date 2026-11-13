@@ -30,7 +30,7 @@ claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
 mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir /workspace/repo --mcp-config .mcp.json
 # Project environment verification
-source .venv/bin/activate
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 which mcp-coder && mcp-coder --version
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -102,7 +102,8 @@ TEST_COMMAND_TEMPLATES: dict[str, str] = {
 # The --project-dir parameter must match the Jenkins workspace structure
 # All templates follow the pattern:
 #   1. Checkout appropriate branch (main for planning, feature branch for implementation/PR)
-#   2. Pull latest code
+#   2. Pull latest code (implement, fix-ci, fix-conflict, review-implementation
+#      then run `mcp-coder setup`; see _linux_setup_template)
 #   3. Verify tool versions
 #   4. Execute mcp-coder command
 #   5. Capture exit code and run watchdog set-status
@@ -143,28 +144,60 @@ ls -la logs
 exit $RC
 """
 
-# The VIRTUAL_ENV line points mcp-tools-py checks at the project venv. It must
-# contain no $, braces or backticks (str.format and AutoRunner's outer bash -c),
-# and uses an if block because the executor runs under set -e.
-IMPLEMENT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
 
-mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir /workspace/repo --force || true
+def _watchdog(failed: str, current: str) -> str:
+    """Return the watchdog set-status line for a workflow without --issue."""
+    return (
+        f"mcp-coder gh-tool set-status {failed} --from-status {current} "
+        "--project-dir /workspace/repo --force || true"
+    )
 
-echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
 
-exit $RC
-"""
+def _linux_setup_template(
+    command: str, failed: str, current: str, *, archive_plan_sessions: bool = True
+) -> str:
+    """Return the Linux template for a workflow that needs the project set up.
+
+    `mcp-coder setup` runs after `git pull`; on failure the watchdog moves the
+    issue to its failed label and the script exits 1. The VIRTUAL_ENV line then
+    points mcp-tools-py checks at the project venv. The setup and venv lines
+    contain no $, braces or backticks (str.format and AutoRunner's outer
+    bash -c), and use if blocks because the executor runs under set -e.
+    """
+    watchdog = _watchdog(failed, current)
+    plan_sessions = (
+        "ls -la .mcp-coder/create_plan_sessions\n" if archive_plan_sessions else ""
+    )
+    return (
+        "git checkout {branch_name}\n"
+        "git pull\n"
+        "if ! mcp-coder setup --project-dir /workspace/repo; then\n"
+        f"{watchdog}\n"
+        "exit 1\n"
+        "fi\n"
+        "if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi\n"
+        "export DISABLE_AUTOUPDATER=1\n"
+        "export MCP_TIMEOUT=30000\n"
+        "which mcp-coder && mcp-coder --version\n"
+        "which claude && claude --version\n"
+        f"mcp-coder --log-level {{log_level}} {command} "
+        "--project-dir /workspace/repo --mcp-config .mcp.json\n"
+        "RC=$?\n"
+        "echo RC=$RC\n"
+        "\n"
+        f"{watchdog}\n"
+        "\n"
+        'echo "archive after execution ======================================="\n'
+        f"{plan_sessions}"
+        "ls -la logs\n"
+        "\n"
+        "exit $RC\n"
+    )
+
+
+IMPLEMENT_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "implement", "status-06f:implementing-failed", "status-06:implementing"
+)
 
 CREATE_PR_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
@@ -204,61 +237,22 @@ ls -la logs
 exit $RC
 """
 
-REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE: str = """git checkout {branch_name}
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} review-implementation --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
+REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "review-implementation",
+    "status-17f:code-review-failed",
+    "status-17i:code-reviewing",
+)
 
-mcp-coder gh-tool set-status status-17f:code-review-failed --from-status status-17i:code-reviewing --project-dir /workspace/repo --force || true
+FIX_CI_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "fix-ci", "status-83:ci-fix-failed", "status-82:fixing-ci"
+)
 
-echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
-
-exit $RC
-"""
-
-FIX_CI_COMMAND_TEMPLATE: str = """git checkout {branch_name}
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} fix-ci --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
-
-mcp-coder gh-tool set-status status-83:ci-fix-failed --from-status status-82:fixing-ci --project-dir /workspace/repo --force || true
-
-echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
-
-exit $RC
-"""
-
-FIX_CONFLICT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} fix-conflict --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
-
-mcp-coder gh-tool set-status status-73:merge-conflict-failed --from-status status-72:fixing-merge-conflict --project-dir /workspace/repo --force || true
-
-echo "archive after execution ======================================="
-ls -la logs
-
-exit $RC
-"""
+FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "fix-conflict",
+    "status-73:merge-conflict-failed",
+    "status-72:fixing-merge-conflict",
+    archive_plan_sessions=False,
+)
 
 # Windows workflow command templates
 # Note: Using raw strings (r""") for cleaner Windows path handling
