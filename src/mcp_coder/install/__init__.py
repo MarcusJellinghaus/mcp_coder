@@ -1,9 +1,13 @@
 """Install mcp-coder (and/or related projects) into a target environment.
 
-Backs the ``mcp-coder install`` subcommand.
+Backs the ``mcp-coder install`` subcommand. The package also backs
+``mcp-coder setup`` via :mod:`.project_setup`, which runs a project's
+language-neutral ``[tool.mcp-coder.setup]`` steps; its ``python`` built-in
+calls :func:`install`.
 
-Scope: Python packages only. Files that need to be staged alongside the
-install (e.g. ``.mcp.json``, ``.claude/``) are the caller's responsibility.
+Scope of :func:`install`: Python packages only. Files that need to be staged
+alongside the install (e.g. ``.mcp.json``, ``.claude/``) are the caller's
+responsibility.
 
 Install sources: ``--source git`` (default) fetches from
 ``git+https://...mcp_coder.git@<ref>``, with sibling MCP packages

@@ -16,7 +16,22 @@ import os
 import sys
 from pathlib import Path
 
+from .mcp_verification import get_bin_dir
+
 _DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD"
+
+
+def venv_search_path(project_dir: Path) -> str:
+    """Return PATH with the project venv's bin dir first.
+
+    Args:
+        project_dir: Project root holding ``.venv``.
+
+    Returns:
+        ``<project_dir>/.venv`` bin dir, ``os.pathsep``, then the current PATH.
+    """
+    bin_dir = get_bin_dir(project_dir / ".venv")
+    return str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
 
 
 def resolve_executable(

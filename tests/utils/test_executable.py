@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.executable import resolve_executable
+from mcp_coder.utils.executable import resolve_executable, venv_search_path
 
 
 def _touch(path: Path, mode: int = 0o755) -> Path:
@@ -154,3 +154,22 @@ class TestWindows:
     def test_windows_absolute_path(self, project_dir: Path, bin_dir: Path) -> None:
         tool = _touch(bin_dir / "tool.exe")
         assert resolve_executable(str(tool), project_dir) == str(tool)
+
+
+class TestVenvSearchPath:
+    """`venv_search_path` puts the project venv's bin dir first."""
+
+    @pytest.mark.parametrize(
+        ("platform", "subdir"), [("linux", "bin"), ("win32", "Scripts")]
+    )
+    def test_bin_dir_first_then_path(
+        self,
+        project_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        platform: str,
+        subdir: str,
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", platform)
+        monkeypatch.setenv("PATH", "existing")
+        expected = str(project_dir / ".venv" / subdir) + os.pathsep + "existing"
+        assert venv_search_path(project_dir) == expected

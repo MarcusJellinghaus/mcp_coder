@@ -523,6 +523,10 @@ _._stub_uv_lookup
 # auto-install it.
 _._require_system_uv
 
+# tests/install/test_project_setup.py - autouse fixture unsetting UV_GIT_SHALLOW
+# (restored afterwards) so run_setup's default is observable.
+_._no_uv_git_shallow
+
 # tests/utils/test_executable.py and tests/toolkits/command/test_toolkit_run.py -
 # autouse fixtures pinning sys.platform so resolve_executable's rules are
 # tested independently of the host.
