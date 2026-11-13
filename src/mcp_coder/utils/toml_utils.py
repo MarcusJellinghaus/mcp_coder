@@ -13,6 +13,9 @@ from typing import Any
 # Curly quotes pasted from chat windows or documents (U+201C/U+201D/U+2018/U+2019)
 _SMART_QUOTES = "“”‘’"
 
+# Project files that may hold [tool.mcp-coder.*] tables, in lookup order
+MCP_CODER_CONFIG_FILES = ("pyproject.toml", "mcp-coder.toml")
+
 
 def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
     """Load and parse a TOML file.
@@ -45,6 +48,48 @@ def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
         if strict:
             raise ValueError(f"Error reading {path}\n{e}") from e
         return {}
+
+
+def find_mcp_coder_table(project_dir: Path, table: str) -> tuple[str, Any] | None:
+    """Return (file name, raw value) of [tool.mcp-coder.<table>], or None.
+
+    Each table is looked up on its own, so different tables may live in
+    different files.
+
+    Args:
+        project_dir: Project root containing pyproject.toml / mcp-coder.toml.
+        table: Name of the table below [tool.mcp-coder].
+
+    Returns:
+        The file name and the raw TOML value, or None when no file defines
+        the table.
+
+    Raises:
+        ValueError: If a file is malformed, 'tool'/'mcp-coder' is not a
+            table, or both files define the table.
+    """
+    found: dict[str, Any] = {}
+    for file_name in MCP_CODER_CONFIG_FILES:
+        data: Any = load_toml(project_dir / file_name, strict=True)
+        for key in ("tool", "mcp-coder"):
+            data = data.get(key, {})
+            if not isinstance(data, dict):
+                raise ValueError(
+                    f"Invalid {key!r} in {file_name}: expected a table, "
+                    f"got {type(data).__name__}: {data!r}"
+                )
+        value = data.get(table)
+        if value is not None:
+            found[file_name] = value
+
+    if len(found) == 2:
+        raise ValueError(
+            f"Both {' and '.join(MCP_CODER_CONFIG_FILES)} in {project_dir} define "
+            f"[tool.mcp-coder.{table}]; keep one"
+        )
+    if not found:
+        return None
+    return next(iter(found.items()))
 
 
 def format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
