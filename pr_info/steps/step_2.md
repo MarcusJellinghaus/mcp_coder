@@ -41,7 +41,7 @@ No functions — Markdown text only.
   (keep the `mcp-coder gh-tool set-status <label>` line).
 - The whole `**Privileged agents:** …` paragraph →
   ```markdown
-  **Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools and `mcp-coder gh-tool set-status` for the other two. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `issue-approver`; `commit-pusher` and `issue-updater` have no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+  **Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_comment` plus its `Bash` commands (including `mcp-coder gh-tool set-status`) for `issue-approver`. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `issue-approver`; `commit-pusher` and `issue-updater` have no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
   ```
 - `**Before every commit:** run \`mcp__mcp-tools-py__run_format_code\`, then stage and commit.` →
   `**Before every commit:** run \`mcp__mcp-tools-py__run_format_code\`, then \`mcp__mcp-workspace__git_commit\`.`
@@ -74,10 +74,12 @@ MCP tools (`mcp__mcp-workspace__git_commit`, `_push`, `_push_force`, `_branch`,
   *every* shell command is auto-approved.
 ```
 
-**c. "The alternative this does not rule out"** — replace
-`Putting \`Bash(git add *) Bash(git commit *) Bash(git push *)\` on the three` with
-`Putting \`mcp__mcp-workspace__git_commit\` and \`mcp__mcp-workspace__git_push\` on the three`
-(keep line wrapping readable; rest of the sentence unchanged).
+**c. "The alternative this does not rule out"** — two replacements in the same paragraph
+(keep line wrapping readable; rest of the paragraph unchanged):
+- `the scope is a command pattern rather than all of \`Bash\`` →
+  `the scope is the specific MCP git write tools (\`git_commit\`, \`git_push\`)`
+- `Putting \`Bash(git add *) Bash(git commit *) Bash(git push *)\` on the three` →
+  `Putting \`mcp__mcp-workspace__git_commit\` and \`mcp__mcp-workspace__git_push\` on the three`
 
 **d. Net trade** — replace
 `Net trade: the agents survive escalations, but \`commit-pusher\` and \`issue-approver\` carry an
