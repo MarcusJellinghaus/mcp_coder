@@ -2,7 +2,7 @@
 
 ## LLM prompt
 
-Read `pr_info/steps/summary.md`, then implement this step (`pr_info/steps/step_6.md`) only. Steps 1–2 must be done: if `load_setup_config` or `resolve_executable` does not exist, write one line to `pr_info/.blocked.txt` and stop.
+Read `pr_info/steps/summary.md`, then implement this step (`pr_info/steps/step_6.md`) only. Steps 1–3 must be done: if `load_setup_config`, `resolve_executable` or `mcp_coder.utils.executable.venv_search_path` (added in step 3) does not exist, write one line to `pr_info/.blocked.txt` and stop.
 Write the tests first, then the implementation. Keep the new logic out of `verify_sections.py` and the new tests out of `test_verify.py` (both near the size limit). Run format, pylint, pytest (unit filter, `-n auto`), mypy, lint-imports and tach; all must pass. One commit.
 
 ## WHERE

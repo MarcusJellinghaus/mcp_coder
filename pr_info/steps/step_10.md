@@ -22,7 +22,7 @@ Docs only. Run pytest (unit filter, `-n auto`, includes `tests/docs`) and `check
 3. Schema: `steps` (required, ordered; `[]` = nothing to do); step keys `argv` | `builtin`, `name`, `timeout` (argv only, positive int, default 1800); unknown keys are errors.
 4. Default: no table + `pyproject.toml` → `[{ builtin = "python" }]`; no table, no `pyproject.toml` → nothing to do.
 5. Built-in `python`: today's `install --source local --use-sync`, `install-from-github` overrides, `post_install_checks`, `[tool.mcp-coder.install]`; later steps see the project venv on `PATH` and in `VIRTUAL_ENV`.
-6. `argv[0]` resolution rules (same text as `toolkits.md`): `./mvnw` → `mvnw.cmd`, `npm` → `npm.cmd` on Windows; no `PATHEXT` match = not found.
+6. `argv[0]` resolution: link to the rules in `toolkits.md` (do not repeat them); one example line is enough (`./mvnw` → `mvnw.cmd`, `npm` → `npm.cmd` on Windows; no `PATHEXT` match = not found).
 7. Changed-files rule: setup fails on changed tracked files or new untracked, non-ignored files; Python repos must track or ignore `uv.lock`.
 8. `UV_GIT_SHALLOW=0` is set by `setup` itself.
 9. Recommend lockfile-frozen commands: `npm ci`, `cargo … --locked`, `--frozen-lockfile`.

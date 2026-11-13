@@ -36,6 +36,7 @@ Description: `"Set up the project as declared in [tool.mcp-coder.setup]"`.
 
 ```
 project_dir = Path(args.project_dir or ".").resolve()
+if not project_dir.is_dir(): logger.error("Project directory does not exist or is not a directory: %s", project_dir); return 1   # no git-repo requirement
 try: run_setup(project_dir, refresh=args.refresh, skip_overrides=args.skip_overrides)
 except (ValueError, SetupError) as exc: logger.error(str(exc)); return 1
 return 0
@@ -49,7 +50,7 @@ return 0
 ## Tests (`tests/cli/commands/test_setup_command.py`)
 
 - Parser: `setup --project-dir X --refresh --skip-overrides` parses; defaults are `None/False/False`.
-- `execute_setup` (patch `run_setup` in the command module): passes resolved dir and flags; `ValueError` → 1 with error logged; `SetupError` → 1; success → 0; no `--project-dir` → cwd.
+- `execute_setup` (patch `run_setup` in the command module): passes resolved dir and flags; `ValueError` → 1 with error logged; `SetupError` → 1; success → 0; no `--project-dir` → cwd; missing `--project-dir` (nonexistent path) → 1 with the error logged, `run_setup` not called and no "nothing to do" output.
 - `main` dispatch reaches `execute_setup`.
 
 ## DATA

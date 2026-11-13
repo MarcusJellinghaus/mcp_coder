@@ -51,6 +51,8 @@ return None
 
 ## Tests (`tests/utils/test_executable.py`)
 
+Host platform: implement runs on Windows agents, so POSIX-mode tests must not depend on the host. They monkeypatch `sys.platform` to `"linux"`. The non-executable-file (X_OK) case is marked `pytest.mark.skipif(sys.platform == "win32")`, because `os.access(X_OK)` is true for any file on Windows. The same rule applies to the rewritten `TestResolveExe` tests.
+
 - POSIX: project-relative script found; non-executable file not found; bare name found in a PATH dir; bare name in cwd only → None; relative PATH entry skipped; explicit `path=` argument used instead of `os.environ`.
 - Windows (monkeypatch `sys.platform="win32"`, `PATHEXT=".COM;.EXE;.BAT;.CMD"`): `./mvnw` → `mvnw.cmd`; `./gradlew` → `gradlew.bat`; only extensionless `mvnw` present → None; `PATHEXT` order respected (`x.exe` beats `x.cmd`); bare `npm` → `npm.cmd` in a PATH dir; `tool.exe` used as-is; backslash path treated as path-like.
 
