@@ -59,9 +59,9 @@ The following files in this repository serve as references/templates for other p
 
 | File / Folder | Cat | Mandatory? | Copy as-is? | What to adjust |
 |---|---|---|---|---|
-| `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands |
-| `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files |
-| `.claude/agents/commit-pusher.md` | G | No | Yes | — |
+| `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
+| `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
+| `.claude/agents/commit-pusher.md` | G | No | Yes | Requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
 | `.claude/agents/issue-updater.md` | G | No | Yes | Requires an mcp-workspace version with `github_issue_edit` |
 | `.claude/agents/issue-approver.md` | G | No | Yes | Requires `mcp-coder` on PATH and the status labels; an mcp-workspace version with `github_issue_comment`, `get_reference_projects` and `reference_name` on the issue write tools (`github_issue_create`, `_edit`, `_comment`) and `github_label_list` (mcp-workspace#272) — `github_pr_create` has no `reference_name`; cross-repo approval also needs `approve-command.yml` in the target repo, and the target configured as an mcp-workspace reference project with a `url` (explicit `url=` or detected from its checkout's git `origin`) |
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |

@@ -14,9 +14,8 @@ allowed-tools:
   - mcp__mcp-tools-py__run_pylint_check
   - mcp__mcp-tools-py__run_pytest_check
   - mcp__mcp-tools-py__run_mypy_check
-  - "Bash(git add *)"
-  - "Bash(git commit *)"
-  - "Bash(git push *)"
+  - mcp__mcp-workspace__git_commit
+  - mcp__mcp-workspace__git_push
   - "Bash(mcp-coder gh-tool set-status *)"
 ---
 
