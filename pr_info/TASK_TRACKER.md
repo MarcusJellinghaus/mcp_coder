@@ -21,6 +21,77 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shared `argv[0]` resolver; command toolkit uses it
+[step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Shared two-file table lookup and setup config loader
+[step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Setup step runner in `install/project_setup.py`
+[step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `mcp-coder setup` CLI command
+[step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `setup_integration` tests and marker registration
+[step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: `verify` `Setup` row
+[step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Session launcher calls `mcp-coder setup`; env built after setup; CI job
+[step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: `validate_target_repo` gates Python warnings on the `python` built-in
+[step_8.md](./steps/step_8.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 9: Linux Jenkins templates run `mcp-coder setup`
+[step_9.md](./steps/step_9.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 10: Documentation
+[step_10.md](./steps/step_10.md)
+
+- [ ] Implementation (documentation only)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary prepared
