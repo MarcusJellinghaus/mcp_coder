@@ -13,6 +13,7 @@ import pytest
 
 from mcp_coder.utils.jenkins_operations import BuildInfo, JenkinsClient, JenkinsError
 from mcp_coder.utils.jenkins_operations.builds import VALID_STATUSES
+from tests.tools.conftest import _FULL_CONFIG
 
 _TOOL_DIR = Path(__file__).resolve().parents[2] / "tools"
 if str(_TOOL_DIR) not in sys.path:
@@ -20,12 +21,6 @@ if str(_TOOL_DIR) not in sys.path:
 
 jenkins_builds = importlib.import_module("jenkins_builds")
 jenkins_download_logs = importlib.import_module("jenkins_download_logs")
-
-_FULL_CONFIG: dict[str, str | None] = {
-    "server_url": "https://jenkins.example.com",
-    "username": "user",
-    "api_token": "token",
-}
 
 
 def _build(job_path: str, number: int, display_name: str = "") -> BuildInfo:
@@ -41,18 +36,6 @@ def _build(job_path: str, number: int, display_name: str = "") -> BuildInfo:
         url=f"https://jenkins.example.com/job/{job_path}/{number}/",
         display_name=display_name,
     )
-
-
-@pytest.fixture(name="client")
-def fixture_client(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Patch config and JenkinsClient; return the client instance mock."""
-    monkeypatch.setattr(jenkins_builds, "get_jenkins_config", lambda: _FULL_CONFIG)
-    monkeypatch.setattr(jenkins_builds, "load_config", dict)
-    client_cls = MagicMock()
-    instance: MagicMock = client_cls.return_value
-    instance.get_recent_builds.return_value = []
-    monkeypatch.setattr(jenkins_builds, "JenkinsClient", client_cls)
-    return instance
 
 
 def test_default_status(client: MagicMock, tmp_path: Path) -> None:

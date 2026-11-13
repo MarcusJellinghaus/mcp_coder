@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move shared `client` fixture and `_FULL_CONFIG` into `tests/tools/conftest.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code): move fixture and `_FULL_CONFIG` to conftest, remove copies from `test_jenkins_builds.py` / `test_jenkins_download_logs.py`, update vulture whitelist comment
-- [ ] Quality checks (pylint, pytest, mypy, vulture) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): move fixture and `_FULL_CONFIG` to conftest, remove copies from `test_jenkins_builds.py` / `test_jenkins_download_logs.py`, update vulture whitelist comment
+- [x] Quality checks (pylint, pytest, mypy, vulture) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: New tool `tools/jenkins_download_log.py` (+ `.sh` / `.bat`), tests and docs
 See [step_2.md](./steps/step_2.md)
