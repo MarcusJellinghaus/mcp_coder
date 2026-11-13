@@ -20,7 +20,13 @@ No functions — Markdown text only.
 
 ### 1. `.claude/CLAUDE.md`
 
-**a. Tool mapping** — insert one row directly after the `| Git read-only (...) | \`mcp__mcp-workspace__git\` |` row:
+**a. Tool mapping** — insert one row directly after this row:
+
+```markdown
+| Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | `mcp__mcp-workspace__git` |
+```
+
+New row:
 
 ```markdown
 | Git write (switch/create branch, delete branch, commit, push, force-push after rebase) | `mcp__mcp-workspace__git_branch`, `git_branch_delete`, `git_commit`, `git_push`, `git_push_force` |
