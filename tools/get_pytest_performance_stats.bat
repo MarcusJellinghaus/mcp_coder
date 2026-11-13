@@ -59,7 +59,7 @@ REM Unit tests (no markers - fast, mocked tests)
 call :echo_both "[1/3] UNIT TESTS (no integration markers)"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not setup_integration and not textual_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul

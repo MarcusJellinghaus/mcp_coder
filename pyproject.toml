@@ -160,6 +160,7 @@ markers = [
     "langchain_integration: tests requiring LangChain and provider API access (network, auth needed)",
     "copilot_cli_integration: tests that use real Copilot CLI executable (slow)",
     "install_integration: tests that run real uv subprocesses via mcp_coder.install",
+    "setup_integration: tests that run real project setup toolchains (npm, cargo, uv) via mcp-coder setup",
     "integration: general integration tests",
     # Regenerate snapshot baselines: pytest tests/icoder/test_snapshots.py --snapshot-update
     "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",
