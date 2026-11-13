@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Skills, agent and rebase design doc use the git-write MCP tools — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code) — update `commit_push/SKILL.md`, `commit-pusher.md`, `pr_comment_triage/SKILL.md`, `rebase/SKILL.md`, `rebase/rebase_design.md`; run the search verification
-- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code) — update `commit_push/SKILL.md`, `commit-pusher.md`, `pr_comment_triage/SKILL.md`, `rebase/SKILL.md`, `rebase/rebase_design.md`; run the search verification
+- [x] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CLAUDE.md and repository-setup docs describe the git-write tools — [step_2.md](./steps/step_2.md)
 
