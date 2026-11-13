@@ -7,3 +7,11 @@ Still reviewing: core setup modules read; now checking the `install` built-in de
 Verdict(decision='tasks', tasks=["In src/mcp_coder/workflows/vscodeclaude/session_launch.py:111, separate the 'pyproject.toml cannot be read/parsed' case from the 'invalid [tool.mcp-coder.setup] table' case. Either catch the TOML read/parse error on its own, or have load_setup_config raise a distinct exception type for it. An unreadable or unparseable pyproject.toml should give a warning saying the file couldn't be read (as before this change), and only a real schema/validation error should blame the [tool.mcp-coder.setup] table. Keep the underlying error text in both messages. Add or adjust a test that gives a malformed pyproject.toml and checks that the warning says the file couldn't be read and does not name the setup table."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-13
+**Findings**:
+Reviewing the session launcher and template diffs next; core modules are read.Checking docs coverage against the issue's doc requirements, then reporting.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
