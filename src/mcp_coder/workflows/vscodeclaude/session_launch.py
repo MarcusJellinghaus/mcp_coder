@@ -23,6 +23,7 @@ from ...utils.pyproject_config import (
 )
 from ...utils.setup_config import load_setup_config
 from ...utils.subprocess_runner import launch_process
+from ...utils.toml_utils import TomlReadError
 from ...utils.user_config import get_cache_refresh_minutes
 from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
@@ -106,6 +107,13 @@ def validate_target_repo(folder_path: Path) -> None:
 
     try:
         uses_python = load_setup_config(folder_path).uses_python()
+    except TomlReadError as exc:
+        logger.warning(
+            "%s cannot be read; `mcp-coder setup` will abort on the same file:\n%s",
+            exc.path,
+            exc,
+        )
+        return
     except ValueError as exc:
         logger.warning(
             "%s: invalid [tool.mcp-coder.setup]; `mcp-coder setup` will fail on it:\n%s",

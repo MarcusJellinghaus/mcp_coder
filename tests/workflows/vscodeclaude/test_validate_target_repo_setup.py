@@ -107,6 +107,24 @@ class TestBrokenSetupConfig:
         assert "mcp-coder setup" in messages[0]
         assert "steps[0].builtin" in messages[0]
 
+    def test_malformed_pyproject_is_not_blamed_on_setup_table(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unparseable pyproject.toml is reported as unreadable, once."""
+        _write_mcp_json(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            "this is not valid toml {{{", encoding="utf-8"
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        messages = _warnings(caplog)
+        assert len(messages) == 1
+        assert f"{tmp_path / 'pyproject.toml'} cannot be read" in messages[0]
+        assert "TOML parse error" in messages[0]
+        assert "[tool.mcp-coder.setup]" not in messages[0]
+
     def test_missing_mcp_json_still_raises(self, tmp_path: Path) -> None:
         """A broken setup table does not mask the fatal MCP config row."""
         (tmp_path / "pyproject.toml").write_text(

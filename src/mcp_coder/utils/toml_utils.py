@@ -17,6 +17,20 @@ _SMART_QUOTES = "“”‘’"
 MCP_CODER_CONFIG_FILES = ("pyproject.toml", "mcp-coder.toml")
 
 
+class TomlReadError(ValueError):
+    """A TOML file exists but cannot be read or parsed."""
+
+    def __init__(self, path: Path, message: str) -> None:
+        """Store the file that failed alongside the message.
+
+        Args:
+            path: The TOML file that could not be read or parsed.
+            message: User-facing message; names the file.
+        """
+        super().__init__(message)
+        self.path = path
+
+
 def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
     """Load and parse a TOML file.
 
@@ -30,7 +44,7 @@ def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
         malformed and strict is False).
 
     Raises:
-        ValueError: If strict is True and the file exists but cannot be
+        TomlReadError: If strict is True and the file exists but cannot be
             read or parsed. The message names the file.
     """
     if not path.exists():
@@ -42,11 +56,11 @@ def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
             return data
     except tomllib.TOMLDecodeError as e:
         if strict:
-            raise ValueError(format_toml_error(path, e)) from e
+            raise TomlReadError(path, format_toml_error(path, e)) from e
         return {}
     except OSError as e:
         if strict:
-            raise ValueError(f"Error reading {path}\n{e}") from e
+            raise TomlReadError(path, f"Error reading {path}\n{e}") from e
         return {}
 
 
