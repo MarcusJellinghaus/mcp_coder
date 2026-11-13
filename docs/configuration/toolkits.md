@@ -168,9 +168,12 @@ Rules:
 
 Rules:
 
-- An `argv[0]` containing a path separator (`scripts/lint.py`) is resolved
-  against the project directory, not the process's working directory. Otherwise
-  it is looked up on `PATH`.
+- An `argv[0]` containing `/` (on Windows also `\`) is path-like: absolute is
+  used as-is, relative is resolved against the project directory, not the
+  process's working directory.
+- A bare name is looked up in the absolute entries of `PATH` only; empty and
+  relative entries are skipped, so the working directory is never searched.
+- On POSIX a candidate must be an executable file.
 - All steps of a depth run in order. The worst status wins
   (`error` > `findings` > `ok` > `skipped`) and findings are concatenated.
 
@@ -224,7 +227,10 @@ the last 200 lines of stdout followed by stderr.
 
 ### Windows
 
-- `argv[0]` is resolved with `shutil.which`, so `npm` finds `npm.cmd`.
+- An `argv[0]` whose extension is in `PATHEXT` is used as-is. Otherwise each
+  `PATHEXT` extension is tried in `PATHEXT` order (default
+  `.COM;.EXE;.BAT;.CMD`), so `npm` finds `npm.cmd` and `./mvnw` finds
+  `mvnw.cmd`. An extensionless file alone is not found.
 - `.sh` scripts can't run without a shell; call them through an interpreter
   that is on `PATH`, or use another script type.
 - cmd.exe re-parses the arguments of `.cmd` files (such as `npm.cmd`); avoid

@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shared `argv[0]` resolver; command toolkit uses it
 [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Shared two-file table lookup and setup config loader
 [step_2.md](./steps/step_2.md)

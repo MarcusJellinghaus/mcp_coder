@@ -523,6 +523,12 @@ _._stub_uv_lookup
 # auto-install it.
 _._require_system_uv
 
+# tests/utils/test_executable.py and tests/toolkits/command/test_toolkit_run.py -
+# autouse fixtures pinning sys.platform so resolve_executable's rules are
+# tested independently of the host.
+_._posix
+_._windows
+
 # tests/cli/commands/coordinator/test_vscodeclaude_cli.py - autouse fixture
 # stubbing check_pr_health so CLI handler tests never run real PR-health checks.
 _._no_pr_health
