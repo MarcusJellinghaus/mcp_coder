@@ -8,3 +8,11 @@ Now the knowledge base and the actual target files.Checking how `.claude/` gets 
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_2.md:44, rewrite the Privileged agents paragraph so it names the skipped prompts per agent: issue-updater (no Bash) skips only the MCP issue write tool prompts, and issue-approver skips the github_issue_comment prompt plus its Bash commands, including `mcp-coder gh-tool set-status`. Do not claim that both agents skip `set-status` and all MCP issue write tools.', "In pr_info/steps/step_2.md:77, extend edit 2c so it also rewords the preceding clause in agent-permissions.md:85. That clause describes the grant's scope as 'a command pattern rather than all of `Bash`'. Change it to describe the grant as the specific MCP git write tools (git_commit/git_push)."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-13
+**Findings**:
+Cross-checking the plan's quoted tool result texts against mcp-workspace source.Plan texts match mcp-workspace. Checking README anchors and agent files for step 2 accuracy.Checking the supervisor skills that launch `commit-pusher`, to see whether their launch text still assumes Bash.Checking whether `settings.local.json` allow-lists mcp-workspace with a server-wide entry, which would implicitly cover the new write tools.`pr_info/steps/step_2.md:23` — low — Edit 1a quotes its anchor row as `| Git read-only (...) | \`mcp__mcp-workspace__git\` |`. The actual row in `.claude/CLAUDE.md` spells out the parenthetical (`status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list`). The step prompt (`step_2.md:8`) says to write `pr_info/.blocked.txt` and stop when an anchor isn't found, so an implementer that matches literally may block for no reason. Quote the full row text instead.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_2.md:23, change the edit 1a anchor so it quotes the full Git read-only row as it appears in .claude/CLAUDE.md: `| Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | \\`mcp__mcp-workspace__git\\` |`. Remove the `(...)` placeholder so that a literal match does not set off the .blocked.txt stop rule.'], escalate_reason=None)
+**Changes**:
+applied
