@@ -73,9 +73,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 8: `validate_target_repo` gates Python warnings on the `python` built-in
 [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Linux Jenkins templates run `mcp-coder setup`
 [step_9.md](./steps/step_9.md)

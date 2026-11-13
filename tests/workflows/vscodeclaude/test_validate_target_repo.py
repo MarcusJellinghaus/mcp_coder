@@ -182,21 +182,18 @@ class TestWarnOnlyRows:
 
 
 class TestMissingPyproject:
-    """A repo without pyproject.toml warns twice but launches."""
+    """A repo without pyproject.toml has no setup steps, so no Python rows."""
 
-    def test_warns_both_toml_rows(
+    def test_no_python_warnings(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Both TOML-declared rows warn; nothing raises."""
+        """Without the python built-in no TOML row warns; nothing raises."""
         (tmp_path / ".mcp.json").write_text("{}", encoding="utf-8")
 
         with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
             validate_target_repo(tmp_path)
 
-        messages = _warnings(caplog)
-        assert len(messages) == 2
-        assert any("extras" in message for message in messages)
-        assert any("install-from-github" in message for message in messages)
+        assert _warnings(caplog) == []
 
 
 class TestUnreadablePyproject:
