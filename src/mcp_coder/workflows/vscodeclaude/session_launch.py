@@ -326,9 +326,9 @@ def prepare_and_launch_session(
             untrusted_body=untrusted,
         )
 
-        # Launch VSCode (MCP environment variables are now set directly in startup script)
-        # This ensures MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR point to the session's
-        # working directory, not the mcp-coder installation directory
+        # Launch VSCode (MCP environment variables are set by session_setup):
+        # MCP_CODER_PROJECT_DIR points to the session's working directory,
+        # MCP_CODER_VENV_DIR to the mcp-coder (tool) venv
         pid = launch_vscode(workspace_file, folder_path)
 
         # Build and save session

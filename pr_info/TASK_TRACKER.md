@@ -66,9 +66,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 7: Session launcher calls `mcp-coder setup`; env built after setup; CI job
 [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: `validate_target_repo` gates Python warnings on the `python` built-in
 [step_8.md](./steps/step_8.md)

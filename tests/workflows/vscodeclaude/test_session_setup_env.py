@@ -41,6 +41,14 @@ def _make_spec(
     )
 
 
+def _make_venv_python(cwd: Path, platform: str, bin_name: str) -> None:
+    """Create the interpreter file of ``<cwd>/.venv`` for ``platform``."""
+    name = "python.exe" if platform == "win32" else "python"
+    bin_dir = cwd / ".venv" / bin_name
+    bin_dir.mkdir(parents=True)
+    (bin_dir / name).write_text("", encoding="utf-8")
+
+
 @pytest.mark.parametrize(
     ("platform", "bin_name"),
     [("win32", "Scripts"), ("linux", "bin")],
@@ -48,34 +56,74 @@ def _make_spec(
 class TestBuildSubprocessEnv:
     """``build_subprocess_env`` overlays the MCP vars on a full env copy."""
 
-    def test_all_mcp_vars_are_cwd_derived(
+    def test_mcp_vars(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         platform: str,
         bin_name: str,
     ) -> None:
-        """The four MCP vars point at CWD-derived paths."""
+        """Project dir is CWD; venv dir and bin name the tool venv."""
         monkeypatch.setattr(sys, "platform", platform)
         spec = _make_spec()
         env = build_subprocess_env(spec, tmp_path)
 
         assert env["MCP_CODER_PROJECT_DIR"] == str(tmp_path)
-        assert env["MCP_CODER_VENV_DIR"] == str(tmp_path / ".venv")
-        assert env["VIRTUAL_ENV"] == str(tmp_path / ".venv")
-        assert Path(env["MCP_CODER_VENV_PATH"]).name == bin_name
+        assert env["MCP_CODER_VENV_DIR"] == str(Path("/coord") / ".venv")
+        assert env["MCP_CODER_VENV_PATH"] == str(Path("/coord") / ".venv" / bin_name)
 
-    def test_virtual_env_matches_project_venv(
+    def test_project_venv_with_interpreter_is_overlaid(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         platform: str,
         bin_name: str,
     ) -> None:
-        """VIRTUAL_ENV equals ``<cwd>/.venv`` (the uv-sync target)."""
+        """An interpreter in ``<cwd>/.venv`` sets VIRTUAL_ENV and PATH."""
         monkeypatch.setattr(sys, "platform", platform)
+        monkeypatch.setenv("PATH", "rest")
+        _make_venv_python(tmp_path, platform, bin_name)
         env = build_subprocess_env(_make_spec(), tmp_path)
+
         assert env["VIRTUAL_ENV"] == str(tmp_path / ".venv")
+        assert env["PATH"].split(os.pathsep) == [
+            env["MCP_CODER_VENV_PATH"],
+            str(tmp_path / ".venv" / bin_name),
+            "rest",
+        ]
+
+    def test_no_project_venv_drops_inherited_virtual_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        platform: str,
+        bin_name: str,
+    ) -> None:
+        """Without a venv interpreter: no VIRTUAL_ENV, PATH has coder bin only."""
+        monkeypatch.setattr(sys, "platform", platform)
+        monkeypatch.setenv("PATH", "rest")
+        monkeypatch.setenv("VIRTUAL_ENV", "/inherited/venv")
+        env = build_subprocess_env(_make_spec(), tmp_path)
+
+        assert "VIRTUAL_ENV" not in env
+        assert env["PATH"].split(os.pathsep) == [env["MCP_CODER_VENV_PATH"], "rest"]
+
+    def test_with_project_venv_false_skips_overlay(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        platform: str,
+        bin_name: str,
+    ) -> None:
+        """``with_project_venv=False`` ignores an existing project venv."""
+        monkeypatch.setattr(sys, "platform", platform)
+        monkeypatch.setenv("PATH", "rest")
+        monkeypatch.setenv("VIRTUAL_ENV", "/inherited/venv")
+        _make_venv_python(tmp_path, platform, bin_name)
+        env = build_subprocess_env(_make_spec(), tmp_path, with_project_venv=False)
+
+        assert "VIRTUAL_ENV" not in env
+        assert env["PATH"].split(os.pathsep) == [env["MCP_CODER_VENV_PATH"], "rest"]
 
     def test_pinned_flags(
         self,
@@ -89,22 +137,6 @@ class TestBuildSubprocessEnv:
         env = build_subprocess_env(_make_spec(), tmp_path)
         assert env["MCP_TIMEOUT"] == "30000"
         assert env["UV_GIT_SHALLOW"] == "0"
-
-    def test_path_prepends_coder_then_project_bin(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
-        platform: str,
-        bin_name: str,
-    ) -> None:
-        """PATH starts with the coder venv bin, then the project venv bin."""
-        monkeypatch.setattr(sys, "platform", platform)
-        env = build_subprocess_env(_make_spec(), tmp_path)
-        parts = env["PATH"].split(os.pathsep)
-
-        assert parts[0] == env["MCP_CODER_VENV_PATH"]
-        assert Path(parts[1]).name == bin_name
-        assert Path(parts[1]).parent == tmp_path / ".venv"
 
     def test_preexisting_key_survives(
         self,
@@ -121,18 +153,13 @@ class TestBuildSubprocessEnv:
 
 
 class TestBuildInstallArgv:
-    """``build_install_argv`` mirrors the retired shell install flags."""
+    """``build_install_argv`` calls ``mcp-coder setup``."""
 
     def test_exact_flags(self, tmp_path: Path) -> None:
-        """The provisioning argv carries the canonical flags in order."""
+        """The setup argv carries the canonical flags in order."""
         argv = build_install_argv(_make_spec(), tmp_path)
         assert Path(argv[0]).stem == "mcp-coder"
-        assert argv[1] == "install"
-        assert argv[2] == str(tmp_path)
-        assert "--source" in argv and "local" in argv
-        assert "--local-path" in argv
-        assert "--use-sync" in argv
-        assert "--refresh" in argv
+        assert argv[1:] == ["setup", "--project-dir", str(tmp_path), "--refresh"]
 
     def test_skip_overrides_present_when_skip_github_install(
         self, tmp_path: Path
@@ -142,7 +169,7 @@ class TestBuildInstallArgv:
         without_skip = build_install_argv(
             _make_spec(skip_github_install=False), tmp_path
         )
-        assert "--skip-overrides" in with_skip
+        assert with_skip[-1] == "--skip-overrides"
         assert "--skip-overrides" not in without_skip
 
 

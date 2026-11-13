@@ -356,11 +356,11 @@ jobs:
           fi
 
   # Backup checks: run on PR, main push and dispatch.
-  # Exercises the install sequence that vscodeclaude sessions run at launch.
+  # Exercises the setup sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
-  # (session_setup shells out to `mcp-coder install`; see #695). This job
-  # mirrors that argv so a break in the installer contract surfaces here.
+  # (session_setup shells out to `mcp-coder setup`; see #695, #1204). This job
+  # mirrors that argv so a break in the setup contract surfaces here.
   # Not a matrix entry because it uses an activated project venv (not
   # --system) and pulls siblings at HEAD via
   # [tool.mcp-coder.install-from-github] — see #969.
@@ -386,8 +386,8 @@ jobs:
           set -euo pipefail
 
           # Bootstrap mcp-coder into the SYSTEM Python, not ./.venv:
-          # `mcp-coder install . --use-sync` runs `uv sync`, which rewrites
-          # ./.venv mid-run and would wipe a bootstrap installed there.
+          # `mcp-coder setup` runs the `python` built-in (`uv sync`), which
+          # rewrites ./.venv mid-run and would wipe a bootstrap installed there.
           #
           # Siblings come from GitHub HEAD, exactly as every other job does: the
           # PyPI copies of mcp-workspace / mcp-coder-utils are too old for
@@ -397,13 +397,9 @@ jobs:
           uv pip install --system "${SPECS[@]}" .
 
           # Mirror the argv session_setup.build_install_argv produces:
-          mcp-coder install . \
-            --source local \
-            --local-path . \
-            --use-sync \
-            --refresh
+          mcp-coder setup --project-dir . --refresh
 
-          # Activate the venv `mcp-coder install` created, smoke-check end-to-end.
+          # Activate the venv `mcp-coder setup` created, smoke-check end-to-end.
           # shellcheck disable=SC1091
           source .venv/bin/activate
           mcp-coder --version
