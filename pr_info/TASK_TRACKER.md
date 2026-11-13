@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: CLAUDE.md and repository-setup docs describe the git-write tools — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code) — update `.claude/CLAUDE.md`, `docs/repository-setup/agent-permissions.md`, `docs/repository-setup/README.md`; run the search verification
-- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code) — update `.claude/CLAUDE.md`, `docs/repository-setup/agent-permissions.md`, `docs/repository-setup/README.md`; run the search verification
+- [x] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

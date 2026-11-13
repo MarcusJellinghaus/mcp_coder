@@ -49,6 +49,7 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | `mcp__mcp-workspace__git` |
+| Git write (switch/create branch, delete branch, commit, push, force-push after rebase) | `mcp__mcp-workspace__git_branch`, `git_branch_delete`, `git_commit`, `git_push`, `git_push_force` |
 | View GitHub issue | `mcp__mcp-workspace__github_issue_view` |
 | List GitHub issues | `mcp__mcp-workspace__github_issue_list` |
 | View GitHub PR | `mcp__mcp-workspace__github_pr_view` |
@@ -58,6 +59,8 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Comment on GitHub issue | `mcp__mcp-workspace__github_issue_comment` |
 | Create GitHub PR | `mcp__mcp-workspace__github_pr_create` |
 | List GitHub labels | `mcp__mcp-workspace__github_label_list` |
+
+**`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, and `.scratch/` is not gitignored (CI blocks PRs carrying it).
 
 Sibling repos are readable in full via the reference tools and `git` with `reference_name` (`get_reference_projects` lists them). Check there before asking about another repo. The GitHub issue/PR read tools and the issue write tools also take `reference_name` for reference projects. That is the only cross-repo route; for repos that aren't reference projects, stop and report.
 
@@ -104,28 +107,26 @@ Never use `python -c` via Bash. If you reason instead of running, label the conc
 
 ## Git operations
 
-**Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `git commit`) must also use Bash.
+**Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `git rebase`) must also use Bash.
 
 ```
-git commit / add / rebase / push / checkout -b / branch
+git add / rebase / push --force-with-lease
 mcp-coder gh-tool set-status <label>
 ```
 
 **Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp-coder gh-tool set-status` to change issue workflow status.
 
-**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts these commands and the MCP issue write tools normally trigger. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `commit-pusher` and `issue-approver`; `issue-updater` has no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_comment` plus its `Bash` commands (including `mcp-coder gh-tool set-status`) for `issue-approver`. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `issue-approver`; `commit-pusher` and `issue-updater` have no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
 **Compact diff:** use `mcp__mcp-workspace__git` for code review. Has compact diff built-in with exclude pattern support.
 
-**Before every commit:** run `mcp__mcp-tools-py__run_format_code`, then stage and commit.
+**Before every commit:** run `mcp__mcp-tools-py__run_format_code`, then `mcp__mcp-workspace__git_commit`.
 
 **Bash discipline:** no `cd` prefix, no `git -C` — commands already run in the project directory. Don't chain approved with unapproved commands. Run them separately.
 
 **Commit messages:** standard format. See Writing style for length. No attribution footers.
-
-**Multi-line commit messages:** use a POSIX heredoc — `git commit -F - <<'EOF' … EOF`. PowerShell here-strings (`@'...'@`) work only in the PowerShell tool; in Bash they silently leave a literal `@` in the subject line.
 
 ## Jenkins
 

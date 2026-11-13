@@ -47,10 +47,12 @@ target repo.
 
 ## What `permissionMode: bypassPermissions` does
 
-`.claude/settings.local.json` deliberately omits `Bash(git add|commit|push)` and the issue
-write tools (`mcp__mcp-workspace__github_issue_create`, `_edit`, `_comment`), so those
-prompt in the main session. The agents carry `bypassPermissions` so they run unprompted
-there, without widening the global allow list.
+`.claude/settings.local.json` deliberately omits `Bash(git add|commit|push)`, the git-write
+MCP tools (`mcp__mcp-workspace__git_commit`, `_push`, `_push_force`, `_branch`,
+`_branch_delete`) and the issue write tools (`mcp__mcp-workspace__github_issue_create`,
+`_edit`, `_comment`), so those prompt in the main session. The agents carry
+`bypassPermissions` so they run unprompted there, without widening the global allow list.
+`commit-pusher` has no `Bash`, so there it auto-approves only its listed MCP tools.
 
 ## What it does not do
 
@@ -59,10 +61,10 @@ Do not treat any of the following as enforced:
 - **It is not access control.** Agent frontmatter has no caller restriction — any session
   can launch these agents, not just the supervisor skills. Note also that "the supervisor"
   is a *skill*, so it runs in the main session; there is no privileged caller tier.
-- **`Bash` is all-or-nothing.** Agent `tools:` takes bare tool names, so the shell limits
-  stated in the agent bodies are prose: `commit-pusher` git only, `issue-approver`
-  `mcp-coder gh-tool set-status` only. `issue-updater` has no `Bash` at all. Under
-  `bypassPermissions`, *every* shell command is auto-approved.
+- **`Bash` is all-or-nothing.** Agent `tools:` takes bare tool names, so the shell limit
+  stated in the agent body is prose: `issue-approver` `mcp-coder gh-tool set-status` only.
+  `commit-pusher` and `issue-updater` have no `Bash` at all. Under `bypassPermissions`,
+  *every* shell command is auto-approved.
 - **Scoped `allowed-tools` would not constrain *these agents*.** Entries such as
   `Bash(git add *)` are a **pre-approval list, not a restriction**: the official docs state it
   "grants permission for the listed tools during the turn that invokes the skill… It does not
@@ -82,9 +84,9 @@ Do not treat any of the following as enforced:
 On a *skill*, `allowed-tools` grants the listed tools for the turn that invokes the skill, so
 they run without prompting; the grant clears at the user's next message. Combined with
 `disable-model-invocation`, that is a genuinely user-gated privileged tier: only a typed
-`/<name>` opens it, the scope is a command pattern rather than all of `Bash`, and it expires
-on its own. Putting `Bash(git add *) Bash(git commit *) Bash(git push *)` on the three
-supervisor skills would retire these agents.
+`/<name>` opens it, the scope is the specific MCP git write tools (`git_commit`, `git_push`),
+and it expires on its own. Putting `mcp__mcp-workspace__git_commit` and
+`mcp__mcp-workspace__git_push` on the three supervisor skills would retire these agents.
 
 Two things stand in the way today:
 
@@ -101,16 +103,16 @@ Two things stand in the way today:
   the user about major refactorings and import-contract violations. The user's reply starts a
   new turn, and the rest of the run prompts again.
 
-Net trade: the agents survive escalations, but `commit-pusher` and `issue-approver` carry an
-unrestricted `Bash` (`issue-updater` has none); a supervisor-level grant is tightly scoped and
-self-expiring but breaks whenever the user is consulted.
+Net trade: the agents survive escalations, but `issue-approver` carries an unrestricted
+`Bash` (`commit-pusher` and `issue-updater` have none); a supervisor-level grant is tightly
+scoped and self-expiring but breaks whenever the user is consulted.
 
 ## What actually constrains these agents
 
 - **The launch-prompt scope check** — `commit-pusher` compares `git status` against the file
   list in its prompt and refuses if anything else changed. A check against observable state,
   not an assertion, and it bounds what a bad launch can do.
-- **A `PreToolUse` hook** would be the only real enforcement of the agents' shell limits:
+- **A `PreToolUse` hook** would be the only real enforcement of `issue-approver`'s shell limit:
   hooks fire regardless of permission mode, and their input carries `agent_id` /
   `agent_type`, so one can be scoped to a single agent. **None is configured today** — a
   deliberate deferral, not an oversight.
