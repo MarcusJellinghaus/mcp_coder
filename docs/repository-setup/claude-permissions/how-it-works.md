@@ -1,0 +1,145 @@
+# Claude Code permissions — how it works
+
+Part 1 of 3 · [Design](design.md) · [TODOs](todos.md)
+
+Generic Claude Code behaviour. Sources: [permissions](https://code.claude.com/docs/en/permissions.md), [permission-modes](https://code.claude.com/docs/en/permission-modes.md), [settings](https://code.claude.com/docs/en/settings.md), [sub-agents](https://code.claude.com/docs/en/sub-agents.md), [skills](https://code.claude.com/docs/en/skills.md), [hooks](https://code.claude.com/docs/en/hooks.md), [claude-directory](https://code.claude.com/docs/en/claude-directory.md). Unverified points are marked.
+
+## 1. Claude objects
+
+`~` = user scope; `CLAUDE_CONFIG_DIR` relocates it.
+
+| Object | Project | User | Auto-loaded | Enforces? |
+|---|---|---|---|---|
+| CLAUDE.md | `./CLAUDE.md`, `.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | yes | no — prose |
+| CLAUDE.local.md | root (personal) | — | yes | no |
+| Rules | `.claude/rules/*.md` | `~/.claude/rules/*.md` | yes; `paths:` → on demand | no |
+| Settings | `.claude/settings.json`, `.claude/settings.local.json` | `~/.claude/settings.json` | yes | **yes** — allow/ask/deny, mode, hooks |
+| Managed settings / CLAUDE.md | system path (Win: `C:\Program Files\ClaudeCode\`) | — | yes | **yes** |
+| MCP servers | `.mcp.json` | `~/.claude.json` | yes | yes — which tools exist |
+| Skills | `.claude/skills/<n>/SKILL.md` | `~/.claude/skills/` | description; body on invoke | partly (§5) |
+| Commands | `.claude/commands/*.md` | `~/.claude/commands/` | as skills | partly |
+| Agents | `.claude/agents/*.md` | `~/.claude/agents/` | on launch | partly (§6) |
+| Hooks | `hooks` key in settings | same | per event | **yes** (§7) |
+| Output styles | `.claude/output-styles/` | `~/.claude/output-styles/` | if selected | no |
+| Workflows | `.claude/workflows/*.js` | `~/.claude/workflows/` | on run | no |
+| Plugins | — | `~/.claude/plugins/` + `enabledPlugins` | if enabled | via their hooks/agents |
+| Auto memory | — | `~/.claude/projects/<p>/memory/` | yes | no |
+| Keybindings, themes, status line | — | `~/.claude/` | yes | no |
+| `.worktreeinclude` | root | — | on worktree | no |
+| `.claude/knowledge_base/` | mcp-coder convention | — | **no** — only when a skill names the path | no |
+
+## 2. Settings files
+
+| # | Level | Location | Scope |
+|---|---|---|---|
+| 1 | Managed policy | system path (Win: `C:\Program Files\ClaudeCode\managed-settings.json` — path unverified) | machine, admin-owned |
+| 2 | CLI flags | `--settings <file>`, `--allowedTools`, `--disallowedTools`, `--permission-mode` | one session |
+| 3 | Project local | `.claude/settings.local.json` | personal; Claude Code adds it to the global git excludes on first write |
+| 4 | Project shared | `.claude/settings.json` | team, committed |
+| 5 | User | `~/.claude/settings.json` | every repo on the machine |
+
+Related, not a settings level: `~/.claude.json` (user/local MCP servers, UI state). Local allow rules apply without the folder-trust step.
+
+**Combining**
+
+| Key type | Rule |
+|---|---|
+| Scalars (`defaultMode`, `model`, `enabledMcpjsonServers`) | highest level that sets it wins |
+| `env` | per variable, highest wins |
+| `permissions.allow` / `ask` / `deny` | merged across all levels |
+| `defaultMode: auto` / `bypassPermissions` | honoured only from user, managed or CLI |
+
+## 3. Permission modes
+
+Set via `--permission-mode`, `permissions.defaultMode`, `Shift+Tab` (cycle excludes `dontAsk`). Fixed set — no custom modes (§10).
+
+| Mode | Prompts for | Notes |
+|---|---|---|
+| `default` (`manual`) | first use of each non-read tool | reads in cwd free |
+| `acceptEdits` | non-edit tools | auto-accepts edits + `mkdir/touch/mv/cp` in cwd |
+| `plan` | — | read-only; no source edits |
+| `auto` | nothing routine | background classifier vets actions |
+| `dontAsk` | never — **denies** instead | allow-listed tools still run |
+| `bypassPermissions` | ask rules, `rm`/`rmdir` on critical paths, interactive tools | **deny rules still block**; `.git` / `.claude` writes allowed |
+
+## 4. Rule evaluation
+
+| Aspect | Rule |
+|---|---|
+| Order | `deny` → `ask` → `allow`; first match wins |
+| `deny` | wins at any level, in every mode, also in subagents |
+| `ask` | prompts even if a narrower `allow` matches |
+| Lower vs higher level | a lower level cannot remove a higher `allow` — only add `deny` |
+| Managed `deny` | not overridable by `--allowedTools` |
+| "Don't ask again" at a prompt | writes a **permanent** rule to `settings.local.json` |
+
+## 5. Skills
+
+| Field | Effect |
+|---|---|
+| `allowed-tools` | pre-approval for the invoking turn — **not a restriction**; clears at next user message |
+| `disallowed-tools` | removes tools while the skill is active |
+| `disable-model-invocation: true` | user `/name` only — also blocks subagents |
+| `user-invocable: false` | model only, hidden from `/` |
+| `context: fork` + `agent` | runs in a subagent (no conversation history) |
+
+`allowed-tools` grant does not reach spawned subagents (read from Claude Code 2.1.227 bundle, see [agent-permissions.md](../agent-permissions.md)).
+
+## 6. Subagents
+
+**Effective mode**
+
+| Parent mode | Subagent mode |
+|---|---|
+| `bypassPermissions`, `acceptEdits`, `auto` | **parent's** — frontmatter ignored |
+| `plan` | `plan` |
+| `default`, `dontAsk` | frontmatter `permissionMode` (unset → parent's; docs: `bypassPermissions` "keeps the parent's mode") |
+
+| Field | Effect |
+|---|---|
+| `tools` | allowlist; omitted → inherit all |
+| `disallowedTools` | applied first; a specifier (`Bash(git push *)`) removes the whole tool |
+| Own allow list | none in frontmatter |
+| Parent `allow` rules | inherited by built-in subagents; custom agents: unverified |
+| Caller restriction | none — any session can launch any agent |
+
+## 7. Hooks (`PreToolUse`)
+
+| Aspect | Behaviour |
+|---|---|
+| When | before the permission check, every tool except `EndConversation` |
+| Block | exit 2 or `permissionDecision: "deny"` |
+| Allow | `permissionDecision: "allow"` skips the prompt — cannot beat `deny` / `ask` rules |
+| Input | `agent_id`, `agent_type` → can scope per agent |
+| Under `bypassPermissions` | no exemption documented — firing unverified |
+
+## 8. MCP rule syntax
+
+| Rule | Matches |
+|---|---|
+| `mcp__<server>__<tool>` | one tool |
+| `mcp__<server>`, `mcp__<server>__*` | all tools of a server |
+| `mcp__*` | deny only — all MCP tools (skipped as allow) |
+| `mcp__…(<specifier>)` | ignored in settings |
+
+Names must match the `.mcp.json` server key exactly.
+
+## 9. Headless (`claude -p`)
+
+| Aspect | Behaviour |
+|---|---|
+| Unmatched tool needing approval | denied (no prompt) |
+| Default mode | `default` since v2.1.302 when nothing sets one |
+| Explicit refusal | `--permission-prompts none`, `permissions.denyInsteadOfPrompting` (user/managed) |
+| Custom approver | `PermissionRequest` hook or `--permission-prompt-tool` |
+| Denials | `permission_denied` events in `stream-json` |
+
+## 10. Custom modes — substitutes
+
+| Mechanism | Acts like | Scope |
+|---|---|---|
+| Settings profile + `--settings` | named mode | session |
+| Agent `tools` / `disallowedTools` / `permissionMode` | mode inside an agent | agent (parent may override) |
+| Skill `allowed-tools` / `disallowed-tools` | temporary mode | one turn |
+| `PreToolUse` hook | programmable mode | every call |
+| `PermissionRequest` hook / `--permission-prompt-tool` | custom approver | prompting calls |
