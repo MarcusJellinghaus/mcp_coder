@@ -4,6 +4,8 @@ Part 1 of 4 · [Tool inventory](tool-inventory.md) · [Design concept](design-co
 
 Generic Claude Code behaviour. Sources: [permissions](https://code.claude.com/docs/en/permissions.md), [permission-modes](https://code.claude.com/docs/en/permission-modes.md), [settings](https://code.claude.com/docs/en/settings.md), [sub-agents](https://code.claude.com/docs/en/sub-agents.md), [skills](https://code.claude.com/docs/en/skills.md), [hooks](https://code.claude.com/docs/en/hooks.md), [claude-directory](https://code.claude.com/docs/en/claude-directory.md). Unverified points are marked.
 
+**Baseline:** Claude Code 2.1.317 · docs read 2026-11-14 (pages carry no version). Re-check on upgrade.
+
 ## 1. Claude objects
 
 `~` = user scope; `CLAUDE_CONFIG_DIR` relocates it.
@@ -38,16 +40,18 @@ Generic Claude Code behaviour. Sources: [permissions](https://code.claude.com/do
 | 4 | Project shared | `.claude/settings.json` | team, committed |
 | 5 | User | `~/.claude/settings.json` | every repo on the machine |
 
-Related, not a settings level: `~/.claude.json` (user/local MCP servers, UI state). Local allow rules apply without the folder-trust step.
+Related, not a settings level: `~/.claude.json` (user/local MCP servers, UI state, folder trust).
 
-**Combining**
+**Combining** — two different mechanisms:
 
-| Key type | Rule |
-|---|---|
-| Scalars (`defaultMode`, `model`, `enabledMcpjsonServers`) | highest level that sets it wins |
-| `env` | per variable, highest wins |
-| `permissions.allow` / `ask` / `deny` | merged across all levels |
-| `defaultMode: auto` / `bypassPermissions` | honoured only from user, managed or CLI |
+| Key type | Conflict resolved by | Example |
+|---|---|---|
+| Scalars (`defaultMode`, `model`, `enabledMcpjsonServers`) | **level** — highest file that sets it wins | user `acceptEdits` + project `default` → `default` |
+| `env` | level, per variable | user `A=1, B=2` + project `B=3` → `A=1, B=3` |
+| Lists (`permissions.allow` / `ask` / `deny`) | **merged** into one pool; conflicts settled by rule type (§4), **not** by level | user allow `Bash(git *)` + project deny `Bash(git push *)` → push denied |
+| `defaultMode: auto` / `bypassPermissions` | ignored from project / local files | project `bypassPermissions` → no effect |
+
+Allow rules from a committed project file (and a tracked `settings.local.json`) wait for folder trust; `deny` / `ask` apply immediately.
 
 ## 3. Permission modes
 
@@ -64,14 +68,23 @@ Set via `--permission-mode`, `permissions.defaultMode`, `Shift+Tab` (cycle exclu
 
 ## 4. Rule evaluation
 
-| Aspect | Rule |
+Per tool call, against the merged pool (§2), first match wins:
+
+| Step | Matching rule | Result |
+|---|---|---|
+| 1 | any `deny` | **blocked** — every mode, also subagents, also `bypassPermissions` |
+| 2 | any `ask` | **prompt** — even if an `allow` also matches |
+| 3 | any `allow` | **runs** without prompt |
+| 4 | none | **mode decides** (§3): prompt (`default`), auto-accept edits (`acceptEdits`), deny (`dontAsk`, `-p`), run (`bypassPermissions`) |
+
+| Consequence | Detail |
 |---|---|
-| Order | `deny` → `ask` → `allow`; first match wins |
-| `deny` | wins at any level, in every mode, also in subagents |
-| `ask` | prompts even if a narrower `allow` matches |
-| Lower vs higher level | a lower level cannot remove a higher `allow` — only add `deny` |
-| Managed `deny` | not overridable by `--allowedTools` |
-| "Don't ask again" at a prompt | writes a **permanent** rule to `settings.local.json` |
+| Level is irrelevant for rules | user deny blocks project allow, and vice versa |
+| Specificity is irrelevant | deny `Bash(aws *)` blocks allow `Bash(aws s3 ls)` — no allow-exceptions to a deny |
+| `allow` only fills gaps | it can turn step 4 into "runs", never override steps 1–2 |
+| CLI flags | `--allowedTools` adds allows (step 3), `--disallowedTools` adds denies (step 1); neither beats a managed deny |
+| Hooks | a `PreToolUse` `allow` cannot override a matching deny / ask rule (§7) |
+| "Don't ask again" at a prompt | writes a **permanent** `allow` to `settings.local.json` |
 
 ## 5. Skills
 
