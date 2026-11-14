@@ -1,6 +1,6 @@
 # Claude Code permissions — design concept
 
-Part 3 of 4 · [How it works](how-it-works.md) · [Tool inventory](tool-inventory.md) · [Implementation](implementation.md)
+Part 3 of 5 · [How it works](how-it-works.md) · [Tool inventory](tool-inventory.md) · [Implementation](implementation.md) · [Skills and agents](skills-agents.md)
 
 **Status:** draft. Open: §5.
 **Scope:** this repo — interactive sessions, skills, agents/subagents, MCP tools, headless `mcp-coder` workflows. Not: Copilot CLI ([copilot.md](../copilot.md)), iCoder's `.icoder/` permission layer.
@@ -38,7 +38,7 @@ Background: [how-it-works §5–§10](how-it-works.md#5-skills).
 
 ## 4. Skill / agent extras — first pass (to brainstorm)
 
-Extras = beyond Tier 2. MCP names assume T18 (git write tools).
+Extras = beyond Tier 2. MCP names assume T18 (git write tools). Superseded group by group by [skills-agents.md](skills-agents.md); delete this section once all groups are decided.
 
 | Skill / agent | Extras needed | Model-invocable |
 |---|---|---|

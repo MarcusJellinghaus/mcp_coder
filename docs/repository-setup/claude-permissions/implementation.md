@@ -1,6 +1,6 @@
 # Claude Code permissions — implementation
 
-Part 4 of 4 · [How it works](how-it-works.md) · [Tool inventory](tool-inventory.md) · [Design concept](design-concept.md)
+Part 4 of 5 · [How it works](how-it-works.md) · [Tool inventory](tool-inventory.md) · [Design concept](design-concept.md) · [Skills and agents](skills-agents.md)
 
 Refs: `§` / `F#` = this file; `inv §` = [tool inventory](tool-inventory.md); `concept §` = [design concept](design-concept.md).
 

@@ -1,6 +1,6 @@
 # Claude Code permissions — tool inventory
 
-Part 2 of 4 · [How it works](how-it-works.md) · [Design concept](design-concept.md) · [Implementation](implementation.md)
+Part 2 of 5 · [How it works](how-it-works.md) · [Design concept](design-concept.md) · [Implementation](implementation.md) · [Skills and agents](skills-agents.md)
 
 | Column | Values |
 |---|---|

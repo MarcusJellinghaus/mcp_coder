@@ -1,6 +1,6 @@
 # Claude Code permissions — how it works
 
-Part 1 of 4 · [Tool inventory](tool-inventory.md) · [Design concept](design-concept.md) · [Implementation](implementation.md)
+Part 1 of 5 · [Tool inventory](tool-inventory.md) · [Design concept](design-concept.md) · [Implementation](implementation.md) · [Skills and agents](skills-agents.md)
 
 Generic Claude Code behaviour. Sources: [permissions](https://code.claude.com/docs/en/permissions.md), [permission-modes](https://code.claude.com/docs/en/permission-modes.md), [settings](https://code.claude.com/docs/en/settings.md), [sub-agents](https://code.claude.com/docs/en/sub-agents.md), [skills](https://code.claude.com/docs/en/skills.md), [hooks](https://code.claude.com/docs/en/hooks.md), [claude-directory](https://code.claude.com/docs/en/claude-directory.md). Unverified points are marked.
 
