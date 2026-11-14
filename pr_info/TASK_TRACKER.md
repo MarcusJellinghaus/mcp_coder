@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md)
 
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: new `test_command_templates_windows_cmd.py` (22 cases pass, not skip, on Windows; fix templates if a case exposes a bug)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: new `test_command_templates_windows_cmd.py` (22 cases pass, not skip, on Windows; fix templates if a case exposes a bug)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
