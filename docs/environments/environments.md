@@ -116,13 +116,14 @@ directory it starts in decides which coding rules it obeys.**
 - mcp-coder therefore launches Claude with `cwd = project_dir`: the driven project's rules,
   never the tool env's.
 
-**The trap this removes.** The Jenkins command templates run `cd %VENV_BASE_DIR%` (six times,
-across the Windows templates in `command_templates.py`) for one reason: to activate a virtualenv.
-Before #1113, that shell-plumbing step *also* silently chose whose coding rules the agent
-followed, because the Claude subprocess inherited the shell's directory. Two unrelated concerns
-— which Python runs, and which rules apply — were coupled through one inherited variable. They
-are now decoupled: the virtualenv still comes from the shell, the rules come from
-`--project-dir`.
+**The trap this removes.** The Windows Jenkins command templates run `cd %VENV_BASE_DIR%`
+(eight times, in `command_templates.py`). They no longer need it for the virtualenv: they run
+`mcp-coder setup` and set `VIRTUAL_ENV` from absolute `%WORKSPACE%\repo` paths. Only the
+coordinator smoke test still needs that cwd, for its bare `claude --mcp-config .mcp.json` (see
+below). Before #1113, that `cd` *also* silently chose whose coding rules the agent followed,
+because the Claude subprocess inherited the shell's directory. Two unrelated concerns — which
+Python runs, and which rules apply — were coupled through one inherited variable. They are now
+decoupled: the rules come from `--project-dir`.
 
 **What belongs in the tool env, and what does not:**
 

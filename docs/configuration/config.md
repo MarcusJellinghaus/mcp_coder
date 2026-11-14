@@ -953,7 +953,7 @@ The default test command performs the following checks:
 - Activates the project virtual environment if `.venv` exists (non-Python repos have none)
 - Re-verifies `mcp-coder`
 
-The test template does not run `mcp-coder setup`; the implement, fix-ci, fix-conflict and review-implementation templates do ([Project setup](setup.md)).
+The Linux test template does not run `mcp-coder setup`; the Windows test template does. The Linux implement, fix-ci, fix-conflict and review-implementation templates and all seven Windows workflow templates run it ([Project setup](setup.md)).
 
 ### Test Command Script
 

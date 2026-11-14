@@ -55,10 +55,11 @@ if "%VENV_BASE_DIR%"=="" (
     exit /b 1
 )
 
-if "%VIRTUAL_ENV%"=="" (
-    echo Activating virtual environment...
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+mcp-coder setup --project-dir %WORKSPACE%\repo --refresh
+if %ERRORLEVEL% NEQ 0 (
+exit /b 1
 )
+if exist "%WORKSPACE%\repo\.venv\Scripts\python.exe" set "VIRTUAL_ENV=%WORKSPACE%\repo\.venv"
 
 echo %VIRTUAL_ENV%
 where python
@@ -255,8 +256,34 @@ FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
 )
 
 # Windows workflow command templates
-# Note: Using raw strings (r""") for cleaner Windows path handling
-CREATE_PLAN_COMMAND_WINDOWS: str = r"""@echo ON
+# Built by _windows_template: each runs `mcp-coder setup` before the command,
+# with the same watchdog on setup failure and after the command.
+
+
+def _windows_template(
+    command: str,
+    failed: str,
+    current: str,
+    *,
+    issue_flag: bool = False,
+    archive_plan_sessions: bool = True,
+) -> str:
+    """Return the Windows template for a workflow.
+
+    `mcp-coder setup` runs before the command; on failure the watchdog moves the
+    issue to its failed label and the script exits 1. VIRTUAL_ENV is set only
+    when the project venv has an interpreter. Block bodies are not indented and
+    use a literal `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed).
+    """
+    issue = " --issue {issue_number}" if issue_flag else ""
+    watchdog = (
+        f"mcp-coder gh-tool set-status {failed} --from-status {current}{issue} "
+        r"--project-dir %WORKSPACE%\repo --force"
+    )
+    plan_sessions = (
+        r"dir .mcp-coder\create_plan_sessions" + "\n" if archive_plan_sessions else ""
+    )
+    return rf"""@echo ON
 
 echo current WORKSPACE directory===================================
 cd %WORKSPACE%
@@ -270,235 +297,65 @@ if "%VENV_BASE_DIR%"=="" (
     exit /b 1
 )
 
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+mcp-coder setup --project-dir %WORKSPACE%\repo --refresh
+if %ERRORLEVEL% NEQ 0 (
+{watchdog}
+exit /b 1
 )
+if exist "%WORKSPACE%\repo\.venv\Scripts\python.exe" set "VIRTUAL_ENV=%WORKSPACE%\repo\.venv"
 
 set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+mcp-coder --log-level {{log_level}} {command} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
 echo RC=%RC%
 
-mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir %WORKSPACE%\repo --force
+{watchdog}
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
+{plan_sessions}dir logs
 
 exit /b %RC%
 """
 
-IMPLEMENT_COMMAND_WINDOWS: str = r"""@echo ON
 
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
+CREATE_PLAN_COMMAND_WINDOWS: str = _windows_template(
+    "create-plan {issue_number}",
+    "status-03f:planning-failed",
+    "status-03:planning",
+    issue_flag=True,
 )
 
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+IMPLEMENT_COMMAND_WINDOWS: str = _windows_template(
+    "implement", "status-06f:implementing-failed", "status-06:implementing"
 )
 
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
-
-exit /b %RC%
-"""
-
-CREATE_PR_COMMAND_WINDOWS: str = r"""@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
+CREATE_PR_COMMAND_WINDOWS: str = _windows_template(
+    "create-pr", "status-09f:pr-creating-failed", "status-09:pr-creating"
 )
 
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+REVIEW_PLAN_COMMAND_WINDOWS: str = _windows_template(
+    "review-plan", "status-14f:plan-review-failed", "status-14i:plan-reviewing"
 )
 
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
-
-exit /b %RC%
-"""
-
-REVIEW_PLAN_COMMAND_WINDOWS: str = r"""@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
+REVIEW_IMPLEMENTATION_COMMAND_WINDOWS: str = _windows_template(
+    "review-implementation",
+    "status-17f:code-review-failed",
+    "status-17i:code-reviewing",
 )
 
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+FIX_CI_COMMAND_WINDOWS: str = _windows_template(
+    "fix-ci", "status-83:ci-fix-failed", "status-82:fixing-ci"
 )
 
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} review-plan --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-14f:plan-review-failed --from-status status-14i:plan-reviewing --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
-
-exit /b %RC%
-"""
-
-REVIEW_IMPLEMENTATION_COMMAND_WINDOWS: str = r"""@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
+FIX_CONFLICT_COMMAND_WINDOWS: str = _windows_template(
+    "fix-conflict",
+    "status-73:merge-conflict-failed",
+    "status-72:fixing-merge-conflict",
+    archive_plan_sessions=False,
 )
-
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
-)
-
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} review-implementation --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-17f:code-review-failed --from-status status-17i:code-reviewing --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
-
-exit /b %RC%
-"""
-
-FIX_CI_COMMAND_WINDOWS: str = r"""@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
-)
-
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
-)
-
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} fix-ci --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-83:ci-fix-failed --from-status status-82:fixing-ci --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
-dir logs
-
-exit /b %RC%
-"""
-
-FIX_CONFLICT_COMMAND_WINDOWS: str = r"""@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
-)
-
-if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
-)
-
-set DISABLE_AUTOUPDATER=1
-set MCP_TIMEOUT=30000
-
-echo command execution  =====================================
-mcp-coder --log-level {log_level} fix-conflict --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
-set RC=%ERRORLEVEL%
-echo RC=%RC%
-
-mcp-coder gh-tool set-status status-73:merge-conflict-failed --from-status status-72:fixing-merge-conflict --project-dir %WORKSPACE%\repo --force
-
-echo archive after execution =======================================
-dir logs
-
-exit /b %RC%
-"""
 
 # Data-driven workflow dispatch table.
 # Maps a workflow name to its (linux_template, windows_template) pair so the

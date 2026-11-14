@@ -16,7 +16,7 @@ Callers pass only these flags, so setup changes land in mcp-coder alone:
 - Linux Jenkins templates (implement, fix-ci, fix-conflict,
   review-implementation): right after `git pull`. A failure moves the issue to
   its failed label and stops the run.
-- Windows Jenkins: AutoRunner's provisioning (AutoRunner#59).
+- Windows Jenkins templates (all workflows and the coordinator test): `--refresh`, before the workflow command. A workflow's failure moves the issue to its failed label and stops the run.
 
 `mcp-coder install` is unchanged; it also builds tool envs and stays Python-only.
 
