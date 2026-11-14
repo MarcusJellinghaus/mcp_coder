@@ -57,7 +57,7 @@ Extras = beyond Tier 2. MCP names assume T18 (git write tools).
 | issue-approver | `set-status`, `github_issue_comment` | — |
 | engineer subagents (general-purpose) | none — Tier 2 | — |
 
-After T18 only `set-status` and `rebase` conflict commands still need Bash.
+After T18 (`git_*`, `github_issue_set_status`) only `rebase` conflict commands still need Bash.
 
 ## 5. Open design questions
 

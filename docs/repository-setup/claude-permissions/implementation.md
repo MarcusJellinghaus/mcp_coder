@@ -34,11 +34,11 @@ Levels and combining rules: [how-it-works §2](how-it-works.md#2-settings-files)
 
 | Agent | `tools` | `permissionMode` | Launched by |
 |---|---|---|---|
-| `commit-pusher` | Bash, git (R), run_format_code, read_file | `bypassPermissions` | review/plan supervisors |
-| `issue-updater` | Bash, issue_view, save/edit/delete file, read_file | `bypassPermissions` | issue_analyse_supervisor |
-| `issue-approver` | Bash, issue_view, read_file, git (R) | `bypassPermissions` | issue_analyse_supervisor |
+| `commit-pusher` | git (R), 🆕 git_commit, 🆕 git_push, run_format_code, read_file | `bypassPermissions` | review/plan supervisors |
+| `issue-updater` | issue_view, issue_edit, save/edit/delete file, delete_directory, read_file | `bypassPermissions` | issue_analyse_supervisor |
+| `issue-approver` | **Bash**, issue_view, issue_comment, read_file, git (R), get_reference_projects | `bypassPermissions` | issue_analyse_supervisor |
 
-Intent: unrestricted `Bash` + bypass → git/gh unprompted. Parent `acceptEdits` (user default) overrides it → F9.
+🆕 = not in the installed server ([inventory §1](tool-inventory.md#1-mcp-workspace)) → `commit-pusher` cannot commit today. Intent of bypass: write tools unprompted. Parent `acceptEdits` (user default) overrides it → F9.
 
 ### 1.3 Skills
 
@@ -47,27 +47,29 @@ Intent: unrestricted `Bash` + bypass → git/gh unprompted. Parent `acceptEdits`
 | Skill | UI | Extra pre-approvals |
 |---|---|---|
 | check_branch_status | – | – |
-| commit_push | ✓ | `Bash(git add/commit/push *)` |
+| commit_push | ✓ | 🆕 `git_commit`, `git_push` |
 | discuss | ✓ | – |
-| implement_direct | ✓ | – |
-| implementation_approve | ✓ | – |
+| implement_direct | ✓ | `Bash(mcp-coder gh-tool *)` |
+| implementation_approve | ✓ | `Bash(… set-status *)` |
 | implementation_finalise | ✓ | – |
-| implementation_needs_rework | ✓ | – |
+| implementation_needs_rework | ✓ | `Bash(… set-status *)` |
 | implementation_new_tasks | ✓ | – |
 | implementation_review | – | – |
 | implementation_review_supervisor | ✓ | – |
 | issue_analyse | – | – |
 | issue_analyse_supervisor | ✓ | – |
-| issue_approve | ✓ | `Bash(gh issue view *)`, `Bash(MSYS_NO_PATHCONV=1 gh issue comment *)` |
-| issue_create | ✓ | `Bash(gh issue create *)` |
+| issue_approve | ✓ | `Bash(… set-status *)`, `github_issue_comment` |
+| issue_create | ✓ | `github_issue_create` |
 | issue_requirements | ✓ | – |
-| issue_update | ✓ | `Bash(gh issue edit *)` |
-| plan_approve | ✓ | – |
+| issue_update | ✓ | `github_issue_edit` |
+| plan_approve | ✓ | `Bash(… set-status *)` |
 | plan_review | – | – |
 | plan_review_supervisor | ✓ | – |
 | plan_update | – | – |
-| pr_comment_triage | **–** | GitHub writes (review reply, thread resolve, issue comment), `Bash(git add *)` |
-| rebase | ✓ | `Bash(git rebase/add/rm/commit/checkout/restore/stash *)`, `Bash(git push --force-with-lease *)` |
+| pr_comment_triage | **–** | `github_review_comment_reply`, `github_review_thread_resolve`, `github_issue_comment`, 🆕 `git_commit`, `git_push`, `Bash(… set-status *)` |
+| rebase | ✓ | 🆕 `git_commit`, `git_push`, `git_push_force`; `Bash(git rebase/add/rm/checkout --ours/--theirs/remote get-url/restore/stash *)`, `Bash(git push --force-with-lease *)` |
+
+`… set-status` = `mcp-coder gh-tool set-status`; 🆕 = not in the installed server.
 
 Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_supervisor`, `plan_review_supervisor`, `plan_review`.
 
@@ -88,9 +90,9 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 | F1 | No `deny` rules, no `ask` rules, no hooks anywhere |
 | F2 | User `defaultMode: acceptEdits` applies to every repo |
 | F3 | `WebFetch(domain:*)` = unrestricted outbound channel |
-| F4 | Agents: `bypassPermissions` + unrestricted Bash |
-| F5 | `pr_comment_triage` is model-invocable and pre-approves GitHub writes |
-| F6 | `pr_comment_triage` lists `git_commit` / `git_push` — exist upstream, not in installed server |
+| F4 | `issue-approver`: `bypassPermissions` + unrestricted Bash |
+| F5 | `pr_comment_triage` is model-invocable and pre-approves GitHub and git writes |
+| F6 | CLAUDE.md, `commit_push`, `rebase`, `pr_comment_triage`, `commit-pusher` use git write tools the installed server lacks (since #1421) → Bash fallback with prompts; `commit-pusher` cannot commit |
 | F7 | User allow-list holds stale server names (`mcp__code-checker__*`, `mcp__filesystem__*`) |
 | F8 | `settings.local.json` is tracked here (template) — "local" file acting as shared config |
 | F9 | Agents' `bypassPermissions` likely ineffective: parent `acceptEdits` wins ([how-it-works §6](how-it-works.md#6-subagents)) |
@@ -139,8 +141,8 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T2 | Define `deny` baseline (e.g. `git push --force`, `rm -rf`, `.env` / `~/.ssh` reads) — user or project? | F1 |
 | T3 | Restrict `WebFetch` to a domain list | F3 |
 | T5 | Narrow `mcp-coder gh-tool:*` to `set-status`, `get-base-branch` | inv §6 |
-| T7 | `PreToolUse` hook restricting agent Bash to git/gh | F4 |
-| T8 | `pr_comment_triage`: fix tool names; decide `disable-model-invocation` | F5, F6 |
+| T7 | `PreToolUse` hook restricting `issue-approver` Bash to `set-status` (until T21) | F4 |
+| T8 | `pr_comment_triage`: decide `disable-model-invocation` | F5 |
 | T9 | Decide project `defaultMode` (`acceptEdits` vs `default`); interacts with F9 | F2, concept §3 |
 | T10 | Decide obsidian `delete_note` / `rename_tag` pre-approval | inv §3 |
 | T11 | Add `run_deptry_check`, `github_subissue_list` to allow-list (read-only) | inv §1, §2 |
@@ -148,11 +150,13 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T13 | Evaluate `disallowedTools` (agents) / `disallowed-tools` (skills) as real restrictions | F4 |
 | T14 | Evaluate `dontAsk` / `denyInsteadOfPrompting` for headless runs | §1.4, §2.2 |
 | T15 | Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
-| T16 | Skills/agents: `gh issue create/edit/comment` → `github_issue_*` MCP tools | inv §6 |
-| T17 | CLAUDE.md "Git operations": move `gh pr create`, `gh issue *` to MCP; keep only ✗ commands | inv §6 |
-| T18 | Upgrade mcp-workspace to expose `workspace.git` write tools; then `git commit/push/branch` → MCP in skills, agents, CLAUDE.md | inv §6, F6 |
-| T19 | After T18: re-evaluate whether `commit-pusher` (and its Bash + bypass) is still needed | F4, F9 |
-| T20 | Remaining ✗: decide MCP tool vs narrow Bash — `set-status`, Jenkins scripts, rebase conflict commands | inv §6 |
+| T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
+| T17 | ✅ CLAUDE.md: `gh` → MCP (#1406), git writes → MCP (#1421) | inv §6 |
+| T18 | **Urgent:** upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed. Then decide allow vs ask for `git_*` (Tier 2: ask) | inv §1, F6 |
+| T19 | After T18: re-evaluate whether `commit-pusher` (and its bypass) is still needed | F9 |
+| T20 | Remaining ✗: decide MCP tool vs narrow Bash — Jenkins scripts, rebase conflict commands | inv §6 |
+| T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
+| T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. Propagate via FU7 | inv §1, §2 |
 
 T4, T6 merged into T1.
 
