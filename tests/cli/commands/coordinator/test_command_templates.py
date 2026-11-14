@@ -520,7 +520,3 @@ class TestImplementTemplateProjectVenv:
         """The template formats with its declared placeholders."""
         result = IMPLEMENT_COMMAND_TEMPLATE.format(branch_name="b", log_level="INFO")
         assert self.VENV_LINE in result.splitlines()
-
-    def test_windows_template_unchanged(self) -> None:
-        """Only the Linux template gets the export."""
-        assert self.VENV_LINE not in IMPLEMENT_COMMAND_WINDOWS

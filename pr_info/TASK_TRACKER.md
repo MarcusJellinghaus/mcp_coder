@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: Windows exact-line tests in `test_command_templates_setup.py`, delete `test_windows_template_unchanged`, add `_windows_template` and rebuild the seven `…_COMMAND_WINDOWS`, edit `DEFAULT_TEST_COMMAND_WINDOWS`, update docs
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Windows exact-line tests in `test_command_templates_setup.py`, delete `test_windows_template_unchanged`, add `_windows_template` and rebuild the seven `…_COMMAND_WINDOWS`, edit `DEFAULT_TEST_COMMAND_WINDOWS`, update docs
+- [x] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Windows-only `cmd.exe` test of the rendered templates
 
