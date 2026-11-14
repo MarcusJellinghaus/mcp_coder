@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Windows templates run `mcp-coder setup` (builder, test template, unit tests, docs)
+
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: Windows exact-line tests in `test_command_templates_setup.py`, delete `test_windows_template_unchanged`, add `_windows_template` and rebuild the seven `…_COMMAND_WINDOWS`, edit `DEFAULT_TEST_COMMAND_WINDOWS`, update docs
+- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Windows-only `cmd.exe` test of the rendered templates
+
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: new `test_command_templates_windows_cmd.py` (22 cases pass, not skip, on Windows; fix templates if a case exposes a bug)
+- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch
+- [ ] PR summary prepared
