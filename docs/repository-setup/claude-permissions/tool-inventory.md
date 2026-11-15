@@ -71,6 +71,8 @@ GitHub writes accept `reference_name` → can write to sibling repos.
 
 ## 3. obsidian-wiki (user-scope server)
 
+Configured in `~/.claude.json` (`npx -y obsidian-mcp`, unpinned — [F12](implementation.md#15-findings)).
+
 | Topic | Read | A | C | Write | A | C |
 |---|---|---|---|---|---|---|
 | Vault notes | list_vaults, read_note, search_vault | L | server only | create_note, edit_note, move_note, **delete_note**, create_directory | L | server only |
@@ -78,7 +80,9 @@ GitHub writes accept `reference_name` → can write to sibling repos.
 
 "server only" = CLAUDE.md names the server and when to read/write, not the tools. "Write only to `Field Notes/`" is prose — not enforced.
 
-## 4. claude-artifacts (claude.ai connector)
+## 4. claude-artifacts (Anthropic server, no local config)
+
+Publishes HTML pages to the claude.ai account. In no local file; unused here ([F13](implementation.md#15-findings)).
 
 | Topic | Read | A | C | Write | A | C |
 |---|---|---|---|---|---|---|

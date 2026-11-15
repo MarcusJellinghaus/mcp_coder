@@ -97,6 +97,9 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 | F8 | `settings.local.json` is tracked here (template) — "local" file acting as shared config |
 | F9 | Agents' `bypassPermissions` likely ineffective: parent `acceptEdits` wins ([how-it-works §6](how-it-works.md#6-subagents)) |
 | F10 | Under real `bypassPermissions`, writes to `.git` / `.claude` are allowed — agent could rewrite skills/settings |
+| F11 | `--settings` adds to the cwd and user settings, it does not replace them → generated settings (`rebase_settings`) narrow nothing; narrowing needs `deny` (analytical, from the merge rules) |
+| F12 | `obsidian-wiki` (user scope, `~/.claude.json`) starts via `npx -y obsidian-mcp` — unpinned, fetches the latest npm version each start |
+| F13 | `claude-artifacts` is in no local file (not `~/.claude.json`, user/project settings, `.mcp.json`) and loads despite `ENABLE_CLAUDEAI_MCP_SERVERS=false`: ~39 tools, ~20k tokens per session, unused here |
 
 ## 2. Future state
 
@@ -106,14 +109,13 @@ Implements concept P2.
 
 | File | Holds | Not |
 |---|---|---|
-| `~/.claude/settings.json` | `env` (MCP venv vars — `.mcp.json` needs them), `model`, `modelSettings`, UI; optional small **`deny`** baseline | `allow`, `ask` |
-| `.claude/settings.json` (committed) | `allow` / `ask` / `deny`, `defaultMode`, `enabledMcpjsonServers` | personal extras |
+| `~/.claude/settings.json` | `env` (MCP venv vars — `.mcp.json` needs them), `model`, `modelSettings`, UI, `defaultMode: acceptEdits` (T9) | `allow`, `ask` |
+| `.claude/settings.json` (committed) | `allow` / `ask`, `deny` (T2), `enabledMcpjsonServers` | personal extras |
 | `.claude/settings.local.json` (gitignored) | empty / absent — personal experiments only | baseline permissions |
 
 | Effect | Detail |
 |---|---|
 | Single review point | permissions per repo in git, diffable, deployable by `mcp-coder init` |
-| User `deny` still global | deny wins at any level |
 | Outside a repo | no allows → everything prompts (intended) |
 | Fixes | F7, F8, user-level `find:*` / `python -m pytest:*` |
 
@@ -125,11 +127,11 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 
 | Tier | Today | Gap | Changes |
 |---|---|---|---|
-| 1 | partly | non-rebase commands pass the full interactive `settings.local.json` (+ user allows) | T14 |
-| 2 | no | no committed `settings.json`; `acceptEdits` default | T1, T9 |
+| 1 | partly | non-rebase commands pass the full interactive `settings.local.json` (+ user allows) — accepted for now (Q4) | T14 |
+| 2 | no | no committed `settings.json`; protected files writable natively under `acceptEdits` | T1, T2 |
 | 3 skill | yes | F5; grant dies on user reply; does not reach subagents | T8, T16 |
 | 3 agent | no | bypass + Bash (F4, F9) | T7, T12, T13, T19 |
-| 4 | no | — | Q8 |
+| 4 | no | — (one-turn skill when needed, Q8) | — |
 
 ## 3. Required changes
 
@@ -138,13 +140,13 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | # | Item | Ref |
 |---|---|---|
 | T1 | Apply settings layout | §2.1 |
-| T2 | Define `deny` baseline (e.g. `git push --force`, `rm -rf`, `.env` / `~/.ssh` reads) — user or project? | F1 |
+| T2 | ✅ decided: project `settings.json` `deny` native `Edit`/`Write` on `.mcp.json`, `.claude/settings*.json`, `.mcp-file-access` — the only grounded rule (`acceptEdits` stays, `.mcp-file-access` doesn't bind native tools). No generic baseline | F1 |
 | T3 | Restrict `WebFetch` to a domain list | F3 |
 | T5 | Narrow `mcp-coder gh-tool:*` to `set-status`, `get-base-branch` | inv §6 |
 | T7 | ~~`PreToolUse` hook restricting `issue-approver` Bash~~ — obsolete: `issue-approver` loses Bash (T21, T26) | F4 |
 | T8 | ✅ decided: `pr_comment_triage` gets `disable-model-invocation: true` → done in T25 | F5 |
-| T9 | Decide project `defaultMode` (`acceptEdits` vs `default`); interacts with F9 | F2, concept §3 |
-| T10 | Decide obsidian `delete_note` / `rename_tag` pre-approval | inv §3 |
+| T9 | ✅ decided: keep user `defaultMode: acceptEdits`; protected files covered by T2 | F2, concept §3 |
+| T10 | ✅ decided: no change — all obsidian tools stay pre-approved | inv §3 |
 | T11 | Add `run_deptry_check`, `github_subissue_list` to allow-list (read-only) | inv §1, §2 |
 | T12 | Test what mode `commit-pusher` actually runs in; fix [agent-permissions.md](../agent-permissions.md) | F9 |
 | T13 | Evaluate `disallowedTools` (agents) / `disallowed-tools` (skills) as real restrictions | F4 |
@@ -152,16 +154,17 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T15 | Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
 | T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
 | T17 | ✅ CLAUDE.md: `gh` → MCP (#1406), git writes → MCP (#1421) | inv §6 |
-| T18 | ✅ (2026-11-15; open: allow vs ask for `git_*`) Upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed (main also brings `.mcp-file-access`, needed for FU9/FU10). Then decide allow vs ask for `git_*` (Tier 2: ask) | inv §1, F6 |
+| T18 | ✅ (2026-11-15; `git_*` writes: ask — not in the shared allow-list, also reaches headless runs where Python does all git writes; agents/skills get them via hooks / `allowed-tools`) Upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed (main also brings `.mcp-file-access`, needed for FU9/FU10) | inv §1, F6 |
 | T19 | ✅ decided: keep `commit-pusher`, drop its bypass (T26) | F9 |
 | T20 | Remaining ✗: decide MCP tool vs narrow Bash — Jenkins scripts, rebase conflict commands | inv §6 |
 | T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
-| T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. Propagate via FU7 | inv §1, §2 |
+| T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. "Delete directory" row ✅ added. Propagate via FU7 | inv §1, §2 |
 | T23 | Test: agent-frontmatter `hooks:` `PreToolUse` returning `allow` runs that tool without a prompt (no `bypassPermissions`), and a path check (`.scratch/` only) blocks other writes. Gate for R3/R4 agents | concept §1.1 R3, R4 |
 | T24 | After T23: new agent files `issue-analyst`, `plan-engineer`, `code-engineer`, `rebaser`; supervisors and `rebase` launch them | [roster](skills-agents.md#target-agent-roster) |
 | T25 | Apply every "Skill text changes" row of skills-agents §2–§5 (incl. T21 status changes per R8, `pr_comment_triage` U-only, `implement_direct` narrow Bash, untrusted stops, dead `get-url` grant) | skills-agents |
 | T26 | After T23: `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add frontmatter hooks; rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) | concept §1.1 R4 |
 | T27 | Upstream mcp-workspace: rebase tools (#263, comment posted); optional `checkout-issue-branch` tool → then `implement_direct` needs no Bash | skills-agents §4, §5 |
+| T28 | By hand (user config): pin `obsidian-mcp@<version>` in `~/.claude.json`; `/mcp` → check source of `claude-artifacts`, disable if unused | F12, F13 |
 
 T4, T6 merged into T1.
 
@@ -187,8 +190,8 @@ Design questions: [concept §5](design-concept.md#5-open-design-questions).
 
 | # | Question |
 |---|---|
-| Q1 | Where are `obsidian-wiki` and `claude-artifacts` configured (`~/.claude.json`? connector despite `ENABLE_CLAUDEAI_MCP_SERVERS=false`)? |
+| Q1 | ✅ `obsidian-wiki`: user scope, `~/.claude.json` (F12). `claude-artifacts`: in no local file — likely provided with Claude Code / the account (unverified, F13) |
 | Q5 | ✅ Yes: every subagent inherits the parent's permission rules, and its mode unless `permissionMode` is set; skill `allowed-tools` carry-over not documented (docs: sub-agents) |
-| Q6 | Do `PreToolUse` hooks fire under `bypassPermissions`? |
-| Q7 | Any plugins enabled (`enabledPlugins`)? |
-| Q9 | Tier 1: do `create-pr` / `review-*` need GitHub or git writes from the LLM? |
+| Q6 | ✅ Closed, moot: R4 / T26 remove `bypassPermissions` everywhere |
+| Q7 | ✅ None (no `enabledPlugins`, `plugins/config.json` empty) |
+| Q9 | ✅ No: Python commits (`commit_all_changes`) and creates the PR (`pr_manager.create_pull_request`) |
