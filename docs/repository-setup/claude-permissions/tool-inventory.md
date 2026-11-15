@@ -44,6 +44,18 @@ GitHub writes accept `reference_name` → can write to sibling repos.
 | git_push_force | `--force-with-lease --force-if-includes` after rebase | default branch |
 | github_issue_set_status | set one `status-*` label, removing the others; workspace or reference repos | — |
 
+**File access rules** 🆕 (`.mcp-file-access`, upstream `f626cf8` / PR #401, unreleased; ref: upstream `docs/file-access.md`):
+
+| Aspect | Fact |
+|---|---|
+| File | `.mcp-file-access` at project root only; one `<level> <gitignore pattern>` per line; levels `read-only`, `read-write`; last match wins; `!` invalid |
+| Effect | rule overrides `.gitignore` both ways: committed + `read-only` → no writes; gitignored + rule → readable / writable |
+| Built-ins | the rules file itself is always read-only for MCP (create / edit it by hand); `.git` always hidden |
+| Invalid file | fail-safe: all writes refused, nothing gitignored exposed |
+| Reload | every tool call (no restart) |
+| Obeyed by | all file tools, reference file tools, GitHub `body_file` |
+| **Not** obeyed by | `git` tools (`git show HEAD:<path>`), `check_file_size`, native Read/Write/Bash — not a sandbox |
+
 ## 2. mcp-tools-py
 
 | Topic | Read / analyse | A | C | Write / execute | A | C |

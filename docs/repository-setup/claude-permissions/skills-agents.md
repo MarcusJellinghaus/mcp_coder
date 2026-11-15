@@ -51,7 +51,7 @@ Per skill / agent: facts, proposal, decision. Tiers and mechanisms: [concept §2
 |---|---|
 | Purpose / caller | Discuss an issue against the codebase, no code. U/M; also run by supervisor engineers |
 | Launches | – |
-| Uses | `github_issue_view`, `git` (`ls_remote`), `read_file`, `list_directory`; `.vscodeclaude_status.txt` |
+| Uses | `github_issue_view`, `git` (`ls_remote`), `read_file`, `list_directory`; issue-number fallback: `read_file` `.vscodeclaude_status.txt` (gitignored; exposed read-only via `.mcp-file-access`, FU9) |
 | Pre-approved | nothing beyond Tier 2 |
 | Risk | Reads issue text, possibly from untrusted authors (prompt injection). Read-only itself; the risk is what the session does next |
 | Proposal | Keep as is — Tier 2, model-invocable |
@@ -63,7 +63,7 @@ Per skill / agent: facts, proposal, decision. Tiers and mechanisms: [concept §2
 |---|---|
 | Purpose / caller | Autonomous loop, max 5 rounds: engineer analyses → supervisor triages, asks the user on scope → issue-updater writes → issue-approver sets `status-02` (queues automated planning). U |
 | Launches | engineer (general-purpose) per round, issue-updater, issue-approver |
-| Uses | `github_issue_view`, `read_file` (knowledge base), file tools for `pr_info/issue_analysis_log.md`, `Agent` |
+| Uses | `github_issue_view`, `read_file` (knowledge base; `.vscodeclaude_status.txt` fallback, FU9), file tools for `pr_info/issue_analysis_log.md`, `Agent` |
 | Pre-approved | nothing beyond Tier 2 (log writes rely on the allow-list) |
 | Risk | ① Engineers are general-purpose → **all tools incl. Bash**; "analysis is read-only" is prose only. ② Issue is edited and approved without the user seeing the final text. ③ Untrusted issue text flows into every engineer prompt |
 | Proposal | ① Custom read-only agent `issue-analyst` (MCP read tools only, no Bash, no writes) instead of general-purpose. ② Keep autonomy, or stop for user confirmation before approve — your call. ③ Stop early when the issue has untrusted `title/body` |
@@ -111,7 +111,7 @@ Per skill / agent: facts, proposal, decision. Tiers and mechanisms: [concept §2
 |---|---|
 | Purpose / caller | Promote status: `01→02`, `04→05`, `07→08`. Cross-repo: comment `/approve` (a GitHub Action sets the label). U |
 | Launches | – |
-| Uses | `github_issue_view`, `git` (`ls_remote`), `get_reference_projects`, `github_issue_comment`, Bash `mcp-coder gh-tool set-status` |
+| Uses | `github_issue_view`, `git` (`ls_remote`), `get_reference_projects`, `github_issue_comment`, Bash `mcp-coder gh-tool set-status`; `read_file` `.vscodeclaude_status.txt` fallback (FU9) |
 | Pre-approved | `Bash(mcp-coder gh-tool set-status *)`, `github_issue_comment` |
 | Risk | `02` and `05` start automated Jenkins workflows (cost, code changes). `github_issue_comment` is pre-approved for any body on any issue, not only `/approve` |
 | Proposal | After T18: `github_issue_set_status` (workspace and reference repos) replaces Bash and the `/approve` comment → T21. Check first: does the `/approve` Action do more than set the label? |

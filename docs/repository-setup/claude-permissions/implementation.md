@@ -152,7 +152,7 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T15 | Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
 | T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
 | T17 | ✅ CLAUDE.md: `gh` → MCP (#1406), git writes → MCP (#1421) | inv §6 |
-| T18 | **Urgent:** upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed. Then decide allow vs ask for `git_*` (Tier 2: ask) | inv §1, F6 |
+| T18 | ✅ (2026-11-15; open: allow vs ask for `git_*`) Upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed (main also brings `.mcp-file-access`, needed for FU9/FU10). Then decide allow vs ask for `git_*` (Tier 2: ask) | inv §1, F6 |
 | T19 | After T18: re-evaluate whether `commit-pusher` (and its bypass) is still needed | F9 |
 | T20 | Remaining ✗: decide MCP tool vs narrow Bash — Jenkins scripts, rebase conflict commands | inv §6 |
 | T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
@@ -172,6 +172,9 @@ T4, T6 merged into T1.
 | FU6 | Update [claude-code.md](../claude-code.md#enhanced-claude-permissions) to the new layout | docs |
 | FU7 | Propagate to sibling repos | Chore Propagation process |
 | FU8 | `vscodeclaude`: pre-trust each new clone — set `projects["<clone-root>"].hasTrustDialogAccepted: true` in `~/.claude.json` before launch. Risks: running sessions also write that file (atomic write + re-read); skip when the issue author is untrusted (`_is_untrusted_body`). Alternative: worktrees of one trusted main checkout | `workflows/vscodeclaude/session_launch.py` / `workspace.py` |
+| FU9 | ✅ (2026-11-15) Add `.mcp-file-access` to this repo with `read-only /.vscodeclaude_status.txt` → `issue_analyse`, `issue_analyse_supervisor`, `issue_approve`, `implement_direct` read the issue number directly via `read_file`, as their SKILL.md already says (today refused: gitignored; no skill change needed). Create by hand (MCP tools can't write the rules file). Also: `read-only` `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json` (MCP `edit_file` is allow-listed and skips Claude Code's own protection of these); `read-write /.scratch/` (prep for FU11) | repo root |
+| FU10 | `mcp-coder init`: create `.mcp-file-access` if missing, else append the `.vscodeclaude_status.txt` rule if absent — idempotent, like `update_gitignore`. Same for `vscodeclaude` session folders if init isn't run there | `cli/commands/init.py`, `workflows/vscodeclaude/workspace.py` |
+| FU11 | Gitignore `.scratch/` (writable via the FU9 rule, never committed). Blocker: `verify` MCP edit smoke test skips when `.scratch/` is gitignored — make `is_path_gitignored` check honour `.mcp-file-access`. Then update CLAUDE.md (`git_commit` note, Scratch probes); CI `check_forbidden_folder .scratch` can stay as a backstop. Needs mcp-workspace with `.mcp-file-access` everywhere (Jenkins, sibling repos) | `cli/commands/verify.py`, `.gitignore`, CLAUDE.md |
 
 ## 4. Open questions (facts)
 
