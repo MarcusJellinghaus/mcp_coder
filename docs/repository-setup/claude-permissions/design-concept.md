@@ -15,6 +15,21 @@ Part 3 of 5 · [How it works](how-it-works.md) · [Tool inventory](tool-inventor
 | P3 | Grant by context (tier), not globally |
 | P4 | No permanent grants from prompts ("don't ask again" writes a rule) |
 
+### 1.1 Skill / agent patterns
+
+Review checklist for every skill and agent ([skills-agents.md](skills-agents.md) applies it one by one).
+
+| # | Pattern |
+|---|---|
+| R1 | MCP tools first. Bash only as last resort: not allow-listed, not in `allowed-tools` / `tools:` when an MCP tool exists → every call prompts |
+| R2 | Subagents are dedicated agent files with an explicit `tools:` list — no general-purpose; no `Skill` unless needed (`skills:` preloads instead) |
+| R3 | File writes limited by path where possible: agent frontmatter `hooks:` `PreToolUse` (e.g. `.scratch/` only) |
+| R4 | No `bypassPermissions`: the agent's own frontmatter hook allows its few extra tools |
+| R5 | Untrusted `title/body` → stop before acting on it |
+| R6 | Autonomy kept: supervisors don't wait for the user except on escalations |
+| R7 | Skill text: only the edits the decision needs; quote current → new |
+| R8 | Status changes: `github_issue_set_status` with `from_status` guard; issue number from the branch (`^\d+-`, MCP `git` `branch --show-current`); uncommitted changes (MCP `git` `status`) → stop — replaces `set-status`'s clean-tree check |
+
 ## 2. Tiers
 
 | Tier | Context | Allowed without asking | Asks | Off |

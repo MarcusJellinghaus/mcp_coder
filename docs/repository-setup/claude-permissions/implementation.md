@@ -157,6 +157,7 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T20 | Remaining ✗: decide MCP tool vs narrow Bash — Jenkins scripts, rebase conflict commands | inv §6 |
 | T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
 | T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. Propagate via FU7 | inv §1, §2 |
+| T23 | Test: agent-frontmatter `hooks:` `PreToolUse` returning `allow` runs that tool without a prompt (no `bypassPermissions`), and a path check (`.scratch/` only) blocks other writes. Gate for R3/R4 agents | concept §1.1 R3, R4 |
 
 T4, T6 merged into T1.
 
@@ -183,7 +184,7 @@ Design questions: [concept §5](design-concept.md#5-open-design-questions).
 | # | Question |
 |---|---|
 | Q1 | Where are `obsidian-wiki` and `claude-artifacts` configured (`~/.claude.json`? connector despite `ENABLE_CLAUDEAI_MCP_SERVERS=false`)? |
-| Q5 | Do custom agents inherit the parent's `allow` rules? (docs: built-ins only) |
+| Q5 | ✅ Yes: every subagent inherits the parent's permission rules, and its mode unless `permissionMode` is set; skill `allowed-tools` carry-over not documented (docs: sub-agents) |
 | Q6 | Do `PreToolUse` hooks fire under `bypassPermissions`? |
 | Q7 | Any plugins enabled (`enabledPlugins`)? |
 | Q9 | Tier 1: do `create-pr` / `review-*` need GitHub or git writes from the LLM? |

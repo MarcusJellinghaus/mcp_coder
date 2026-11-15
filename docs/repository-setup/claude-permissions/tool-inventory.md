@@ -100,7 +100,7 @@ Write = publishes off-machine.
 
 ## 6. Bash patterns → MCP replacement
 
-✓ = replace now, ✅ = done, ⏳ = needs mcp-workspace upgrade (🆕 tools), ✗ = no MCP equivalent.
+✓ = replace now, ✅ = done, ⏳ = MCP tool now installed, callers still to switch (T21), ✗ = no MCP equivalent.
 
 **Allow-lists**
 
@@ -132,6 +132,14 @@ Write = publishes off-machine.
 | `mcp-coder gh-tool set-status *` | Bash | approve skills, pr_comment_triage, issue-approver; implement_direct: all of `gh-tool *` | ⏳ `github_issue_set_status` (#391) — not yet used anywhere |
 | `/approve` comment for cross-repo issues | `github_issue_comment` | issue_approve, issue-approver | ⏳ `github_issue_set_status` with `reference_name`? — check whether the comment triggers more than the label |
 
-⏳ tools exist upstream, not in the installed server (§1 🆕). Until upgraded, skills and agents that name the git write tools fall back to Bash (prompts) or fail — `commit-pusher` has no Bash, so it cannot commit at all.
+⏳ = tools installed since T18 (2026-11-15); the replacement in skills / agents is still to do (T21).
 
-After upgrade, Bash is left only for `rebase` conflict handling (`git rebase/add/rm/restore/stash/checkout --ours/--theirs`, `git remote get-url`).
+**Target: Bash only as last resort.** No Bash in any allow-list; every call prompts. What still needs Bash after T15 + T21:
+
+| Bash left | Why | Plan |
+|---|---|---|
+| `git rebase/add/rm/restore/stash/checkout --ours/--theirs` | rebase conflict handling, no MCP tool | keep in `rebase` skill only (turn-scoped); option: request MCP rebase tools upstream |
+| `git push --force-with-lease` | fallback when `git_push_force` refuses (no reflog, fresh clone) | keep in `rebase` skill, prompts |
+| `tools/jenkins_*.sh` | Jenkins read, no MCP tool | T20: MCP tool vs prompt |
+| `git remote get-url` | dead grant in `rebase` `allowed-tools`, never used | remove |
+| `mcp-coder gh-tool` define-labels / checkout-issue-branch / issue-stats, `start …html` | human CLI actions | drop from allow-list |
