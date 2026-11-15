@@ -141,8 +141,8 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T2 | Define `deny` baseline (e.g. `git push --force`, `rm -rf`, `.env` / `~/.ssh` reads) — user or project? | F1 |
 | T3 | Restrict `WebFetch` to a domain list | F3 |
 | T5 | Narrow `mcp-coder gh-tool:*` to `set-status`, `get-base-branch` | inv §6 |
-| T7 | `PreToolUse` hook restricting `issue-approver` Bash to `set-status` (until T21) | F4 |
-| T8 | `pr_comment_triage`: decide `disable-model-invocation` | F5 |
+| T7 | ~~`PreToolUse` hook restricting `issue-approver` Bash~~ — obsolete: `issue-approver` loses Bash (T21, T26) | F4 |
+| T8 | ✅ decided: `pr_comment_triage` gets `disable-model-invocation: true` → done in T25 | F5 |
 | T9 | Decide project `defaultMode` (`acceptEdits` vs `default`); interacts with F9 | F2, concept §3 |
 | T10 | Decide obsidian `delete_note` / `rename_tag` pre-approval | inv §3 |
 | T11 | Add `run_deptry_check`, `github_subissue_list` to allow-list (read-only) | inv §1, §2 |
@@ -153,11 +153,15 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
 | T17 | ✅ CLAUDE.md: `gh` → MCP (#1406), git writes → MCP (#1421) | inv §6 |
 | T18 | ✅ (2026-11-15; open: allow vs ask for `git_*`) Upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed (main also brings `.mcp-file-access`, needed for FU9/FU10). Then decide allow vs ask for `git_*` (Tier 2: ask) | inv §1, F6 |
-| T19 | After T18: re-evaluate whether `commit-pusher` (and its bypass) is still needed | F9 |
+| T19 | ✅ decided: keep `commit-pusher`, drop its bypass (T26) | F9 |
 | T20 | Remaining ✗: decide MCP tool vs narrow Bash — Jenkins scripts, rebase conflict commands | inv §6 |
 | T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
 | T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. Propagate via FU7 | inv §1, §2 |
 | T23 | Test: agent-frontmatter `hooks:` `PreToolUse` returning `allow` runs that tool without a prompt (no `bypassPermissions`), and a path check (`.scratch/` only) blocks other writes. Gate for R3/R4 agents | concept §1.1 R3, R4 |
+| T24 | After T23: new agent files `issue-analyst`, `plan-engineer`, `code-engineer`, `rebaser`; supervisors and `rebase` launch them | [roster](skills-agents.md#target-agent-roster) |
+| T25 | Apply every "Skill text changes" row of skills-agents §2–§5 (incl. T21 status changes per R8, `pr_comment_triage` U-only, `implement_direct` narrow Bash, untrusted stops, dead `get-url` grant) | skills-agents |
+| T26 | After T23: `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add frontmatter hooks; rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) | concept §1.1 R4 |
+| T27 | Upstream mcp-workspace: rebase tools (#263, comment posted); optional `checkout-issue-branch` tool → then `implement_direct` needs no Bash | skills-agents §4, §5 |
 
 T4, T6 merged into T1.
 
