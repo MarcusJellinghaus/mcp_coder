@@ -168,7 +168,7 @@ Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_
 
 - `PYTHONPATH`: `${MCP_CODER_VENV_DIR}\Lib\` — for finding installed packages
 
-**File access rules (`.mcp-file-access`):** the server refuses gitignored paths unless a rule in the root `.mcp-file-access` exposes them, and a `read-only` rule blocks writes to committed files. `mcp-coder init` creates the file with `read-write /.scratch/` (so the gitignored `.scratch/` stays usable for probes and temp files) and `read-only` rules for `.vscodeclaude_status.txt`, `.mcp.json` and `.claude/settings*.json` — commit it. Needs an mcp-workspace version with `.mcp-file-access` support; an older one ignores the file and hides `.scratch/`. Details: [repo.md](repo.md#mcp-file-access-rules-mcp-file-access).
+**File access rules (`.mcp-file-access`):** the server refuses gitignored paths unless a rule in the root `.mcp-file-access` exposes them, and a `read-only` rule blocks writes to committed files. `mcp-coder init` creates the file with `read-write /.scratch/` (so the gitignored `.scratch/` stays usable for probes and temp files) and `read-only` rules for `.vscodeclaude_status.txt`, `.mcp.json` and `.claude/settings*.json` — commit it. Needs mcp-workspace ≥ `f626cf8`. Details: [repo.md](repo.md#mcp-file-access-rules-mcp-file-access).
 
 ### Example for using MCP Configuration
 
@@ -193,12 +193,12 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 ## Enhanced Claude Permissions
 
-> **Customize:** Permissions list (`.claude/settings.local.json`) — gitignore this file in target repos.
+> **Customize:** Permissions list (`.claude/settings.local.json`) — tracked in each repo.
 
 - **Purpose:** Pre-approve safe tools while maintaining security
-- **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
-- **Security:** No system-wide edits, no file deletion outside project. Never allow unrestricted `Bash(*)`; read-only commands such as `Bash(git diff:*)` are safe
-- **Reference:** See `.claude/settings.local.json` in this repository (tracked there as a template; gitignore it in your own repos)
+- **Principles:** Only allow tools that change the project folder (git-tracked) or only read. MCP tools before Bash: allow-list the MCP tool (e.g. `mcp__mcp-workspace__git` for `git diff`), Bash only where no MCP tool exists, narrowly (e.g. `Bash(tools/jenkins_builds.sh:*)`)
+- **Security:** No system-wide edits, no file deletion outside project. Never allow unrestricted `Bash(*)`
+- **Reference:** `.claude/settings.local.json` in this repository. Commit it in each repo (Claude Code may list it in the global git excludes → add it once with `git add -f`). A gitignored personal layout: backlog [#1433](https://github.com/MarcusJellinghaus/mcp_coder/issues/1433)
 
 ```json
 {
@@ -207,10 +207,10 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
       "mcp__mcp-workspace__read_file",
       "mcp__mcp-workspace__save_file",
       "mcp__mcp-workspace__edit_file",
+      "mcp__mcp-workspace__git",
       "mcp__mcp-workspace__github_issue_view",
       "mcp__mcp-tools-py__run_format_code",
-      "Bash(git status:*)",
-      "Skill(commit_push)"
+      "Skill(check_branch_status)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -218,24 +218,22 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 }
 ```
 
-`permissions.allow` pre-approves tools. `enableAllProjectMcpServers` and `enabledMcpjsonServers` enable the servers defined in `.mcp.json`.
+`permissions.allow` pre-approves tools. `Skill(<name>)` only matters for model-invocable skills; it does not lift `disable-model-invocation` ([agent-permissions.md](agent-permissions.md#agents-cannot-invoke-disable-model-invocation-skills)). `enableAllProjectMcpServers` and `enabledMcpjsonServers` enable the servers defined in `.mcp.json`.
 
 The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue_comment`, `github_issue_set_status`) are deliberately left out so issue writes prompt in the main session (see [agent-permissions.md](agent-permissions.md)).
 
-This repository commits no `.claude/settings.json` and no `deny` rules. Protected config files rest on Claude Code's built-in protection (native writes to `.mcp.json` and `.claude/` prompt), `.mcp-file-access` (MCP tools refuse writes) and git review ([implementation T2](claude-permissions/implementation.md#31-decisions--config)).
+This repository commits no `.claude/settings.json` and no `deny` rules. Protected config files rest on Claude Code's built-in protection (native writes to `.mcp.json` and `.claude/` prompt), `.mcp-file-access` (MCP tools refuse writes) and git review ([design concept §3](claude-permissions/design-concept.md#3-mechanisms); deny-rule facts: [How Claude permissions work §4](claude-permissions/how-it-works.md#4-rule-evaluation)).
 
 ### Pinning the settings file with `--settings`
 
-Claude Code reads `.claude/settings.local.json` (and `.claude/settings.json`)
-from its own working directory only — it does not walk up to parent
-directories, so a session started in a subfolder of the repo loads neither
-(Claude Code docs: settings). For mcp-coder that working directory is
-`--project-dir`, so the files are found in your repo — the shell you launched
-from no longer matters. Start interactive sessions at the repo root.
+Claude Code reads `.claude/settings*.json` from its working directory only, no
+walk-up ([How Claude permissions work §2](claude-permissions/how-it-works.md#2-settings-files)).
+mcp-coder runs Claude with `cwd = --project-dir`, so your repo's files are found
+whatever shell you launch from. Start interactive sessions at the repo root.
 
 mcp-coder commands that drive Claude Code accept `--settings <path>` to
-forward the settings file explicitly via Claude's native `--settings` flag,
-which adds to cwd-based discovery (merged, not replaced). The file is not limited to
+forward a settings file via Claude's native `--settings` flag; it is merged
+with the cwd files, not a replacement. The file is not limited to
 permissions — it also controls `enabledMcpjsonServers`, `hooks`, `env`,
 `model`, `outputStyle`, and the rest of the Claude Code settings schema.
 
@@ -253,27 +251,20 @@ With no `--settings` argument, mcp-coder auto-detects
 `config.toml`. See [Configuration Guide](../configuration/config.md#claude)
 for the full resolution chain.
 
-#### Side effect: your repo's `settings.json` is now also discovered
+#### Both settings files apply
 
 `--settings` pins **one** file, and mcp-coder passes only one — its
-auto-detection prefers `settings.local.json` when both exist. Since the
-Claude subprocess now runs with `cwd = project_dir`, Claude *additionally*
-discovers `<project_dir>/.claude/settings.json` and
-`.claude/settings.local.json` from its cwd and **merges** them
-with the pinned file.
+auto-detection prefers `settings.local.json` when both exist. Claude
+*additionally* discovers `<project_dir>/.claude/settings.json` and
+`.claude/settings.local.json` from its cwd and **merges** them with the
+pinned file. A repo holding both files gets both: review a checked-in
+`settings.json` for entries you don't want in effect (stale `hooks`, a pinned
+`model`, permissive `permissions`).
 
-The practical consequence: a project holding **both** files now activates the
-shared, checked-in `settings.json` that was previously inert whenever the
-subprocess ran elsewhere. This is intended — the repo's settings are the ones
-that should apply to the repo's code — but it is a behaviour change worth
-knowing before rollout. If a repo's `settings.json` contains entries you do
-not want in effect (stale `hooks`, a pinned `model`, permissive `permissions`),
-review it now rather than after the first surprising run.
-
-The same anchoring shift applies to the copilot provider: its
-`_read_settings_allow` (`llm/providers/copilot/copilot_cli.py:230-241`) reads
-`<cwd>/.claude/settings.local.json`, which is now the driven
-project's file rather than the launching shell's.
+The copilot provider anchors the same way: `_read_settings_allow` in
+`llm/providers/copilot/copilot_cli.py` reads
+`<cwd>/.claude/settings.local.json` — the driven project's file, not the
+launching shell's.
 
 ## Architecture Documentation
 

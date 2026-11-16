@@ -1,5 +1,5 @@
 ---
-name: implement-direct
+name: implement_direct
 disable-model-invocation: true
 argument-hint: "<issue-number>"
 allowed-tools:

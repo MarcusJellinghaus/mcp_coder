@@ -13,6 +13,7 @@ For a complete overview of the process, see [development-process.md](development
 | **Issue discussion** | |
 | `/issue_analyse` | Analyze and discuss a GitHub issue |
 | `/issue_analyse_supervisor` | Analyse an issue autonomously; approves it when no questions remain |
+| `/issue_requirements` | Refocus on open requirements questions after `/issue_analyse` |
 | `/issue_create` | Create a new GitHub issue from discussion |
 | `/issue_update` | Update issue description with discussed details |
 | `/issue_approve` | Approve issue to start planning |
@@ -34,7 +35,10 @@ For a complete overview of the process, see [development-process.md](development
 | **General** | |
 | `/discuss` | Step-by-step Q&A on open questions, on any topic |
 | `/commit_push` | Format, commit, and push changes |
-| `/check_branch_status` | Check CI status, rebase needs and task completion; auto-fix CI |
+| `/check_branch_status` | Check CI, rebase need, tasks and labels; recommends next steps |
+| `/implement_direct <issue>` | Implement a small issue directly; sets `status-07:code-review` |
+
+All commands except `/issue_analyse`, `/plan_review`, `/plan_update`, `/implementation_review` and `/check_branch_status` are user-only (`disable-model-invocation`), including every command that changes status, commits or edits issues: type them yourself.
 
 ---
 
@@ -59,7 +63,7 @@ For a complete overview of the process, see [development-process.md](development
 3. **Code review:** review the code, then approve or request rework.
 
    - `/implementation_review`: human-supervised. Claude presents findings; you decide what to act on.
-   - `/implementation_review_supervisor`: autonomous. Claude supervises subagents and decides from the knowledge base; it escalates to you only when unsure or when a major refactoring is needed.
+   - `/implementation_review_supervisor`: autonomous. Claude supervises the `code-engineer` agent (review and fixes) and `commit-pusher` (commits), and decides from the knowledge base; it escalates to you only when unsure or when a major refactoring is needed.
 
    Either one → `/discuss`, then:
 

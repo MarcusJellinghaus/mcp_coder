@@ -82,5 +82,9 @@ read-write  /.scratch/
   probes, issue body files and Jenkins logs.
 - No `.mcp.linux.json` / `.mcp.macos.json` rules: they are gitignored, and a
   `read-only` rule would expose them to MCP reads.
-- Needs mcp-workspace with `.mcp-file-access` support in every environment
-  that runs the MCP server; an older server hides a gitignored `.scratch/`.
+- **Needs mcp-workspace ≥ `f626cf8`** in every environment that runs the MCP
+  server for the repo (tool env, Jenkins executors, sibling-repo envs). An older
+  server ignores `.mcp-file-access` and silently hides the gitignored
+  `.scratch/` — breaking scratch probes, `.scratch/` issue body files, Jenkins
+  log reads and the `verify` smoke test. Check: `mcp-coder verify` → MCP edit
+  smoke test.

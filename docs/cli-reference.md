@@ -12,7 +12,7 @@ For the complete option list of any command, run `mcp-coder <command> --help`. T
 
 | Command | Description |
 |---------|-------------|
-| [`init`](#init) | Initialize project: create config and deploy Claude skills |
+| [`init`](#init) | Initialize project: create config, deploy Claude skills and agents, write .mcp-file-access |
 | [`install`](#install) | Install mcp-coder into a target environment |
 | [`setup`](#setup-1) | Set up the project as declared in [tool.mcp-coder.setup] |
 | [`verify`](#verify) | Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers |
@@ -92,7 +92,7 @@ The flag is optional when a default is configured via the `MCP_CODER_MCP_CONFIG`
 
 ### Claude Code Settings
 
-`--settings` pins the Claude Code settings file (`.claude/settings.local.json` or `.claude/settings.json`). The path is forwarded to Claude via its native `--settings` flag and overrides cwd-based settings discovery. The file controls permissions, `enabledMcpjsonServers`, hooks, env, model and the rest of the Claude Code settings schema.
+`--settings` pins the Claude Code settings file (`.claude/settings.local.json` or `.claude/settings.json`). The path is forwarded to Claude via its native `--settings` flag and merges with the settings Claude discovers from its cwd (it adds, it doesn't replace). The file controls permissions, `enabledMcpjsonServers`, hooks, env, model and the rest of the Claude Code settings schema.
 
 It is optional when a default is set via `MCP_CODER_CLAUDE_SETTINGS` or `[claude] default_settings_path` in `config.toml`. With no override, mcp-coder auto-detects `<project_dir>/.claude/settings.local.json`, then `<project_dir>/.claude/settings.json`. See the [Configuration Guide](configuration/config.md#claude).
 
@@ -200,7 +200,7 @@ Check the whole local setup in one report. Run it after editing `config.toml` an
 mcp-coder verify [OPTIONS]
 ```
 
-The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails.
+The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails. The smoke test is skipped with a warning when `.mcp-file-access` is invalid or leaves `.scratch/` hidden or read-only for MCP.
 
 - `--llm-method METHOD` checks that provider instead of the configured one.
 - `--check-models` lists the models available to the configured LangChain backend (needs network).

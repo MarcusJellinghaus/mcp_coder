@@ -15,7 +15,7 @@ GIT_WRITE_TOOLS = {
     "mcp__mcp-workspace__git_push",
     "mcp__mcp-workspace__git_push_force",
 }
-T11_TOOLS = {
+READ_ONLY_EXTRA_TOOLS = {
     "mcp__mcp-tools-py__run_deptry_check",
     "mcp__mcp-workspace__github_subissue_list",
 }
@@ -32,7 +32,7 @@ def _local_allow() -> list[str]:
 
 
 def test_no_committed_settings_json() -> None:
-    """Deny rules dropped 2026-11-16: no committed `.claude/settings.json`."""
+    """No committed `.claude/settings.json`: allows live in the tracked local file."""
     assert not SETTINGS_JSON.exists()
 
 
@@ -45,8 +45,8 @@ def test_settings_local_json_has_no_git_write_tools() -> None:
     assert not present, f"git write tools must not be allow-listed: {present}"
 
 
-def test_settings_local_json_has_t11_tools() -> None:
-    missing = sorted(T11_TOOLS - set(_local_allow()))
+def test_settings_local_json_has_read_only_extra_tools() -> None:
+    missing = sorted(READ_ONLY_EXTRA_TOOLS - set(_local_allow()))
     assert not missing, f"missing allow entries: {missing}"
 
 
@@ -60,7 +60,7 @@ def test_settings_local_json_has_no_dropped_entries() -> None:
 
 
 def test_settings_local_json_gh_tool_narrowed() -> None:
-    """T5: only `gh-tool checkout-issue-branch` stays allow-listed."""
+    """Only `gh-tool checkout-issue-branch` stays allow-listed."""
     allow = _local_allow()
     broad = [entry for entry in allow if "gh-tool:*" in entry or "set-status" in entry]
     assert not broad, f"gh-tool must be narrowed to checkout-issue-branch: {broad}"

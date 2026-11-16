@@ -9,36 +9,38 @@ constraint is unenforced reads, from inside the prompt, as permission to ignore 
 and subagents are Claude Code mechanisms — nothing here describes another client. Worth
 stating because Copilot CLI reads `.claude/skills/*/SKILL.md` natively ([copilot.md](copilot.md))
 but has no `.claude/agents/` and no permission modes: under Copilot the skills are plain
-instructions and none of the gating below applies. Verified against **Claude Code 2.1.227**;
-hook and `skills:` behaviour tested 2026-11-16 (T23, T26 in
-[claude-permissions/implementation.md](claude-permissions/implementation.md)).
+instructions and none of the gating below applies. Baseline: Claude Code 2.1.317; hook and
+`skills:` behaviour tested ([How Claude permissions work §6](claude-permissions/how-it-works.md#6-subagents)).
 
-## The agents
+## Agents in this repo
 
-| Agent | Launched by | Process | Extra tools (allow hook) |
-|---|---|---|---|
-| `commit-pusher` | plan / implementation review supervisors | reads `commit_push/SKILL.md` | `git_commit`, `git_push` |
-| `issue-updater` | `issue_analyse_supervisor` | reads `issue_update/SKILL.md` | `github_issue_edit` |
-| `issue-approver` | `issue_analyse_supervisor` | reads `issue_approve/SKILL.md` | `github_issue_set_status` |
-| `issue-analyst` | `issue_analyse_supervisor` | preloads `issue_analyse` | none |
-| `plan-engineer` | `plan_review_supervisor` | preloads `plan_review`, `plan_update` | none |
-| `code-engineer` | `implementation_review_supervisor` | preloads `implementation_review`, `check_branch_status` | none |
+| Agent | Launched by | Extra tools | Hook | Write limit | `skills:` |
+|---|---|---|---|---|---|
+| `issue-analyst` | `issue_analyse_supervisor` | `save_file`, `delete_this_file`, `delete_directory` | none (all allow-listed) | none — `.scratch/` by instruction | `issue_analyse` |
+| `plan-engineer` | `plan_review_supervisor` | file write tools | none | none — `pr_info/`, `.scratch/`, named requirement files by instruction | `plan_review`, `plan_update` |
+| `code-engineer` | `implementation_review_supervisor` | file write tools, `check_branch_status` | none | none — `.mcp-file-access` guards settings | `implementation_review`, `check_branch_status` |
+| `commit-pusher` | plan / implementation review supervisors | `git_commit`, `git_push` | inline allow | none | – (reads `commit_push/SKILL.md`) |
+| `issue-updater` | `issue_analyse_supervisor` | `github_issue_edit`, file tools | inline allow | none — `.scratch/` by instruction | – (reads `issue_update/SKILL.md`) |
+| `issue-approver` | `issue_analyse_supervisor` | `github_issue_set_status` | inline allow | none | – (reads `issue_approve/SKILL.md`) |
 
-None has `Bash`, `Skill` or `permissionMode`. The three engineer agents have no git or
-GitHub write tools; committing stays with `commit-pusher`.
+Extra tools = beyond the MCP read tools and mcp-tools-py. Inline allow = the one-line
+frontmatter `PreToolUse` hook below, matcher = the agent's GitHub / git write tools. Enforcing
+a write limit would need a hook with path parsing; the paths are instructions.
+
+None has `Bash`, `Skill` or `permissionMode`, and none has GitHub or git write tools beyond
+those listed; committing stays with `commit-pusher`. `tools:` lists every tool the preloaded
+skills call (see below). `/rebase` has no agent: it stays a
+self-contained skill until mcp-workspace offers rebase tools (mcp-workspace #263).
 
 ## Agents cannot invoke `disable-model-invocation` skills
 
 Several skills carry `disable-model-invocation: true`, reserving them for the user typing
 `/<name>`. That flag gates the **Skill tool from every model context, subagents included**.
 It is independent of permissions — allow-listing `Skill(commit_push)` does not lift it. It
-also blocks preloading: `skills:` silently skips a user-only skill (T23).
+also blocks preloading: `skills:` silently skips a user-only skill (tested).
 
-`commit-pusher` and `issue-updater` were each defined with a single instruction ("invoke the
-`/commit_push` skill" / "invoke the `/issue_update` skill") against exactly such a skill, so
-neither had a reachable procedure and both failed on every launch.
-
-**Resolution:** each of the three privileged agents reads its skill's `SKILL.md` with
+So an agent whose procedure is a user-only skill cannot invoke or preload it. Instead each of
+the three privileged agents reads its skill's `SKILL.md` with
 `mcp__mcp-workspace__read_file` and follows the process. Reading the file is not invoking the
 skill, so the flag does not apply, the skill stays the single source of truth, and the skills
 remain user-only.
@@ -50,20 +52,17 @@ editing a `SKILL.md` for the user-typed path changes unattended agent behaviour,
 each agent names its deltas explicitly ("ignore its frontmatter", "ignore its opening step")
 instead of assuming the skill reads well unattended.
 
-`issue-approver` follows the same pattern against `.claude/skills/issue_approve/SKILL.md`. It
-stayed inlined longer than the other two and had drifted in both directions: the agent had
-grown cross-repo handling, while the skill held the issue-number
-resolution the agent lacked. The `--repo` handling moved into the skill,
-so both paths now do the same thing; what remains in the agent is only the two inputs that
-genuinely differ unattended — where the issue number comes from, and what counts as
+For `issue-approver` (against `.claude/skills/issue_approve/SKILL.md`) the cross-repo handling
+lives in the skill, so both paths do the same thing; the agent states only the two inputs
+that genuinely differ unattended — where the issue number comes from, and what counts as
 validation.
 
 ## Engineer agents preload model-invocable skills
 
-`issue-analyst`, `plan-engineer` and `code-engineer` replace the general-purpose engineer
-subagents the supervisors used to launch (those had every tool, incl. `Bash` and GitHub
-writes). Their skills are model-invocable, so `skills:` injects the skill text at launch — no
-`Skill` tool and no file read needed. Two rules follow from T23:
+`issue-analyst`, `plan-engineer` and `code-engineer` are the supervisors' workers — dedicated
+agents rather than general-purpose subagents, which would have every tool, incl. `Bash` and
+GitHub writes. Their skills are model-invocable, so `skills:` injects the skill text at
+launch — no `Skill` tool and no file read needed. Two rules follow (tested):
 
 - **`skills:` injects text, not tools.** `tools:` must list every tool the preloaded skills
   call (their `allowed-tools` and their bodies).
@@ -74,7 +73,7 @@ writes). Their skills are model-invocable, so `skills:` injects the skill text a
   the supervisor consumes.
 
 They need no hook: every tool they have is in `.claude/settings.local.json` `allow`, which
-custom agents inherit (T23). Custom agents also load CLAUDE.md themselves.
+custom agents inherit (tested). Custom agents also load CLAUDE.md themselves.
 
 `tests/icoder/test_repo_agents.py` checks these rules against the frontmatter.
 
@@ -100,11 +99,10 @@ No script, nothing extra to deploy; the command runs in Git Bash on Windows (no 
 key needed). A frontmatter hook fires only for its own agent, so the global allow list stays
 narrow.
 
-**Why not `permissionMode: bypassPermissions`** (used before): per the docs, an agent's
-`permissionMode` is ignored when the parent runs `acceptEdits`, `auto` or
-`bypassPermissions` — the user default here is `acceptEdits`, so per the docs bypass had no
-effect (F9 — documented, not tested). Real bypass would also have allowed writes to `.git`
-and `.claude`. A settings `allow` rule would reach every session and every headless run.
+**Why not `permissionMode: bypassPermissions`:** under the user default `acceptEdits` an
+agent's `permissionMode` is ignored ([details](claude-permissions/how-it-works.md#6-subagents)),
+so bypass would have no effect. Real bypass would also allow writes to `.git` and
+`.claude`. A settings `allow` rule would reach every session and every headless run.
 
 ## What the hook does not do
 
@@ -113,15 +111,15 @@ Do not treat any of the following as enforced:
 - **It is not access control.** Agent frontmatter has no caller restriction — any session
   can launch these agents, not just the supervisor skills. Note also that "the supervisor"
   is a *skill*, so it runs in the main session; there is no privileged caller tier.
-- **It does not run everywhere.** Frontmatter hooks are skipped in untrusted folders and
-  under `-p` (docs). There the extra tools prompt (interactive) or are denied (headless). A
-  fresh vscodeclaude clone prompts until its folder is trusted (FU8).
+- **It does not run everywhere** — not in untrusted folders or under `-p`
+  ([details](claude-permissions/how-it-works.md#6-subagents)). A fresh vscodeclaude clone
+  prompts until its folder is trusted (pre-trust: [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434)).
 - **It cannot beat `deny` or `ask`.** A hook `allow` loses to both, so no `ask` or `deny`
   rule may ever match these tools.
-- **It does not limit paths.** No agent has a write limit yet: `.scratch/`-only or
+- **It does not limit paths.** No agent has a write limit: `.scratch/`-only or
   `pr_info/`-only are instructions in the agent body. Agent files are MCP-writable, so an
-  agent with file write tools could edit another agent's hook. Write limits need a hook
-  runtime with path parsing — later.
+  agent with file write tools could edit another agent's hook. Write limits would need a
+  hook with path parsing ([#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434)).
 - **Edits take a restart.** Changes to an agent file apply only after a session restart.
 - **`Bash` would be all-or-nothing.** Agent `tools:` takes bare tool names, so any shell
   limit stated in an agent body would be prose. None of the agents has `Bash`.
@@ -138,14 +136,14 @@ they run without prompting; the grant clears at the user's next message. Combine
 and it expires on its own. Putting `mcp__mcp-workspace__git_commit` and
 `mcp__mcp-workspace__git_push` on the supervisor skills would retire `commit-pusher`.
 
-Two things stand in the way today:
+Two things stand in the way:
 
 - **The grant does not reach subagents.** A spawned agent's permission layers are built fresh
   — a `model` layer plus an optional `effort` layer — with no copy of the parent's. The grant
   is an `allowed_tools` layer, so it is simply absent. (`context: fork` skills are the
   exception: that path merges the parent's layers explicitly.) Read out of the shipped bundle
-  of **Claude Code 2.1.227**, not from the docs — re-check it against the current build before
-  relying on it. The grant therefore only helps
+  of **Claude Code 2.1.227** (older than the 2.1.317 baseline), not from the docs — re-check
+  it against the current build before relying on it. The grant therefore only helps
   if a supervisor runs `git` itself instead of delegating to `commit-pusher` — not a large
   step, since `implementation_review_supervisor` already runs `run_vulture_check` and
   `run_lint_imports_check` itself.

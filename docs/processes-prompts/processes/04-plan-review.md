@@ -34,7 +34,7 @@ These apply to the interactive review (`status-04`). The automated review needs 
 
 | Command | Purpose | Resulting label |
 |---|---|---|
-| [`/plan_review_supervisor`](../../../.claude/skills/plan_review_supervisor/SKILL.md) | Run the review through subagents, end at "ready for approval" | — |
+| [`/plan_review_supervisor`](../../../.claude/skills/plan_review_supervisor/SKILL.md) | Run the review through the `plan-engineer` agent (commits via `commit-pusher`), end at "ready for approval" | — |
 | [`/plan_review`](../../../.claude/skills/plan_review/SKILL.md) | Review the plan in `pr_info/steps`; checks git status and confirms the branch first | — |
 | [`/discuss`](../../../.claude/skills/discuss/SKILL.md) | Step-by-step discussion, one question at a time | — |
 | [`/plan_update`](../../../.claude/skills/plan_update/SKILL.md) | Update the plan files and log decisions | — |

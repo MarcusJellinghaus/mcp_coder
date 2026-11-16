@@ -51,7 +51,7 @@ You are a technical lead supervising a software engineer (the `code-engineer` ag
 **Workflow:**
 
 1. Launch a new `code-engineer` agent; tell it to apply its preloaded `implementation_review`
-2. `/discuss` the findings — triage each item, decide accept/skip
+2. Triage the findings (see **Triage** above) — decide accept/skip per item
 3. Tell `code-engineer` to implement the accepted changes. If a major refactoring is needed, stop and talk to the user.
 4. Update `pr_info/implementation_review_log_{n}.md` with this round's findings, decisions, and changes.
 5. Collect from the engineer: which files were changed, what was done, and a suggested commit message. Then launch the **commit agent** with this context. The commit agent should verify only the expected files are modified before committing.

@@ -18,18 +18,19 @@ A major restart from a later stage lands back on `status-01:created` (`mcp-coder
 Tier: interactive LLM session — you, or a supervisor skill.
 
 - vscodeclaude auto-launches `/issue_analyse`, then `/discuss` (from `labels.json`). It only does so for issues assigned to you, so assign the issue to yourself first.
-- `/issue_analyse_supervisor` runs the analysis through subagents and approves (→ `status-02`). It escalates scope and requirements questions to you.
+- `/issue_analyse_supervisor` runs the analysis through the `issue-analyst` agent and approves (→ `status-02`) through the `issue-approver` agent (`github_issue_set_status`). It escalates scope and requirements questions to you.
 
 ## Slash commands
 
 | Command | Purpose | Resulting label |
 |---|---|---|
 | [`/issue_analyse`](../../../.claude/skills/issue_analyse/SKILL.md) | Fetch the issue and analyse requirements and feasibility | — |
+| [`/issue_requirements`](../../../.claude/skills/issue_requirements/SKILL.md) | Summarise decided items and list the open requirements questions | — |
 | [`/discuss`](../../../.claude/skills/discuss/SKILL.md) | Step-by-step discussion, one question at a time | — |
 | [`/issue_update`](../../../.claude/skills/issue_update/SKILL.md) | Update the issue on GitHub, preserving the original content | — |
 | [`/issue_create`](../../../.claude/skills/issue_create/SKILL.md) | Create a GitHub issue from the discussion | `status-01:created` |
 | [`/issue_approve`](../../../.claude/skills/issue_approve/SKILL.md) | Approve the issue | `status-02:awaiting-planning` |
-| [`/issue_analyse_supervisor`](../../../.claude/skills/issue_analyse_supervisor/SKILL.md) | Run the analysis through subagents, then approve | `status-02:awaiting-planning` |
+| [`/issue_analyse_supervisor`](../../../.claude/skills/issue_analyse_supervisor/SKILL.md) | Run the analysis through the `issue-analyst` agent, then approve through the `issue-approver` agent | `status-02:awaiting-planning` |
 
 ## Failure exits
 
