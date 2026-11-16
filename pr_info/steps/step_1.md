@@ -131,8 +131,10 @@ Load the script via `importlib.util.spec_from_file_location` (pattern:
 
 Fake git (a small dataclass, used as a fixture), installed with
 `monkeypatch.setattr(module, "run_git", fake)`:
-- fields: `changed: list[str]`, `rules: bytes | None` (default: the repo's current rules,
-  e.g. `read-only /.mcp.json`, `read-only /.claude/`, `read-write /.claude/skills/`),
+- fields: `changed: list[str]`, `rules: bytes | None` (default: synthetic test rules
+  `read-only /.mcp.json`, `read-only /.claude/`, `read-write /.claude/skills/` — not the
+  repo's real `.mcp-file-access`; the `/.claude/` and `/.claude/skills/` rules are
+  deliberately synthetic and tests 9 and 10 depend on them, so don't copy the real file),
   `mode: str = "100644"`, `fail: bool = False`, `calls: list[tuple[str, ...]]`.
 - answers by `args[0]`: `merge-base` → `b"MB\n"`; `diff` → NUL-joined `changed`;
   `ls-tree` → `b""` if `rules is None` else `f"{mode} blob 0123\t.mcp-file-access\0"`;
@@ -147,7 +149,7 @@ Test cases (one test each, unless noted):
 3. non-UTF-8 rules file (`b"read-only /\xff\n"`) → invalid, no crash.
 4. `Read-Only /.mcp.json` → invalid; `.mcp.json` not flagged.
 5. `read-only /[Z-a]x` with `sys.platform` patched to `"linux"` → the lower-cased load raises `re.error` → invalid, no crash.
-6. same rule, `load_access_rules` wrapped via monkeypatch so the load whose file contains `[z-a]` returns `AccessRules(problems=("line 1: invalid pattern '/[z-a]x'",))` → invalid.
+6. same rule, `sys.platform` patched to `"linux"` (on win32 the original load already raises, so the lower-cased load would never be reached), and `load_access_rules` wrapped via monkeypatch so the load whose file contains `[z-a]` returns `AccessRules(problems=("line 1: invalid pattern '/[z-a]x'",))` → invalid.
 7. ls-tree mode `040000` and `120000` (parametrize) → invalid.
 8. `.mcp.json` → `read-only rule /.mcp.json`.
 9. `.claude/settings.json` under directory rule `/.claude/` → flagged.
@@ -163,6 +165,7 @@ Test cases (one test each, unless noted):
 19. nothing flagged → summary is exactly `No sensitive files changed.`
 20. calls include `("merge-base", "B", "H")` and the diff starts from `MB`, not `B`.
 21. escaping: `_escape_property("a%b:c,d\r\ne") == "a%25b%3Ac%2Cd%0D%0Ae"`; `_escape_data` leaves `:` and `,`; a flagged `.claude/agents/a|b.md` appears as `a\|b.md` in the table.
+    End-to-end (separate test): changed path `.claude/agents/a%:,\nb.md` through `main` → stdout contains `::warning file=.claude/agents/a%25%3A%2C%0Ab.md::watch list /.claude/agents/` and no raw line starting with `b.md`.
 22. `GITHUB_STEP_SUMMARY` set to a `tmp_path` file with existing content → the table is appended there, not printed; unset → printed (covered by the other tests).
 23. exit code 0 when files are flagged.
 24. `fail=True` → `pytest.raises(SystemExit)`, and the code is neither `0` nor `None`.
