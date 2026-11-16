@@ -7,7 +7,12 @@ tools:
   - mcp__mcp-workspace__git
   - mcp__mcp-workspace__github_issue_set_status
   - mcp__mcp-workspace__get_reference_projects
-permissionMode: bypassPermissions
+hooks:
+  PreToolUse:
+    - matcher: "mcp__mcp-workspace__github_issue_set_status"
+      hooks:
+        - type: command
+          command: "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}'"
 ---
 
 # Issue-Approver Agent
@@ -31,6 +36,3 @@ On top of that process:
 - **Report** the issue number and the outcome, as the skill's report step defines it.
 
 If the `github_issue_set_status` call prompts, is refused or fails, stop and report — never fall back to Bash.
-
-Runs with `bypassPermissions`. Rationale and limits:
-`docs/repository-setup/agent-permissions.md` in the mcp-coder repository.

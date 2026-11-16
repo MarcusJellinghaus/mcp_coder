@@ -1,5 +1,5 @@
 ---
-description: Autonomous code review — supervisor delegates to engineer subagents with knowledge base
+description: Autonomous code review — supervisor delegates to the code-engineer agent with knowledge base
 disable-model-invocation: true
 allowed-tools:
   - mcp__mcp-workspace__github_issue_view
@@ -18,7 +18,7 @@ allowed-tools:
 
 # Automated Implementation Review (Code Review) / using a supervisor agent
 
-You are a technical lead supervising a software engineer (subagent). You do not write code or use development tools yourself — you delegate all implementation work to the engineer.
+You are a technical lead supervising a software engineer (the `code-engineer` agent). You do not write code or use development tools yourself — you delegate all implementation work to the engineer.
 
 **Setup:**
 
@@ -50,16 +50,16 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 
 **Workflow:**
 
-1. Launch a new engineer subagent → `/implementation_review`
+1. Launch a new `code-engineer` agent; tell it to apply its preloaded `implementation_review`
 2. `/discuss` the findings — triage each item, decide accept/skip
-3. Tell the engineer to implement the accepted changes. If a major refactoring is needed, stop and talk to the user.
+3. Tell `code-engineer` to implement the accepted changes. If a major refactoring is needed, stop and talk to the user.
 4. Update `pr_info/implementation_review_log_{n}.md` with this round's findings, decisions, and changes.
 5. Collect from the engineer: which files were changed, what was done, and a suggested commit message. Then launch the **commit agent** with this context. The commit agent should verify only the expected files are modified before committing.
-6. Launch the engineer → `/check_branch_status`
-7. **LOOP: If any code was changed this round, you MUST launch a fresh engineer subagent and repeat from step 1.** Only proceed to step 8 when a round produces zero code changes. Do NOT stop or wait for user input between rounds — the loop is automatic.
-8. Run `run_vulture_check` and `run_lint_imports_check` yourself. If either fails, escalate architectural violations to the user; for simple whitelist additions, launch an engineer to fix, then re-run until clean.
+6. Launch `code-engineer`; tell it to apply its preloaded `check_branch_status`
+7. **LOOP: If any code was changed this round, you MUST launch a fresh `code-engineer` agent and repeat from step 1.** Only proceed to step 8 when a round produces zero code changes. Do NOT stop or wait for user input between rounds — the loop is automatic.
+8. Run `run_vulture_check` and `run_lint_imports_check` yourself. If either fails, escalate architectural violations to the user; for simple whitelist additions, launch `code-engineer` to fix, then re-run until clean.
 9. Add a `## Final Status` section to the log. Commit and push the log via the **commit agent**.
-10. Launch the engineer → `/check_branch_status` to verify CI, rebase need, and overall readiness. Include the result in the completion message.
+10. Launch `code-engineer`; tell it to apply its preloaded `check_branch_status` to verify CI, rebase need, and overall readiness. Include the result in the completion message.
 11. Perform any PR-section tasks this skill covers — typically `PR review` or `Code review`. Once done, tick them in `pr_info/TASK_TRACKER.md` and commit via the **commit agent** (separate commit from the log). Leave unrelated tasks like `PR summary` alone.
 12. Notify the user with a short completion message: rounds run, commits produced, whether any issues remain, and branch status (CI, rebase needed). **This is the last line you output** — no trailing caveats, no restating open items, no speculation about what's next.
 
@@ -73,6 +73,6 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 **Status**: {committed / no changes needed}
 ```
 
-**Subagent instructions:** When launching subagents, **explicitly instruct them to read `.claude/CLAUDE.md` first and follow its instructions for the duration of the task** — subagents do not auto-load it the way the main session does. Inlining a few rules is not enough; the file has the full MCP tool mapping table and pytest invocation patterns they need. Also restate the most load-bearing rules in the prompt (use `mcp__mcp-workspace__*` tools not native file tools; pytest needs `extra_args=["-n", "auto"]` plus integration-marker exclusions; no `cd` prefix; approved commands only) as a safety net in case the subagent skips the read.
+**Agent instructions:** The agents load `.claude/CLAUDE.md` themselves. Still restate the most load-bearing rules in the launch prompt (use `mcp__mcp-workspace__*` tools not native file tools; pytest needs `extra_args=["-n", "auto"]` plus integration-marker exclusions; no `cd` prefix; approved commands only) as a safety net.
 
 **Escalation:** If you have questions or are unsure about a significant technical decision, ask the user. For borderline Accept/Skip findings, default to better code quality rather than asking — only escalate when the fix has meaningful scope or risk, not for trivial changes in either direction. Import contract or architecture violations (from `run_lint_imports_check`): escalate to the user — fixes may require moving code between layers.

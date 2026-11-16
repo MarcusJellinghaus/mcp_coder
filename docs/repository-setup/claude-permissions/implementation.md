@@ -88,16 +88,16 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 
 | # | Finding |
 |---|---|
-| F1 | No `ask` rules, no hooks anywhere; `deny` only in project `settings.json` (protected files, T2) |
+| F1 | No `ask` rules; hooks only in agent frontmatter (allow hooks, T26); `deny` only in project `settings.json` (protected files, T2) |
 | F2 | User `defaultMode: acceptEdits` applies to every repo |
 | F3 | `WebFetch(domain:*)` = unrestricted outbound channel |
-| F4 | `issue-approver`: `bypassPermissions` + unrestricted Bash |
+| F4 | ✅ fixed: `issue-approver` had `bypassPermissions` + unrestricted Bash → no Bash ([issue 2](issues/issue_2_skill_text.md)), allow hook instead of bypass ([issue 3](issues/issue_3_agents.md)) |
 | F5 | `pr_comment_triage` is model-invocable and pre-approves GitHub and git writes |
 | F6 | CLAUDE.md, `commit_push`, `rebase`, `pr_comment_triage`, `commit-pusher` use git write tools the installed server lacks (since #1421) → Bash fallback with prompts; `commit-pusher` cannot commit |
 | F7 | User allow-list holds stale server names (`mcp__code-checker__*`, `mcp__filesystem__*`) |
 | F8 | `settings.local.json` is tracked here (template) — "local" file acting as shared config |
-| F9 | Agents' `bypassPermissions` ineffective under the user's `acceptEdits`: docs (sub-agents) say the agent's `permissionMode` is ignored when the parent runs `acceptEdits`, `auto` or `bypassPermissions` ([how-it-works §6](how-it-works.md#6-subagents)) |
-| F10 | Under real `bypassPermissions`, writes to `.git` / `.claude` are allowed — agent could rewrite skills; the T2 deny still binds for the 6 protected files — deny rules block in every mode, including `bypassPermissions` (Claude Code docs: permission-modes) |
+| F9 | ✅ resolved ([issue 3](issues/issue_3_agents.md): no agent sets `permissionMode`). Agents' `bypassPermissions` was ineffective under the user's `acceptEdits` — documented, not tested: docs (sub-agents) say the agent's `permissionMode` is ignored when the parent runs `acceptEdits`, `auto` or `bypassPermissions` ([how-it-works §6](how-it-works.md#6-subagents)) |
+| F10 | ✅ moot ([issue 3](issues/issue_3_agents.md): no `bypassPermissions`). Under real `bypassPermissions`, writes to `.git` / `.claude` are allowed — agent could rewrite skills; the T2 deny still binds for the 6 protected files — deny rules block in every mode, including `bypassPermissions` (Claude Code docs: permission-modes). Remaining: agent files are MCP-writable, so an agent with file write tools can still edit another agent's hook (no path limits yet) |
 | F11 | `--settings` adds to the cwd and user settings, it does not replace them → generated settings (`rebase_settings`) narrow nothing; narrowing needs `deny` (analytical, from the merge rules) |
 | F12 | `obsidian-wiki` (user scope, `~/.claude.json`) starts via `npx -y obsidian-mcp` — unpinned, fetches the latest npm version each start |
 | F13 | `claude-artifacts` is in no local file (not `~/.claude.json`, user/project settings, `.mcp.json`) and loads despite `ENABLE_CLAUDEAI_MCP_SERVERS=false`: ~39 tools, ~20k tokens per session, unused here |
@@ -131,7 +131,7 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | 1 | partly | non-rebase commands pass the full interactive `settings.local.json` (+ user allows) — accepted for now (Q4) | T14 |
 | 2 | partly | deny-only `settings.json` blocks native writes to the protected files (T2 ✅); unrecognised Bash/PowerShell writes not covered; allows layout open | T1 |
 | 3 skill | yes | F5; grant dies on user reply; does not reach subagents | T8, T16 |
-| 3 agent | no | bypass + Bash (F4, F9) | T7, T12, T13, T19 |
+| 3 agent | yes ([issue 3](issues/issue_3_agents.md)) | ✅ inline allow hooks replace bypass; dedicated engineer agents, no Bash. Open: per-agent write limits (hook with path parsing) | T19, T24, T26 |
 | 4 | no | — (one-turn skill when needed, Q8) | — |
 
 ## 3. Required changes
@@ -149,8 +149,8 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T9 | ✅ decided: keep user `defaultMode: acceptEdits`; protected files covered by T2 | F2, concept §3 |
 | T10 | ✅ decided: no change — all obsidian tools stay pre-approved | inv §3 |
 | T11 | ✅ done ([issue 1](issues/issue_1_settings_json.md)): `run_deptry_check`, `github_subissue_list` added to `settings.local.json` (read-only) | inv §1, §2 |
-| T12 | Test what mode `commit-pusher` actually runs in; fix [agent-permissions.md](../agent-permissions.md) | F9 |
-| T13 | Evaluate `disallowedTools` (agents) / `disallowed-tools` (skills) as real restrictions | F4 |
+| T12 | ✅ moot: no agent sets `permissionMode` any more ([issue 3](issues/issue_3_agents.md)); [agent-permissions.md](../agent-permissions.md) rewritten | F9 |
+| T13 | ✅ moot for this goal: per the docs there is no per-agent allow field — `disallowedTools` only removes tools, which explicit `tools:` already does; the grant is the frontmatter hook (T26) | F4 |
 | T14 | Evaluate `dontAsk` / `denyInsteadOfPrompting` for headless runs | §1.4, §2.2 |
 | T15 | ◐ (this repo's `settings.local.json`: `start …html` and `.bat` Jenkins entries dropped in [issue 1](issues/issue_1_settings_json.md); user-file ✓ patterns open) Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
 | T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
@@ -161,9 +161,9 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T21 | ✅ ([issue 2](issues/issue_2_skill_text.md)) After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
 | T22 | ◐ (this repo's CLAUDE.md done in [issue 2](issues/issue_2_skill_text.md); FU7 propagation open) CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. "Delete directory" row ✅ added. Propagate via FU7 | inv §1, §2 |
 | T23 | ✅ Tested 2026-11-16 (probe agent, parent in `acceptEdits`, Windows): frontmatter `PreToolUse` hook `allow` runs a non-allow-listed tool (`git_branch`) with no prompt and no bypass; exit 2 + stderr blocks a write outside `.scratch/`, reason reaches the agent; hook fires only for that agent (input has `agent_type`, `agent_id`, `permission_mode`); Git Bash command `"${CLAUDE_PROJECT_DIR}/.venv/Scripts/python.exe" "<script>"` works; agent inherits the allow-list; `skills:` preloads a model-invocable skill but not its tools (`tools:` must list them); a user-only skill was not preloaded. New agent file picked up mid-session after 0.5–2 min; edits to it only after restart. Documented, not tested: frontmatter hooks are skipped in untrusted folders and under `-p`; agent `permissionMode` is ignored when the parent runs `acceptEdits` (confirms F9) | concept §1.1 R3, R4 |
-| T24 | New agent files `issue-analyst`, `plan-engineer`, `code-engineer`; supervisors launch them. `rebaser` dropped (2026-11-16) → [issue 3](issues/issue_3_agents.md) | [roster](skills-agents.md#target-agent-roster) |
-| T25 | ◐ (skill text in [issue 2](issues/issue_2_skill_text.md); agent parts → [issue 3](issues/issue_3_agents.md)) Apply every "Skill text changes" row of skills-agents §2–§5 (incl. T21 status changes per R8, `pr_comment_triage` U-only, `implement_direct` narrow Bash, untrusted stops, dead `get-url` grant) | skills-agents |
-| T26 | `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add an inline frontmatter allow hook (decided 2026-11-16: allow only, no write limits yet; docs show no other per-agent grant under `acceptEdits`); rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) → [issue 3](issues/issue_3_agents.md) | concept §1.1 R4 |
+| T24 | ✅ ([issue 3](issues/issue_3_agents.md)) New agent files `issue-analyst`, `plan-engineer`, `code-engineer` (explicit `tools:`, preloaded skills, no Bash / `Skill` / hook — all tools allow-listed); the three supervisors launch them. `rebaser` dropped (2026-11-16): `/rebase` stays a self-contained skill until mcp-workspace #263. Frontmatter checked by `tests/icoder/test_repo_agents.py` | [roster](skills-agents.md#target-agent-roster) |
+| T25 | ✅ (skill text in [issue 2](issues/issue_2_skill_text.md); agent parts in [issue 3](issues/issue_3_agents.md)) Apply every "Skill text changes" row of skills-agents §2–§5 (incl. T21 status changes per R8, `pr_comment_triage` U-only, `implement_direct` narrow Bash, untrusted stops, dead `get-url` grant) | skills-agents |
+| T26 | ✅ ([issue 3](issues/issue_3_agents.md)) `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add an inline frontmatter allow hook (decided 2026-11-16: allow only, no write limits yet; docs show no other per-agent grant under `acceptEdits`); rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) → [issue 3](issues/issue_3_agents.md). Probe 2026-11-16 (temporary agent, parent `acceptEdits`, Windows, no `shell:` key → Git Bash): `github_issue_set_status` ran with no prompt, twice. Working frontmatter: `hooks: PreToolUse: - matcher: "<extra tools, \|-separated>"  hooks: - type: command  command: "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}'"` | concept §1.1 R4 |
 | T27 | Upstream mcp-workspace: rebase tools (#263, comment posted); optional `checkout-issue-branch` tool → then `implement_direct` needs no Bash | skills-agents §4, §5 |
 | T28 | By hand (user config): pin `obsidian-mcp@<version>` in `~/.claude.json`; `/mcp` → check source of `claude-artifacts`, disable if unused | F12, F13 |
 
@@ -205,6 +205,6 @@ Design questions: [concept §5](design-concept.md#5-open-design-questions).
 |---|---|
 | Q1 | ✅ `obsidian-wiki`: user scope, `~/.claude.json` (F12). `claude-artifacts`: in no local file — likely provided with Claude Code / the account (unverified, F13) |
 | Q5 | ✅ Yes: every subagent inherits the parent's permission rules, and its mode unless `permissionMode` is set; skill `allowed-tools` carry-over not documented (docs: sub-agents) |
-| Q6 | ✅ Closed, moot: R4 / T26 remove `bypassPermissions` everywhere |
+| Q6 | ✅ Closed, moot: R4 / T26 removed `bypassPermissions` everywhere ([issue 3](issues/issue_3_agents.md)) |
 | Q7 | ✅ None (no `enabledPlugins`, `plugins/config.json` empty) |
 | Q9 | ✅ No: Python commits (`commit_all_changes`) and creates the PR (`pr_manager.create_pull_request`) |

@@ -597,6 +597,11 @@ _.fixture_prompt_llm
 _.fixture_python_perms
 _.fixture_command_perms
 
+# tests/icoder/test_repo_agents.py - fixtures registered via
+# @pytest.fixture(name="repo_agents") and name="allow_list", injected by pytest.
+_.fixture_repo_agents
+_.fixture_allow_list
+
 # tests/cli/commands/test_verify_setup.py - fixtures pulled in via usefixtures
 # (no_venv, with_venv) and an autouse fixture stubbing verify_toolkit.
 _.no_venv

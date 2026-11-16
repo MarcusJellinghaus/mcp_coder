@@ -123,7 +123,7 @@ git add / rebase / push --force-with-lease
 
 **Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp__mcp-workspace__github_issue_set_status` to change issue workflow status (`from_status` guards the current status; `reference_name` for reference projects).
 
-**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_set_status` for `issue-approver`. That is an ergonomics device, not access control — any session can launch them. None of the three has `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` each carry a frontmatter `PreToolUse` hook that allows their extra tools without a prompt — `git_commit` and `git_push` for `commit-pusher`, `github_issue_edit` for `issue-updater`, `github_issue_set_status` for `issue-approver`. No `bypassPermissions`. Frontmatter hooks are skipped in untrusted folders and under `-p` → there the tools prompt (interactive) or are denied (`-p`). That is an ergonomics device, not access control — any session can launch them. None of the three has `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 

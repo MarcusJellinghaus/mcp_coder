@@ -42,7 +42,7 @@ Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command t
 | GitHub-side: tokens, labels, actions, CI, badges, dependabot | [github.md](github.md) | Any target repo |
 | Jenkins: API user permissions, credentials, coordinator job setup | [jenkins.md](jenkins.md) | Repos dispatched by the coordinator |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any target repo |
-| Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any target repo — reference only, `mcp-coder init` does not deploy `docs/` |
+| Agent permissions: how `.claude/agents/*.md` are wired, and what their allow hooks do and do not enforce | [agent-permissions.md](agent-permissions.md) | Any target repo — reference only, `mcp-coder init` does not deploy `docs/` |
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any target repo |
 | Generic repo conventions: `.gitattributes`, `.gitignore`, `.mcp-file-access`, file size | [repo.md](repo.md) | Any target repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python target repos only |
@@ -62,9 +62,12 @@ The following files in this repository serve as references/templates for other p
 |---|---|---|---|---|
 | `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) and `github_issue_set_status` |
 | `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) and `github_issue_set_status` |
-| `.claude/agents/commit-pusher.md` | G | No | Yes | Requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
-| `.claude/agents/issue-updater.md` | G | No | Yes | Requires an mcp-workspace version with `github_issue_edit` |
-| `.claude/agents/issue-approver.md` | G | No | Yes | Requires the status labels and an mcp-workspace version with `github_issue_set_status` and `get_reference_projects`; cross-repo approval also needs the target configured as an mcp-workspace reference project with a `url` (explicit `url=` or detected from its checkout's git `origin`) |
+| `.claude/agents/commit-pusher.md` | G | No | Yes | Requires an mcp-workspace version with the git-write tools (mcp-workspace#220). Its frontmatter hook allows `git_commit` / `git_push` only in a trusted folder; untrusted or `-p` → they prompt (interactive) or are denied (`-p`) |
+| `.claude/agents/issue-updater.md` | G | No | Yes | Requires an mcp-workspace version with `github_issue_edit`. Its frontmatter hook allows `github_issue_edit` only in a trusted folder |
+| `.claude/agents/issue-approver.md` | G | No | Yes | Requires the status labels and an mcp-workspace version with `github_issue_set_status` and `get_reference_projects`; cross-repo approval also needs the target configured as an mcp-workspace reference project with a `url` (explicit `url=` or detected from its checkout's git `origin`). Its frontmatter hook allows `github_issue_set_status` only in a trusted folder |
+| `.claude/agents/issue-analyst.md` | G | No | Yes | Launched by `/issue_analyse_supervisor`; needs `.claude/skills/issue_analyse/` and the tools it lists allow-listed in `.claude/settings.local.json` |
+| `.claude/agents/plan-engineer.md` | G | No | Yes | Launched by `/plan_review_supervisor`; needs `.claude/skills/plan_review/`, `plan_update/` and its tools allow-listed |
+| `.claude/agents/code-engineer.md` | G | No | Yes | Launched by `/implementation_review_supervisor`; needs `.claude/skills/implementation_review/`, `check_branch_status/` and its tools allow-listed |
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |

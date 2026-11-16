@@ -113,7 +113,10 @@ Per tool call, against the merged pool (§2), first match wins:
 | `tools` | allowlist; omitted → inherit all |
 | `disallowedTools` | applied first; a specifier (`Bash(git push *)`) removes the whole tool |
 | Own allow list | none in frontmatter |
-| Parent `allow` rules | inherited by built-in subagents; custom agents: unverified |
+| Parent `allow` rules | inherited by built-in subagents and custom agents (custom: tested, T23) |
+| Frontmatter `hooks:` `PreToolUse` | fire only for that agent; `allow` runs a non-allow-listed tool with no prompt, exit 2 blocks (tested, T23); skipped in untrusted folders and under `-p` (docs) |
+| `skills:` | preloads model-invocable skills' text, not their tools — `tools:` must list them; a user-only skill is silently not preloaded (tested, T23) |
+| Agent file changes | new file picked up mid-session; edits only after a restart (tested, T23) |
 | Caller restriction | none — any session can launch any agent |
 
 ## 7. Hooks (`PreToolUse`)

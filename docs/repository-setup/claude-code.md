@@ -45,7 +45,7 @@ Skills provide structured workflows for common tasks. Run `mcp-coder init` to de
 | Command | Purpose |
 |---------|---------|
 | `/plan_review` | Review implementation plan for completeness, simplicity, risks |
-| `/plan_review_supervisor` | Autonomous plan review (delegates to subagents) |
+| `/plan_review_supervisor` | Autonomous plan review (delegates to the `plan-engineer` agent) |
 | `/plan_update` | Update plan files based on discussion |
 | `/plan_approve` | Approve plan and transition to plan-ready |
 
@@ -55,7 +55,7 @@ Skills provide structured workflows for common tasks. Run `mcp-coder init` to de
 |---------|---------|
 | `/implement_direct` | Implement an issue directly |
 | `/implementation_review` | Code review with compact diff analysis |
-| `/implementation_review_supervisor` | Autonomous code review (delegates to engineer subagents) |
+| `/implementation_review_supervisor` | Autonomous code review (delegates to the `code-engineer` agent) |
 | `/implementation_needs_rework` | Return issue to plan-ready after major review issues |
 | `/implementation_new_tasks` | Add implementation steps after review findings |
 | `/implementation_finalise` | Complete remaining unchecked tasks in tracker |
@@ -89,7 +89,12 @@ Supporting files referenced by skills. Deployed automatically by `mcp-coder init
 - `.claude/knowledge_base/refactoring_principles.md` — Used by code review skills
 - `.claude/knowledge_base/software_engineering_principles.md` — Used by code review skills
 - `.claude/knowledge_base/python.md` — Python-specific knowledge for code review (see [python.md](python.md))
-- `.claude/agents/commit-pusher.md` — Workflow agent referenced by `/commit_push`
+- `.claude/agents/` — agents launched by the supervisor skills (wiring and permissions: [agent-permissions.md](agent-permissions.md)):
+  - `issue-analyst.md` — analyses the issue (`/issue_analyse_supervisor`)
+  - `issue-updater.md`, `issue-approver.md` — edit and approve the issue (`/issue_analyse_supervisor`)
+  - `plan-engineer.md` — reviews and updates the plan (`/plan_review_supervisor`)
+  - `code-engineer.md` — reviews and fixes the code, reports branch status (`/implementation_review_supervisor`)
+  - `commit-pusher.md` — commits and pushes (`/plan_review_supervisor`, `/implementation_review_supervisor`)
 
 ## `.mcp.json` - MCP Server Configuration
 
