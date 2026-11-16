@@ -34,5 +34,3 @@ On top of that process:
 - **Temp files** — remove what you wrote to `.scratch/` with `mcp__mcp-workspace__delete_this_file`,
   never `rm`.
 - **Report** the issue number, the new title, and confirmation the edit succeeded.
-
-The working directory is already correct — do not use `cd` or `git -C`.

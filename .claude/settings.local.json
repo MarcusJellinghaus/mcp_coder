@@ -1,7 +1,7 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(mcp-coder gh-tool:*)",
+    "allow": [      
+      "Bash(mcp-coder gh-tool checkout-issue-branch:*)",
       "Bash(tools/jenkins_builds.sh:*)",
       "Bash(tools/jenkins_download_log.sh:*)",
       "Bash(tools/jenkins_download_logs.sh:*)",

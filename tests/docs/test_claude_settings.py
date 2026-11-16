@@ -61,3 +61,11 @@ def test_settings_local_json_has_no_dropped_entries() -> None:
         if entry.startswith("Bash(start ") or ".bat" in entry
     ]
     assert not dropped, f"dropped entries are back: {dropped}"
+
+
+def test_settings_local_json_gh_tool_narrowed() -> None:
+    """T5: only `gh-tool checkout-issue-branch` stays allow-listed."""
+    allow = _local_allow()
+    broad = [entry for entry in allow if "gh-tool:*" in entry or "set-status" in entry]
+    assert not broad, f"gh-tool must be narrowed to checkout-issue-branch: {broad}"
+    assert "mcp__mcp-workspace__github_issue_set_status" not in allow

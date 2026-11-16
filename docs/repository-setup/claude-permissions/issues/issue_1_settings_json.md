@@ -74,4 +74,4 @@ Order: step 1 before step 4 (the path form depends on it). Steps 2–4 are edito
 - [x] MCP `edit_file` on `.mcp.linux.json` and `.mcp.macos.json` is refused
 - [x] MCP read and file tools, `run_deptry_check`, `github_subissue_list` run without prompts
 - [ ] `mcp-coder verify`: the MCP edit smoke test passes
-- [ ] pylint, pytest, mypy pass
+- [x] pylint, pytest, mypy pass (known pre-existing failures only)

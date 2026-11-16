@@ -220,7 +220,9 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 `permissions.allow` pre-approves tools. `enableAllProjectMcpServers` and `enabledMcpjsonServers` enable the servers defined in `.mcp.json`.
 
-The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue_comment`) are deliberately left out so issue writes prompt in the main session (see [agent-permissions.md](agent-permissions.md)).
+The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue_comment`, `github_issue_set_status`) are deliberately left out so issue writes prompt in the main session (see [agent-permissions.md](agent-permissions.md)).
+
+This repository also commits a deny-only `.claude/settings.json` that blocks native writes to `.mcp*.json`, `.claude/settings*.json` and `.mcp-file-access` ([issue 1](claude-permissions/issues/issue_1_settings_json.md)); `mcp-coder init` does not deploy it.
 
 ### Pinning the settings file with `--settings`
 

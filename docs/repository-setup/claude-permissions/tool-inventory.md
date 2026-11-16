@@ -22,7 +22,7 @@ Part 2 of 5 · [How it works](how-it-works.md) · [Design concept](design-concep
 
 | Topic | Read | A | C | Write | A | C |
 |---|---|---|---|---|---|---|
-| Workspace files | read_file, list_directory, search_files, check_file_size | L | ✓ | save_file, edit_file, append_file, move_file, delete_this_file, delete_directory | L | ✓ (delete_directory: prose only) |
+| Workspace files | read_file, list_directory, search_files, check_file_size | L | ✓ | save_file, edit_file, append_file, move_file, delete_this_file, delete_directory | L | ✓ |
 | Reference projects | get_reference_projects, list_reference_directory, read_reference_file, search_reference_files | L | ✓ | — | | |
 | Git | git (read-only allowlist; `fetch` touches network/refs), get_base_branch, check_branch_status | L | ✓ | 🆕 git_branch, git_branch_delete, git_commit, git_push, git_push_force | S | ✓ |
 | GitHub issues | github_issue_view, github_issue_list, github_search, github_label_list | L | ✓ | github_issue_create, github_issue_edit, github_issue_comment | S | ✓ |
@@ -104,7 +104,7 @@ Write = publishes off-machine.
 
 ## 6. Bash patterns → MCP replacement
 
-✓ = replace now, ✅ = done, ⏳ = MCP tool now installed, callers still to switch (T21), ✗ = no MCP equivalent.
+✓ = replace now, ✅ = done, ✗ = no MCP equivalent.
 
 **Allow-lists**
 
@@ -120,7 +120,7 @@ Write = publishes off-machine.
 | `./tools/format_all.sh`, `pycycle_check.sh` | U | — | not in this repo → delete? | ✓ |
 | `mcp-coder check file-size:*` | U | read | `check_file_size` | ✓ |
 | `mcp-coder gh-tool get-base-branch` | U | read | `get_base_branch` | ✓ |
-| `mcp-coder gh-tool:*` | L | set-status, **define-labels**, **checkout-issue-branch**, issue-stats, get-base-branch | `github_issue_set_status` (skills switched, T21), `get_base_branch`; only `implement_direct`'s checkout-issue-branch still needs it → narrow (T5) | ⏳ |
+| `mcp-coder gh-tool:*` → `mcp-coder gh-tool checkout-issue-branch:*` | L | checkout-issue-branch (`implement_direct`) | `github_issue_set_status` (skills switched, T21), `get_base_branch`; narrowed to checkout-issue-branch (T5) | ✅ |
 | `tools/jenkins_*.sh:*` | L | Jenkins read | none (`.bat` entries dropped, issue 1) | ✗ |
 | `start docs/architecture/dependency_graph.html` | – | opens browser | none (human action) — dropped (issue 1) | ✅ |
 
@@ -129,14 +129,14 @@ Write = publishes off-machine.
 | Former Bash | Now | Where | |
 |---|---|---|---|
 | `gh issue view/create/edit/comment`, `gh pr create` | `github_issue_*`, `github_pr_create` | all skills, agents, CLAUDE.md (#1406) | ✅ |
-| `git commit`, `git push`, `git push --force-with-lease`, `git checkout -b` / `git branch` | `git_commit`, `git_push`, `git_push_force`, `git_branch` | commit_push, rebase, pr_comment_triage, commit-pusher, CLAUDE.md (#1421) | ⏳ |
+| `git commit`, `git push`, `git push --force-with-lease`, `git checkout -b` / `git branch` | `git_commit`, `git_push`, `git_push_force`, `git_branch` | commit_push, rebase, pr_comment_triage, commit-pusher, CLAUDE.md (#1421) | ✅ |
 | `git rebase/add/rm/restore/stash/checkout --ours/--theirs *` | Bash | rebase | ✗ |
 | `git remote get-url *` | removed (dead grant); `ls_remote` `--get-url origin` is equivalent | rebase | ✅ |
 | `git push --force-with-lease *` | Bash fallback | rebase (when `git_push_force` refuses) | ✗ |
 | `mcp-coder gh-tool set-status *` | `github_issue_set_status` | approve skills, pr_comment_triage, implement_direct, issue-approver, CLAUDE.md (T21) | ✅ |
 | `/approve` comment for cross-repo issues | `github_issue_set_status` with `reference_name` (the Action only swaps the label + posts a confirmation) | issue_approve, issue-approver (T21) | ✅ |
 
-⏳ = tools installed since T18 (2026-11-15); the replacement in skills / agents is still to do.
+✅ = tools installed since T18 (2026-11-15); skills / agents / CLAUDE.md call them.
 
 **Target: Bash only as last resort.** No Bash in any allow-list; every call prompts. What still needs Bash after T15 + T21:
 
@@ -145,4 +145,4 @@ Write = publishes off-machine.
 | `git rebase/add/rm/restore/stash/checkout --ours/--theirs` | rebase conflict handling, no MCP tool | keep in `rebase` skill only (turn-scoped); option: request MCP rebase tools upstream |
 | `git push --force-with-lease` | fallback when `git_push_force` refuses (no reflog, fresh clone) | keep in `rebase` skill, prompts |
 | `tools/jenkins_*.sh` | Jenkins read, no MCP tool | T20: MCP tool vs prompt |
-| `mcp-coder gh-tool` define-labels / checkout-issue-branch / issue-stats | human CLI actions | drop from allow-list (`start …html` ✅ dropped, issue 1) |
+| `mcp-coder gh-tool checkout-issue-branch` | `implement_direct` branch checkout, no MCP tool | ✅ allow-list narrowed to it (T5); define-labels / issue-stats prompt (human CLI actions); option: upstream MCP tool (T27) |
