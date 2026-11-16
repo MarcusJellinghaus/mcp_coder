@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `check-sensitive-files` job in `ci.yml` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: add PR-only advisory job after `check-forbidden-folders` in `.github/workflows/ci.yml`
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add PR-only advisory job after `check-forbidden-folders` in `.github/workflows/ci.yml`
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Docs for `check-sensitive-files` — [step_3.md](./steps/step_3.md)
 

@@ -97,6 +97,32 @@ jobs:
           echo "✅ All checks passed! No forbidden folders found."
         fi
 
+  # PR only, advisory: warns when a PR changes sensitive files (#1431); never fails on findings.
+  # HEAD^1 is the base tip of GitHub's merge commit (needs fetch-depth: 2).
+  check-sensitive-files:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.11
+
+      - name: Install mcp-workspace
+        run: |
+          SPEC=$(python tools/read_github_deps.py --specs | grep '^mcp-workspace ')
+          uv pip install --system "$SPEC"
+
+      - name: Run check-sensitive-files
+        run: python tools/check_sensitive_files.py --base HEAD^1 --head HEAD
+
   # Matrix approach: Each check runs as independent job with individual pass/fail status
   # fail-fast: false ensures all checks complete even if one fails
   # First-line checks: run on every push, not again on the PR.
