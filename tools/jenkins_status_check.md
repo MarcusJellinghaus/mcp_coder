@@ -48,7 +48,7 @@ If a Jenkins call fails, run `mcp-coder verify` (JENKINS sections) first.
 6. **Propose** in one batch: label changes (issue, current → new, evidence) and drafts for comments or issues (see [Recording problems](#recording-problems)). Wait for approval.
 7. **Act** on what was approved:
    - `blocked` / `wait`: `github_issue_edit(remove_labels=[...])`
-   - status: `mcp-coder gh-tool set-status <label> --issue N --from-status <current> --project-dir <checkout>`. Retry labels are in [`failure-handling.md`](../docs/processes-prompts/processes/failure-handling.md); a stuck in-progress label goes back one (`03` → `02`, `06` → `05`, `09` → `08`). For other repos, `git rev_parse --show-toplevel` with `reference_name` gives the checkout path.
+   - status: `github_issue_set_status(number=N, status=<label>, from_status=<current>)`, plus `reference_name=<repo>` for other repos only (mcp_coder itself is not a reference project). Retry labels are in [`failure-handling.md`](../docs/processes-prompts/processes/failure-handling.md); a stuck in-progress label goes back one (`03` → `02`, `06` → `05`, `09` → `08`).
    - Then confirm that each re-run started and got past provisioning. If it's stuck again, propose again.
 8. **Report:** counts per status; done issues, one line per repo; a table for the rest (issue, last build, label now, action, why); the known problems seen, with build numbers. Delete `.scratch/`.
 

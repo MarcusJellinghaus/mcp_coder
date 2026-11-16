@@ -54,7 +54,7 @@ status-10:pr-created
 
 | Command | Purpose | Resulting label |
 |---|---|---|
-| [`/pr_comment_triage`](../../../.claude/skills/pr_comment_triage/SKILL.md) | Auto-launched at `status-91`. Triage each review item: fix, reply or decline. Each code-scanning alert: fix, or explain a false positive and wait for the user to dismiss it | ends with `mcp-coder gh-tool set-status status-10:pr-created`, only once no alert is open |
+| [`/pr_comment_triage`](../../../.claude/skills/pr_comment_triage/SKILL.md) | Auto-launched at `status-91`. Triage each review item: fix, reply or decline. Each code-scanning alert: fix, or explain a false positive and wait for the user to dismiss it | ends with `github_issue_set_status` to `status-10:pr-created` (guarded: only from `status-91`), only once no alert is open |
 | [`/check_branch_status`](../../../.claude/skills/check_branch_status/SKILL.md) | Auto-launched at `status-73` / `74` / `83` / `84` (at `74` after `/rebase`). Shows CI, rebase need, tasks and labels | — |
 | [`/rebase`](../../../.claude/skills/rebase/SKILL.md) | Auto-launched first at `status-74`. Rebase onto the base branch | — |
 

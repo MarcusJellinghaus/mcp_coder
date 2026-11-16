@@ -50,9 +50,9 @@ target repo.
 `.claude/settings.local.json` deliberately omits `Bash(git add|commit|push)`, the git-write
 MCP tools (`mcp__mcp-workspace__git_commit`, `_push`, `_push_force`, `_branch`,
 `_branch_delete`) and the issue write tools (`mcp__mcp-workspace__github_issue_create`,
-`_edit`, `_comment`), so those prompt in the main session. The agents carry
+`_edit`, `_comment`, `_set_status`), so those prompt in the main session. The agents carry
 `bypassPermissions` so they run unprompted there, without widening the global allow list.
-`commit-pusher` has no `Bash`, so there it auto-approves only its listed MCP tools.
+None of the three agents has `Bash`, so in the main session bypass auto-approves only their listed MCP tools.
 
 ## What it does not do
 
@@ -61,10 +61,10 @@ Do not treat any of the following as enforced:
 - **It is not access control.** Agent frontmatter has no caller restriction — any session
   can launch these agents, not just the supervisor skills. Note also that "the supervisor"
   is a *skill*, so it runs in the main session; there is no privileged caller tier.
-- **`Bash` is all-or-nothing.** Agent `tools:` takes bare tool names, so the shell limit
-  stated in the agent body is prose: `issue-approver` `mcp-coder gh-tool set-status` only.
-  `commit-pusher` and `issue-updater` have no `Bash` at all. Under `bypassPermissions`,
-  *every* shell command is auto-approved.
+- **`Bash` is all-or-nothing.** Agent `tools:` takes bare tool names, so any shell limit
+  stated in an agent body would be prose. None of the three agents has `Bash`:
+  `issue-approver` sets the status with `github_issue_set_status`. Under
+  `bypassPermissions`, an agent with `Bash` would get *every* shell command auto-approved.
 - **Scoped `allowed-tools` would not constrain *these agents*.** Entries such as
   `Bash(git add *)` are a **pre-approval list, not a restriction**: the official docs state it
   "grants permission for the listed tools during the turn that invokes the skill… It does not
@@ -103,9 +103,9 @@ Two things stand in the way today:
   the user about major refactorings and import-contract violations. The user's reply starts a
   new turn, and the rest of the run prompts again.
 
-Net trade: the agents survive escalations, but `issue-approver` carries an unrestricted
-`Bash` (`commit-pusher` and `issue-updater` have none); a supervisor-level grant is tightly
-scoped and self-expiring but breaks whenever the user is consulted.
+Net trade: the agents survive escalations, but their write tools run unprompted for any
+caller; a supervisor-level grant is tightly scoped and self-expiring but breaks whenever the
+user is consulted.
 
 ## What actually constrains these agents
 
@@ -117,9 +117,12 @@ scoped and self-expiring but breaks whenever the user is consulted.
   HEAD, and `git_push_force` uses only `--force-with-lease --force-if-includes`, never plain
   `--force`. These guardrails, plus `commit-pusher` having no `Bash`, are why keeping
   `bypassPermissions` on it is safe.
-- **A `PreToolUse` hook** would be the only real enforcement of `issue-approver`'s shell limit:
-  hooks fire regardless of permission mode, and their input carries `agent_id` /
-  `agent_type`, so one can be scoped to a single agent. **None is configured today** — a
-  deliberate deferral, not an oversight.
+- **The status tool's own guard** — `issue-approver` passes `from_status`, so
+  `github_issue_set_status` changes nothing unless the issue's sole status label is the
+  expected one. Followed by instruction, not enforced: a call without `from_status` changes
+  the status from any status.
+- **A `PreToolUse` hook** would be the only real per-agent enforcement: hooks fire
+  regardless of permission mode, and their input carries `agent_id` / `agent_type`, so one
+  can be scoped to a single agent. **None is configured today.**
 - **`deny` rules** abort a call regardless of `allowed-tools`. Whether they also override
   `bypassPermissions` has not been verified here.

@@ -48,6 +48,8 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Format code (project's configured formatter) | `mcp__mcp-tools-py__run_format_code` |
 | Check a Python semantic before claiming it | scratch probe — see [Scratch probes](#scratch-probes) |
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
+| Search installed deps / stdlib source | `mcp__mcp-tools-py__search_library_files` |
+| Run deptry | `mcp__mcp-tools-py__run_deptry_check` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | `mcp__mcp-workspace__git` |
 | Git write (switch/create branch, delete branch, commit, push, force-push after rebase) | `mcp__mcp-workspace__git_branch`, `git_branch_delete`, `git_commit`, `git_push`, `git_push_force` |
@@ -58,7 +60,10 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Create GitHub issue | `mcp__mcp-workspace__github_issue_create` |
 | Edit GitHub issue | `mcp__mcp-workspace__github_issue_edit` |
 | Comment on GitHub issue | `mcp__mcp-workspace__github_issue_comment` |
+| Set issue workflow status | `mcp__mcp-workspace__github_issue_set_status` |
+| Sub-issues (list, link, unlink) | `mcp__mcp-workspace__github_subissue_list`, `github_subissue_add`, `github_subissue_remove` |
 | Create GitHub PR | `mcp__mcp-workspace__github_pr_create` |
+| Reply to / resolve PR review comment | `mcp__mcp-workspace__github_review_comment_reply`, `github_review_thread_resolve` |
 | List GitHub labels | `mcp__mcp-workspace__github_label_list` |
 
 **`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, and `.scratch/` is not gitignored (CI blocks PRs carrying it).
@@ -112,12 +117,11 @@ Never use `python -c` via Bash. If you reason instead of running, label the conc
 
 ```
 git add / rebase / push --force-with-lease
-mcp-coder gh-tool set-status <label>
 ```
 
-**Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp-coder gh-tool set-status` to change issue workflow status.
+**Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp__mcp-workspace__github_issue_set_status` to change issue workflow status (`from_status` guards the current status; `reference_name` for reference projects).
 
-**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_comment` plus its `Bash` commands (including `mcp-coder gh-tool set-status`) for `issue-approver`. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `issue-approver`; `commit-pusher` and `issue-updater` have no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_set_status` for `issue-approver`. That is an ergonomics device, not access control — any session can launch them. None of the three has `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 

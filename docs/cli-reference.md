@@ -554,7 +554,7 @@ mcp-coder gh-tool set-status [LABEL] [OPTIONS]
 
 Without `--issue NUMBER`, the issue number is extracted from the branch name, which must follow `{issue_number}-title` (for example `123-feature-name`). `--from-status LABEL` is a precondition guard: it only updates when the issue's current status matches. `--force` bypasses the clean working directory check. `mcp-coder gh-tool set-status --help` lists the available labels.
 
-Used by the slash commands (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`) and for failure recovery (see [Failure Handling](processes-prompts/processes/failure-handling.md)).
+Used for failure recovery (see [Failure Handling](processes-prompts/processes/failure-handling.md)).
 
 ```bash
 mcp-coder gh-tool set-status status-05:plan-ready
