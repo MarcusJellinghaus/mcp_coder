@@ -3,7 +3,7 @@
 Part 3 of 3 · [How Claude permissions work](how-it-works.md) · [Tool inventory](tool-inventory.md)
 
 **Scope:** this repo — interactive sessions, skills, agents/subagents, MCP tools, headless `mcp-coder` workflows. Not: Copilot CLI ([copilot.md](../copilot.md)), iCoder's `.icoder/` permission layer.
-**Related:** [agent-permissions.md](../agent-permissions.md), [claude-code.md](../claude-code.md#enhanced-claude-permissions). Open work: [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434) (tracking), [#1433](https://github.com/MarcusJellinghaus/mcp_coder/issues/1433) (settings layout), [#1431](https://github.com/MarcusJellinghaus/mcp_coder/issues/1431) (CI warning).
+**Related:** [agent-permissions.md](../agent-permissions.md), [claude-code.md](../claude-code.md#enhanced-claude-permissions). Open work: [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434) (tracking), [#1433](https://github.com/MarcusJellinghaus/mcp_coder/issues/1433) (settings layout). CI warning: [`check-sensitive-files`](../quality-and-security-checks.md#repo-hygiene).
 
 ## 1. Principles
 
@@ -67,7 +67,7 @@ Background: [how-it-works §5–§10](how-it-works.md#5-skills).
 | Tier | Gap | Follow-up |
 |---|---|---|
 | 1 | non-rebase commands get the full interactive `settings.local.json` (+ user allows) — one allow-list for both | headless narrowing: [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434) |
-| 2 | no deny rules: native writes to `.mcp-file-access`, `.mcp.linux.json`, `.mcp.macos.json` run unprompted under `acceptEdits`; caught by git review | planned CI warning: [#1431](https://github.com/MarcusJellinghaus/mcp_coder/issues/1431); layout: [#1433](https://github.com/MarcusJellinghaus/mcp_coder/issues/1433) |
+| 2 | no deny rules: native writes to `.mcp-file-access`, `.mcp.linux.json`, `.mcp.macos.json` run unprompted under `acceptEdits`; caught by git review | CI warning: [`check-sensitive-files`](../quality-and-security-checks.md#repo-hygiene); layout: [#1433](https://github.com/MarcusJellinghaus/mcp_coder/issues/1433) |
 | 3 skill | grant ends at the user's reply; does not reach subagents | inherent |
 | 3 agent | no per-agent write limits (needs a path-parsing hook); agent files are MCP-writable → an agent with file write tools can edit another agent's hook | [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434) |
 | 4 | not built — one-turn skill when a need appears | — |
