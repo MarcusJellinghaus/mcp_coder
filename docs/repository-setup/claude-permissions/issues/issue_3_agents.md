@@ -65,8 +65,8 @@ Each body: untrusted stop ("If `github_issue_view` lists `title/body` as untrust
 
 - [x] `search_files` finds no `permissionMode` under `.claude/agents` and no "engineer subagent" under `.claude/skills`
 - [ ] Interactive, after restart (manual; throwaway branch and issue only):
-  - [ ] `commit-pusher` commits and pushes on a throwaway branch without a prompt
+  - [x] `commit-pusher` commits and pushes on a throwaway branch without a prompt — 2026-11-16: pushed this branch (`f2e3020..3540718`, nothing to commit), no prompt; `git_commit` itself not exercised
   - [ ] `issue-updater` edits a throwaway issue without a prompt
-  - [ ] `issue-approver` hook: covered by task 1 (same tool, same hook form, no write)
+  - [x] `issue-approver` hook: covered by task 1 (same tool, same hook form, no write) — 2026-11-16: also run with the real agent after restart, `from_status` guard refused, no prompt
   - [ ] `plan_review_supervisor` and `implementation_review_supervisor` each run one round on a throwaway branch and launch the dedicated agent; `issue_analyse_supervisor` runs until its Finalize step (stop before `issue-approver`, which would set `status-02`)
 - [x] pylint, pytest, mypy pass

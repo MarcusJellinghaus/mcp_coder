@@ -597,6 +597,10 @@ _.fixture_prompt_llm
 _.fixture_python_perms
 _.fixture_command_perms
 
+# tests/icoder/test_repo_skills.py - fixture registered via
+# @pytest.fixture(name="repo_skills"), injected by pytest.
+_.fixture_repo_skills
+
 # tests/icoder/test_repo_agents.py - fixtures registered via
 # @pytest.fixture(name="repo_agents") and name="allow_list", injected by pytest.
 _.fixture_repo_agents

@@ -185,17 +185,17 @@ T4, T6 merged into T1.
 | FU10 | ✅ ([issue 4](issues/issue_4_init_mcp_file_access.md)) `mcp-coder init`: create `.mcp-file-access` if missing, else append the template rules it lacks — idempotent, like `update_gitignore`. Template (constant in `cli/commands/init_file_access.py`): `read-only` `/.vscodeclaude_status.txt`, `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json`; `read-write /.scratch/` — no `.mcp.linux/macos.json` (gitignored in target repos, a rule would expose them). Invalid file left unchanged; then gitignores `.scratch/` (init only). Session-folder part **reversed**: session folders get the committed file via git; an untracked one would break checkouts of branches that track it | `cli/commands/init.py`, `cli/commands/init_file_access.py` |
 | FU11 | ✅ ([issue 4](issues/issue_4_init_mcp_file_access.md)) `.scratch/` gitignored in this repo (writable via the FU9 rule, never committed). `verify` MCP edit smoke test honours `.mcp-file-access` (`get_file_access`, `validate_access_rules`; gitignore-only without support). CLAUDE.md `git_commit` note, Scratch probes, Jenkins bullet updated; CI `check_forbidden_folder .scratch` stays as a backstop. Needs mcp-workspace with `.mcp-file-access` everywhere (Jenkins, sibling repos — issue 4 task 0) | `cli/commands/verify.py`, `.gitignore`, CLAUDE.md |
 
-### 3.3 Issue drafts
+### 3.3 Issues
 
-Not yet on GitHub. Analysed with the `issue_analyse_supervisor` loop (2026-11-16).
+Never filed on GitHub: analysed with the `issue_analyse_supervisor` loop, then implemented on branch `docs/claude-permissions-concept` by an implementer agent + a separate review agent per issue (2026-11-16).
 
-| Draft | Covers | Analysis | Depends on |
-|---|---|---|---|
-| [issue 1](issues/issue_1_settings_json.md) | deny-only `settings.json` (T2), `settings.local.json` cleanup (T11, T15 part) | 4 rounds, converged | — |
-| [issue 2](issues/issue_2_skill_text.md) | status tool switch, untrusted stops, narrower Bash (T21, T22, T25 part) | 3 rounds, converged | T18 |
-| [issue 3](issues/issue_3_agents.md) | 3 new agents, inline allow hooks, no bypass (T24, T26) | 2 rounds, converged | issues 1, 2 |
-| [issue 4](issues/issue_4_init_mcp_file_access.md) | `init` writes `.mcp-file-access` and gitignores `.scratch/` in every repo; `verify` honours the rules (FU10, FU11) | 2 rounds, converged | mcp-workspace ≥ f626cf8 in every env (task 0); issue 1 (soft) |
-| [issue 5](issues/issue_5_settings_layout.md) | allows to `settings.json`, untrack `settings.local.json` (T1, F8, FU3, FU5, FU6) | **shelved** — `settings.local.json` stays shared | issue 1 |
+| Issue | Covers | Analysis | Status | Open (manual) |
+|---|---|---|---|---|
+| [issue 1](issues/issue_1_settings_json.md) | deny-only `settings.json` (T2), `settings.local.json` cleanup (T11, T15 part) | 4 rounds | ✅ implemented `64b6e34`, live-tested | `Write` creating a protected file; "don't ask again" probe |
+| [issue 2](issues/issue_2_skill_text.md) | status tool switch, untrusted stops, narrower Bash (T21, T22, T25 part) | 3 rounds | ✅ implemented `2515f2b` | wiki Field Note; live guard runs |
+| [issue 3](issues/issue_3_agents.md) | 3 new agents, inline allow hooks, no bypass (T24, T26) | 2 rounds | ✅ implemented `3540718`; `commit-pusher` / `issue-approver` hooks live-tested | `issue-updater` run; one round per supervisor |
+| [issue 4](issues/issue_4_init_mcp_file_access.md) | `init` writes `.mcp-file-access` and gitignores `.scratch/` in every repo; `verify` honours the rules (FU10, FU11) | 2 rounds | ✅ implemented `35e1f6c` | **task 0 before merge:** mcp-workspace ≥ f626cf8 on every Jenkins executor env |
+| [issue 5](issues/issue_5_settings_layout.md) | allows to `settings.json`, untrack `settings.local.json` (T1, F8, FU3, FU5, FU6) | 1 round | **shelved** — `settings.local.json` stays shared | — |
 
 ## 4. Open questions (facts)
 

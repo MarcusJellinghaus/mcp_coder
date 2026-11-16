@@ -2,7 +2,7 @@
 
 Part 3 of 5 · [How it works](how-it-works.md) · [Tool inventory](tool-inventory.md) · [Implementation](implementation.md) · [Skills and agents](skills-agents.md)
 
-**Status:** draft. §5 decided (2026-11-15).
+**Status:** §5 decided (2026-11-15); issues 1–4 implemented (2026-11-16, [implementation §3.3](implementation.md#33-issues)); issue 5 shelved.
 **Scope:** this repo — interactive sessions, skills, agents/subagents, MCP tools, headless `mcp-coder` workflows. Not: Copilot CLI ([copilot.md](../copilot.md)), iCoder's `.icoder/` permission layer.
 **Related:** [agent-permissions.md](../agent-permissions.md), [claude-code.md](../claude-code.md#enhanced-claude-permissions).
 
