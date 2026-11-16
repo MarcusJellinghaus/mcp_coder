@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(/.mcp.json)",
+      "Edit(/.mcp.linux.json)",
+      "Edit(/.mcp.macos.json)",
+      "Edit(/.mcp-file-access)",
+      "Edit(/.claude/settings.json)",
+      "Edit(/.claude/settings.local.json)"
+    ]
+  }
+}

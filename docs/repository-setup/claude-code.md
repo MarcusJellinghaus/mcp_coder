@@ -217,14 +217,16 @@ The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue
 
 ### Pinning the settings file with `--settings`
 
-Claude Code normally discovers `.claude/settings.local.json` (and
-`.claude/settings.json`) by walking up from its own working directory. That
-working directory is `--project-dir`, so the discovery normally lands in your
-repo — the shell you launched from no longer matters.
+Claude Code reads `.claude/settings.local.json` (and `.claude/settings.json`)
+from its own working directory only — it does not walk up to parent
+directories, so a session started in a subfolder of the repo loads neither
+(Claude Code docs: settings). For mcp-coder that working directory is
+`--project-dir`, so the files are found in your repo — the shell you launched
+from no longer matters. Start interactive sessions at the repo root.
 
 mcp-coder commands that drive Claude Code accept `--settings <path>` to
 forward the settings file explicitly via Claude's native `--settings` flag,
-which overrides cwd-based discovery. The file is not limited to
+which adds to cwd-based discovery (merged, not replaced). The file is not limited to
 permissions — it also controls `enabledMcpjsonServers`, `hooks`, `env`,
 `model`, `outputStyle`, and the rest of the Claude Code settings schema.
 
@@ -248,7 +250,7 @@ for the full resolution chain.
 auto-detection prefers `settings.local.json` when both exist. Since the
 Claude subprocess now runs with `cwd = project_dir`, Claude *additionally*
 discovers `<project_dir>/.claude/settings.json` and
-`.claude/settings.local.json` through its own cwd walk and **merges** them
+`.claude/settings.local.json` from its cwd and **merges** them
 with the pinned file.
 
 The practical consequence: a project holding **both** files now activates the

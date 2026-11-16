@@ -2,12 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(mcp-coder gh-tool:*)",
-      "Bash(start docs/architecture/dependency_graph.html)",
-      "Bash(tools/jenkins_builds.bat:*)",
       "Bash(tools/jenkins_builds.sh:*)",
-      "Bash(tools/jenkins_download_log.bat:*)",
       "Bash(tools/jenkins_download_log.sh:*)",
-      "Bash(tools/jenkins_download_logs.bat:*)",
       "Bash(tools/jenkins_download_logs.sh:*)",
       "mcp__mcp-tools-py__find_references",
       "mcp__mcp-tools-py__get_library_source",
@@ -80,7 +76,9 @@
       "mcp__obsidian-wiki__obsidian_search_vault",
       "mcp__mcp-tools-py__run_tach_check",
       "mcp__mcp-tools-py__search_library_files",
-      "mcp__mcp-workspace__github_label_list"
+      "mcp__mcp-workspace__github_label_list",
+      "mcp__mcp-tools-py__run_deptry_check",
+      "mcp__mcp-workspace__github_subissue_list"
     ]
   },
   "enableAllProjectMcpServers": true,

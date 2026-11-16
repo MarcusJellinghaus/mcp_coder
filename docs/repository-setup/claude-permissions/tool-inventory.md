@@ -27,7 +27,7 @@ Part 2 of 5 · [How it works](how-it-works.md) · [Design concept](design-concep
 | Git | git (read-only allowlist; `fetch` touches network/refs), get_base_branch, check_branch_status | L | ✓ | 🆕 git_branch, git_branch_delete, git_commit, git_push, git_push_force | S | ✓ |
 | GitHub issues | github_issue_view, github_issue_list, github_search, github_label_list | L | ✓ | github_issue_create, github_issue_edit, github_issue_comment | S | ✓ |
 | | | | | github_issue_set_status | S | ✓ |
-| GitHub sub-issues | github_subissue_list | – | ✓ | github_subissue_add, github_subissue_remove | – | ✓ |
+| GitHub sub-issues | github_subissue_list | L | ✓ | github_subissue_add, github_subissue_remove | – | ✓ |
 | GitHub PRs | github_pr_view | L | ✓ | github_pr_create | – | ✓ |
 | | | | | github_review_comment_reply, github_review_thread_resolve | S | ✓ |
 
@@ -61,7 +61,7 @@ GitHub writes accept `reference_name` → can write to sibling repos.
 | Topic | Read / analyse | A | C | Write / execute | A | C |
 |---|---|---|---|---|---|---|
 | Static checks | run_pylint_check, run_mypy_check, run_ruff_check, run_bandit_check, run_vulture_check, run_lint_imports_check, run_tach_check | L | ✓ | — | | |
-| Dependency check | run_deptry_check | – | ✓ | — | | |
+| Dependency check | run_deptry_check | L | ✓ | — | | |
 | Tests | — | | | run_pytest_check (**executes project code**) | L | ✓ |
 | Formatting | — | | | run_format_code, run_ruff_fix | L | ✓ |
 | Refactoring | list_symbols, find_references | L | ✓ | move_symbol, move_module, rename_symbol | L | ✓ |
@@ -121,8 +121,8 @@ Write = publishes off-machine.
 | `mcp-coder check file-size:*` | U | read | `check_file_size` | ✓ |
 | `mcp-coder gh-tool get-base-branch` | U | read | `get_base_branch` | ✓ |
 | `mcp-coder gh-tool:*` | L | set-status, **define-labels**, **checkout-issue-branch**, issue-stats, get-base-branch | `github_issue_set_status` (skills switched, T21), `get_base_branch`; only `implement_direct`'s checkout-issue-branch still needs it → narrow (T5) | ⏳ |
-| `tools/jenkins_*.sh/.bat:*` | L | Jenkins read | none | ✗ |
-| `start docs/architecture/dependency_graph.html` | L | opens browser | none (human action) → drop? | ✗ |
+| `tools/jenkins_*.sh:*` | L | Jenkins read | none (`.bat` entries dropped, issue 1) | ✗ |
+| `start docs/architecture/dependency_graph.html` | – | opens browser | none (human action) — dropped (issue 1) | ✅ |
 
 **Skills / agents / CLAUDE.md**
 
@@ -145,4 +145,4 @@ Write = publishes off-machine.
 | `git rebase/add/rm/restore/stash/checkout --ours/--theirs` | rebase conflict handling, no MCP tool | keep in `rebase` skill only (turn-scoped); option: request MCP rebase tools upstream |
 | `git push --force-with-lease` | fallback when `git_push_force` refuses (no reflog, fresh clone) | keep in `rebase` skill, prompts |
 | `tools/jenkins_*.sh` | Jenkins read, no MCP tool | T20: MCP tool vs prompt |
-| `mcp-coder gh-tool` define-labels / checkout-issue-branch / issue-stats, `start …html` | human CLI actions | drop from allow-list |
+| `mcp-coder gh-tool` define-labels / checkout-issue-branch / issue-stats | human CLI actions | drop from allow-list (`start …html` ✅ dropped, issue 1) |

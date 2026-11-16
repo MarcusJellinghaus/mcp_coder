@@ -112,6 +112,7 @@ Use `refs/remotes/origin/<branch>`, not the bare name: a tag named `origin/<bran
 | `pr_info/` files | Auto-resolve with `--theirs` (keep feature branch version) |
 | Code files (`.py`, `.js`, etc.) | Keep both sides, merge imports |
 | Test files | Keep all tests from both sides |
+| Protected config files (`.mcp*.json`, `.claude/settings*.json`, `.mcp-file-access`) | Pick a side with `git checkout --ours/--theirs`, or stop and ask the user to edit the file — never write it via Bash or PowerShell |
 | Config files | Merge additively, prefer HEAD for same keys |
 | Lockfiles (`*-lock.json`, `*.lock`) | Accept theirs (`--theirs`), notify user to regenerate after rebase |
 

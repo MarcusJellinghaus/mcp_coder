@@ -110,9 +110,10 @@ For local development: discovers the tool environment the same way as `claude.ba
 Environment variables are not the only thing an entry point hands to Claude. **The working
 directory it starts in decides which coding rules it obeys.**
 
-- Claude Code discovers `CLAUDE.md` — and project-level `.claude/settings.json` /
-  `settings.local.json` — by walking up from **its own working directory**. No flag points it
-  somewhere else; cwd is the only lever.
+- Claude Code discovers `CLAUDE.md` by walking up from **its own working directory**, and
+  reads project-level `.claude/settings.json` / `settings.local.json` from that directory only —
+  no parent-directory fallback, so a session started in a subfolder loads neither (Claude Code
+  docs: settings). No flag points `CLAUDE.md` discovery somewhere else; cwd is the only lever.
 - mcp-coder therefore launches Claude with `cwd = project_dir`: the driven project's rules,
   never the tool env's.
 

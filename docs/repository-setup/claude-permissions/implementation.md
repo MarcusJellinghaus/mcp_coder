@@ -15,7 +15,7 @@ Levels and combining rules: [how-it-works §2](how-it-works.md#2-settings-files)
 | 1 | Managed policy | no | — |
 | 2 | CLI flags | headless only | mcp-coder passes `--settings settings.local.json`, `--allowedTools` Bash grants |
 | 3 | `.claude/settings.local.json` | yes — **tracked** here as template | ~80 allows, MCP enablement; no `deny` / `ask` |
-| 4 | `.claude/settings.json` | **absent** | — |
+| 4 | `.claude/settings.json` | yes — committed | `permissions.deny` only: native `Edit` on the 6 protected files (T2) |
 | 5 | `~/.claude/settings.json` | yes | `env`, model, UI, `defaultMode: acceptEdits`, ~45 allows (many stale), `WebFetch(domain:*)`, `Bash(find:*)` |
 
 **Effective today**
@@ -23,12 +23,13 @@ Levels and combining rules: [how-it-works §2](how-it-works.md#2-settings-files)
 | Key | Result |
 |---|---|
 | `permissions.allow` | user ~45 + local ~80 — all active |
-| `permissions.deny` / `ask` | none |
+| `permissions.deny` | project: 6 `Edit(/…)` rules (T2) |
+| `permissions.ask` | none |
 | `defaultMode` | `acceptEdits` (only user sets it) |
 | `env` | user's 5 vars |
 | `enabledMcpjsonServers`, `enableAllProjectMcpServers` | local |
 | `model`, `tui`, … | user |
-| Headless `--settings` | `settings.local.json` read twice (CLI + cwd discovery) — same content |
+| Headless `--settings` | `settings.local.json` read twice (CLI + cwd discovery) — same content; `settings.json` deny merged via cwd |
 
 ### 1.2 Agents
 
@@ -79,7 +80,7 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 |---|---|
 | Built-in tools | `--tools ToolSearch` (+ `Bash` only if grants) — Read/Write/Edit/Bash off |
 | MCP servers | `--mcp-config <file> --strict-mcp-config` |
-| Settings | `--settings <file>`; auto-detect `settings.local.json` → `settings.json`; Claude also merges repo files via cwd |
+| Settings | `--settings <file>`; auto-detect `settings.local.json` → `settings.json`; Claude also merges repo files via cwd — incl. the `settings.json` deny |
 | Bash | exact grants via `--allowedTools` from toolkit `llm_permissions` |
 | Rebase | generated least-privilege settings (`workflows/rebase_permissions.py`); Python does all git writes + push |
 
@@ -87,7 +88,7 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 
 | # | Finding |
 |---|---|
-| F1 | No `deny` rules, no `ask` rules, no hooks anywhere |
+| F1 | No `ask` rules, no hooks anywhere; `deny` only in project `settings.json` (protected files, T2) |
 | F2 | User `defaultMode: acceptEdits` applies to every repo |
 | F3 | `WebFetch(domain:*)` = unrestricted outbound channel |
 | F4 | `issue-approver`: `bypassPermissions` + unrestricted Bash |
@@ -96,7 +97,7 @@ Knowledge base readers: `implementation_review_supervisor`, `issue_analyse_super
 | F7 | User allow-list holds stale server names (`mcp__code-checker__*`, `mcp__filesystem__*`) |
 | F8 | `settings.local.json` is tracked here (template) — "local" file acting as shared config |
 | F9 | Agents' `bypassPermissions` ineffective under the user's `acceptEdits`: docs (sub-agents) say the agent's `permissionMode` is ignored when the parent runs `acceptEdits`, `auto` or `bypassPermissions` ([how-it-works §6](how-it-works.md#6-subagents)) |
-| F10 | Under real `bypassPermissions`, writes to `.git` / `.claude` are allowed — agent could rewrite skills/settings |
+| F10 | Under real `bypassPermissions`, writes to `.git` / `.claude` are allowed — agent could rewrite skills; the T2 deny still binds for the 6 protected files — deny rules block in every mode, including `bypassPermissions` (Claude Code docs: permission-modes) |
 | F11 | `--settings` adds to the cwd and user settings, it does not replace them → generated settings (`rebase_settings`) narrow nothing; narrowing needs `deny` (analytical, from the merge rules) |
 | F12 | `obsidian-wiki` (user scope, `~/.claude.json`) starts via `npx -y obsidian-mcp` — unpinned, fetches the latest npm version each start |
 | F13 | `claude-artifacts` is in no local file (not `~/.claude.json`, user/project settings, `.mcp.json`) and loads despite `ENABLE_CLAUDEAI_MCP_SERVERS=false`: ~39 tools, ~20k tokens per session, unused here |
@@ -128,7 +129,7 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | Tier | Today | Gap | Changes |
 |---|---|---|---|
 | 1 | partly | non-rebase commands pass the full interactive `settings.local.json` (+ user allows) — accepted for now (Q4) | T14 |
-| 2 | no | no committed `settings.json`; protected files writable natively under `acceptEdits` | T1, T2 |
+| 2 | partly | deny-only `settings.json` blocks native writes to the protected files (T2 ✅); unrecognised Bash/PowerShell writes not covered; allows layout open | T1 |
 | 3 skill | yes | F5; grant dies on user reply; does not reach subagents | T8, T16 |
 | 3 agent | no | bypass + Bash (F4, F9) | T7, T12, T13, T19 |
 | 4 | no | — (one-turn skill when needed, Q8) | — |
@@ -139,19 +140,19 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 
 | # | Item | Ref |
 |---|---|---|
-| T1 | Apply settings layout | §2.1 |
-| T2 | ✅ decided: project `settings.json` `deny` native `Edit`/`Write` on `.mcp.json`, `.claude/settings*.json`, `.mcp-file-access` — the only grounded rule (`acceptEdits` stays, `.mcp-file-access` doesn't bind native tools). No generic baseline | F1 |
+| T1 | ◐ (deny-only `settings.json` done in [issue 1](issues/issue_1_settings_json.md); layout and user-file parts open) Apply settings layout | §2.1 |
+| T2 | ✅ done ([issue 1](issues/issue_1_settings_json.md)): project `settings.json` holds only `permissions.deny` — `Edit(/…)` on `.mcp.json`, `.mcp.linux.json`, `.mcp.macos.json`, `.mcp-file-access`, `.claude/settings.json`, `.claude/settings.local.json`. The only grounded rule (`acceptEdits` stays, `.mcp-file-access` doesn't bind native tools); no generic baseline. Syntax (Claude Code docs: permissions / settings): only `Edit(path)` deny rules match file writes — `Edit` covers `Write`, `NotebookEdit`, `MultiEdit`; `Write(path)` with a path silently matches nothing. `/path` anchors at the session's primary working directory; Windows paths normalised to POSIX before matching → forward slashes; case sensitivity on Windows undocumented. Deny/ask apply before the trust dialog, project allows wait for trust. Built-in protection already prompts for `.mcp.json` and `.claude/` (default / `acceptEdits`) — the deny turns that into a refusal and adds the other three files. Known limits: ① session started in a subfolder loads no `<repo>/.claude/settings*.json` (no parent fallback) → start at the repo root ② deny covers Bash file commands Claude Code recognises (`cat`, `sed`, `tee`, redirections), not arbitrary subprocesses; `cp`, `mv`, `Set-Content` undocumented ③ Copilot, iCoder don't read it ④ `acceptEdits` auto-approves `mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp`, `sed` in the working directory; protected paths (`.claude/`, `.mcp.json`) still prompt, but `.mcp-file-access`, `.mcp.linux.json`, `.mcp.macos.json` are not protected paths — whether the `Edit` deny checks `cp`/`mv` targets is undocumented, so `cp`/`mv` onto them may run unprompted (`sed` is covered — recognised command). Live test 2026-11-16 (root session, after restart): native `Write` on `.mcp-file-access` and `.mcp.json` refused without a prompt; `/permissions` lists all 6 rules, no warning. Open (by hand, after restart): "don't ask again" probe | F1 |
 | T3 | Restrict `WebFetch` to a domain list | F3 |
 | T5 | Narrow `mcp-coder gh-tool:*` to `checkout-issue-branch` — the only subcommand a skill still runs (`implement_direct`); `set-status` → `github_issue_set_status` (T21), `get-base-branch` → `get_base_branch` | inv §6 |
 | T7 | ~~`PreToolUse` hook restricting `issue-approver` Bash~~ — obsolete: `issue-approver` loses Bash (T21, T26) | F4 |
 | T8 | ✅ decided: `pr_comment_triage` gets `disable-model-invocation: true` → done in T25 | F5 |
 | T9 | ✅ decided: keep user `defaultMode: acceptEdits`; protected files covered by T2 | F2, concept §3 |
 | T10 | ✅ decided: no change — all obsidian tools stay pre-approved | inv §3 |
-| T11 | Add `run_deptry_check`, `github_subissue_list` to allow-list (read-only) | inv §1, §2 |
+| T11 | ✅ done ([issue 1](issues/issue_1_settings_json.md)): `run_deptry_check`, `github_subissue_list` added to `settings.local.json` (read-only) | inv §1, §2 |
 | T12 | Test what mode `commit-pusher` actually runs in; fix [agent-permissions.md](../agent-permissions.md) | F9 |
 | T13 | Evaluate `disallowedTools` (agents) / `disallowed-tools` (skills) as real restrictions | F4 |
 | T14 | Evaluate `dontAsk` / `denyInsteadOfPrompting` for headless runs | §1.4, §2.2 |
-| T15 | Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
+| T15 | ◐ (this repo's `settings.local.json`: `start …html` and `.bat` Jenkins entries dropped in [issue 1](issues/issue_1_settings_json.md); user-file ✓ patterns open) Drop all ✓ Bash patterns from allow-lists; drop dead script entries | inv §6 |
 | T16 | ✅ Skills/agents: `gh issue *` → `github_issue_*` (#1406) | inv §6 |
 | T17 | ✅ CLAUDE.md: `gh` → MCP (#1406), git writes → MCP (#1421) | inv §6 |
 | T18 | ✅ (2026-11-15; `git_*` writes: ask — not in the shared allow-list, also reaches headless runs where Python does all git writes; agents/skills get them via hooks / `allowed-tools`) Upgrade mcp-workspace in the tool env (6 🆕 tools): ① close Claude sessions + Jenkins jobs using `C:\Jenkins\environments\mcp-coder-dev\.venv` (Windows locks `mcp-workspace.exe`) ② `uv pip install --python <env>\Scripts\python.exe --upgrade "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` ③ `mcp-workspace.exe --version` ④ restart Claude, check the 🆕 tools are listed (main also brings `.mcp-file-access`, needed for FU9/FU10) | inv §1, F6 |
@@ -180,7 +181,7 @@ T4, T6 merged into T1.
 | FU6 | Update [claude-code.md](../claude-code.md#enhanced-claude-permissions) to the new layout | docs |
 | FU7 | Propagate to sibling repos | Chore Propagation process |
 | FU8 | `vscodeclaude`: pre-trust each new clone — set `projects["<clone-root>"].hasTrustDialogAccepted: true` in `~/.claude.json` before launch. Risks: running sessions also write that file (atomic write + re-read); skip when the issue author is untrusted (`_is_untrusted_body`). Alternative: worktrees of one trusted main checkout | `workflows/vscodeclaude/session_launch.py` / `workspace.py` |
-| FU9 | ✅ (2026-11-15) Add `.mcp-file-access` to this repo with `read-only /.vscodeclaude_status.txt` → `issue_analyse`, `issue_analyse_supervisor`, `issue_approve`, `implement_direct` read the issue number directly via `read_file`, as their SKILL.md already says (today refused: gitignored; no skill change needed). Create by hand (MCP tools can't write the rules file). Also: `read-only` `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json` (MCP `edit_file` is allow-listed and skips Claude Code's own protection of these); `read-write /.scratch/` (prep for FU11) | repo root |
+| FU9 | ✅ (2026-11-15) Add `.mcp-file-access` to this repo with `read-only /.vscodeclaude_status.txt` → `issue_analyse`, `issue_analyse_supervisor`, `issue_approve`, `implement_direct` read the issue number directly via `read_file`, as their SKILL.md already says (today refused: gitignored; no skill change needed). Create by hand (MCP tools can't write the rules file). Also: `read-only` `/.mcp.json`, `/.mcp.linux.json`, `/.mcp.macos.json` (the last two added in [issue 1](issues/issue_1_settings_json.md)), `/.claude/settings.json`, `/.claude/settings.local.json` (MCP `edit_file` is allow-listed and skips Claude Code's own protection of these); `read-write /.scratch/` (prep for FU11) | repo root |
 | FU10 | `mcp-coder init`: create `.mcp-file-access` if missing, else append the `.vscodeclaude_status.txt` rule if absent — idempotent, like `update_gitignore`. Same for `vscodeclaude` session folders if init isn't run there | `cli/commands/init.py`, `workflows/vscodeclaude/workspace.py` |
 | FU11 | Gitignore `.scratch/` (writable via the FU9 rule, never committed). Blocker: `verify` MCP edit smoke test skips when `.scratch/` is gitignored — make `is_path_gitignored` check honour `.mcp-file-access`. Then update CLAUDE.md (`git_commit` note, Scratch probes); CI `check_forbidden_folder .scratch` can stay as a backstop. Needs mcp-workspace with `.mcp-file-access` everywhere (Jenkins, sibling repos) | `cli/commands/verify.py`, `.gitignore`, CLAUDE.md |
 
