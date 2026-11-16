@@ -193,8 +193,8 @@ Not yet on GitHub. Analysed with the `issue_analyse_supervisor` loop (2026-11-16
 | [issue 1](issues/issue_1_settings_json.md) | deny-only `settings.json` (T2), `settings.local.json` cleanup (T11, T15 part) | 4 rounds, converged | — |
 | [issue 2](issues/issue_2_skill_text.md) | status tool switch, untrusted stops, narrower Bash (T21, T22, T25 part) | 3 rounds, converged | T18 |
 | [issue 3](issues/issue_3_agents.md) | 3 new agents, inline allow hooks, no bypass (T24, T26) | 2 rounds, converged | issues 1, 2 |
-| [issue 4](issues/issue_4_init_mcp_file_access.md) | `init` writes `.mcp-file-access`; gitignore `.scratch/` (FU10, FU11) | not analysed | issue 1 |
-| [issue 5](issues/issue_5_settings_layout.md) | allows to `settings.json`, untrack `settings.local.json` (T1, F8, FU3, FU5, FU6) | not analysed | issue 1 |
+| [issue 4](issues/issue_4_init_mcp_file_access.md) | `init` writes `.mcp-file-access` and gitignores `.scratch/` in every repo; `verify` honours the rules (FU10, FU11) | 2 rounds, converged | mcp-workspace ≥ f626cf8 in every env (task 0); issue 1 (soft) |
+| [issue 5](issues/issue_5_settings_layout.md) | allows to `settings.json`, untrack `settings.local.json` (T1, F8, FU3, FU5, FU6) | **shelved** — `settings.local.json` stays shared | issue 1 |
 
 ## 4. Open questions (facts)
 

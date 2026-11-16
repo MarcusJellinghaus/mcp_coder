@@ -1,5 +1,7 @@
 # chore(permissions): move allows to committed settings.json, untrack settings.local.json
 
+> **Shelved (2026-11-16):** `settings.local.json` stays the tracked, shared settings file; only issue 1's deny lives in `settings.json`. Kept for the analysis below. Round-1 analysis (2026-11-16) found, beyond this draft: Copilot merge needs defined semantics (union, 4 file cases) and a local file with only `Bash`/`Skill` entries already yields no restriction; `--settings` auto-detect order vs folder trust under `-p`; `git rm --cached` needed (gitignore alone untracks nothing); open-branch modify/delete conflicts; `WebFetch(domain:*)`, obsidian tools, `autoMemoryEnabled`, `enableAllProjectMcpServers` placement; `GITIGNORE_ENTRY` is shared with the session launch; template can't live in `resources/claude/` (build artifact).
+
 Move this repo's permission allows from the tracked `.claude/settings.local.json` into the committed `.claude/settings.json`, and make `settings.local.json` a gitignored personal file — without breaking Copilot, existing clones or the docs.
 
 ## Dependencies / references
