@@ -156,7 +156,7 @@ Test cases (one test each, unless noted):
 10. `.claude/skills/x/SKILL.md` overridden by `read-write /.claude/skills/` → no read-only reason (only `watch list /.claude/skills/`).
 11. `.mcp-file-access` → `rules file`.
 12. `pyproject.toml` → `watch list /pyproject.toml` only.
-13. `.claude/agents/a.md` → `watch list /.claude/agents/`.
+13. `.claude/agents/a.md` with `rules=None` (the default `read-only /.claude/` would add a read-only reason) → exactly `watch list /.claude/agents/`.
 14. rename: changed `["x.json", ".mcp.json"]` → old path `.mcp.json` flagged; diff call contains `--no-renames`.
 15. deleted read-only file listed by diff → flagged.
 16. `.MCP.json` with `sys.platform` patched to `"linux"` → `read-only rule /.mcp.json`; output keeps `.MCP.json`.
@@ -165,7 +165,7 @@ Test cases (one test each, unless noted):
 19. nothing flagged → summary is exactly `No sensitive files changed.`
 20. calls include `("merge-base", "B", "H")` and the diff starts from `MB`, not `B`.
 21. escaping: `_escape_property("a%b:c,d\r\ne") == "a%25b%3Ac%2Cd%0D%0Ae"`; `_escape_data` leaves `:` and `,`; a flagged `.claude/agents/a|b.md` appears as `a\|b.md` in the table.
-    End-to-end (separate test): changed path `.claude/agents/a%:,\nb.md` through `main` → stdout contains `::warning file=.claude/agents/a%25%3A%2C%0Ab.md::watch list /.claude/agents/` and no raw line starting with `b.md`.
+    End-to-end (separate test, `rules=None` as in test 13): changed path `.claude/agents/a%:,\nb.md` through `main` → stdout contains `::warning file=.claude/agents/a%25%3A%2C%0Ab.md::watch list /.claude/agents/` and no raw line starting with `b.md`.
 22. `GITHUB_STEP_SUMMARY` set to a `tmp_path` file with existing content → the table is appended there, not printed; unset → printed (covered by the other tests).
 23. exit code 0 when files are flagged.
 24. `fail=True` → `pytest.raises(SystemExit)`, and the code is neither `0` nor `None`.
