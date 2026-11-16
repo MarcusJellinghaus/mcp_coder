@@ -12,7 +12,7 @@ For the complete option list of any command, run `mcp-coder <command> --help`. T
 
 | Command | Description |
 |---------|-------------|
-| [`init`](#init) | Initialize project: create config and deploy Claude skills |
+| [`init`](#init) | Initialize project: create config, deploy Claude skills and agents, write .mcp-file-access |
 | [`install`](#install) | Install mcp-coder into a target environment |
 | [`setup`](#setup-1) | Set up the project as declared in [tool.mcp-coder.setup] |
 | [`verify`](#verify) | Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers |
@@ -92,7 +92,7 @@ The flag is optional when a default is configured via the `MCP_CODER_MCP_CONFIG`
 
 ### Claude Code Settings
 
-`--settings` pins the Claude Code settings file (`.claude/settings.local.json` or `.claude/settings.json`). The path is forwarded to Claude via its native `--settings` flag and overrides cwd-based settings discovery. The file controls permissions, `enabledMcpjsonServers`, hooks, env, model and the rest of the Claude Code settings schema.
+`--settings` pins the Claude Code settings file (`.claude/settings.local.json` or `.claude/settings.json`). The path is forwarded to Claude via its native `--settings` flag and merges with the settings Claude discovers from its cwd (it adds, it doesn't replace). The file controls permissions, `enabledMcpjsonServers`, hooks, env, model and the rest of the Claude Code settings schema.
 
 It is optional when a default is set via `MCP_CODER_CLAUDE_SETTINGS` or `[claude] default_settings_path` in `config.toml`. With no override, mcp-coder auto-detects `<project_dir>/.claude/settings.local.json`, then `<project_dir>/.claude/settings.json`. See the [Configuration Guide](configuration/config.md#claude).
 
@@ -118,7 +118,7 @@ Full setup checklist: [Repository Setup](repository-setup/README.md).
 
 ### init
 
-Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, and add the VSCodeClaude entries to the project's `.gitignore`.
+Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, add the VSCodeClaude entries to the project's `.gitignore`, and set up the `.mcp-file-access` rules file with `.scratch/` gitignored.
 
 ```bash
 mcp-coder init [--project-dir PATH] [--just-skills]
@@ -127,6 +127,14 @@ mcp-coder init [--project-dir PATH] [--just-skills]
 `--just-skills` deploys only the bundled resources (all three sets, despite the name) and skips config creation. Use it to refresh them after upgrading mcp-coder. Existing files are never overwritten; delete a file first to refresh it.
 
 The `.gitignore` step runs in both modes and is idempotent. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails.
+
+Also in both modes, init creates or completes the mcp-workspace rules file `.mcp-file-access` and then gitignores `.scratch/`:
+
+- **Rules file:** created with the template rules (`read-only` for `/.vscodeclaude_status.txt`, `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json`; `read-write /.scratch/`). An existing file gets only the template rules whose pattern it lacks, appended at the end, so they win over earlier rules; init warns when an appended rule changes the level an existing rule gives. An invalid file is left unchanged with a warning. If the file cannot be written, the command fails after the remaining steps.
+- **`.scratch/`:** added to `.gitignore` only when the rules file is valid and keeps `.scratch/` writable for MCP. Skipped when mcp-workspace in the mcp-coder environment does not support `.mcp-file-access` (the rules file is then written without validation).
+- Report lines: `File access rules: created | N rules added | unchanged | invalid (<problem>)` and `Gitignore: .scratch/ added | present | skipped (<reason>)`.
+
+Commit `.gitignore` and `.mcp-file-access` afterwards.
 
 ```bash
 mcp-coder init                                   # config + bundled resources
@@ -192,7 +200,7 @@ Check the whole local setup in one report. Run it after editing `config.toml` an
 mcp-coder verify [OPTIONS]
 ```
 
-The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails.
+The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails. The smoke test is skipped with a warning when `.mcp-file-access` is invalid or leaves `.scratch/` hidden or read-only for MCP.
 
 - `--llm-method METHOD` checks that provider instead of the configured one.
 - `--check-models` lists the models available to the configured LangChain backend (needs network).
@@ -554,7 +562,7 @@ mcp-coder gh-tool set-status [LABEL] [OPTIONS]
 
 Without `--issue NUMBER`, the issue number is extracted from the branch name, which must follow `{issue_number}-title` (for example `123-feature-name`). `--from-status LABEL` is a precondition guard: it only updates when the issue's current status matches. `--force` bypasses the clean working directory check. `mcp-coder gh-tool set-status --help` lists the available labels.
 
-Used by the slash commands (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`) and for failure recovery (see [Failure Handling](processes-prompts/processes/failure-handling.md)).
+Used for failure recovery (see [Failure Handling](processes-prompts/processes/failure-handling.md)).
 
 ```bash
 mcp-coder gh-tool set-status status-05:plan-ready

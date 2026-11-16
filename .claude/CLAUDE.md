@@ -13,6 +13,8 @@
 
 If you can't name the gap, use the MCP tool. Exempt: the approved commands under Git operations.
 
+**Protected files** (`.mcp*.json`, `.claude/settings*.json`, `.mcp-file-access`): if MCP refuses or a native write is denied, stop and ask the user to edit the file — never write it via Bash or PowerShell.
+
 **No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`.
 
 
@@ -25,6 +27,7 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Write file | `mcp__mcp-workspace__save_file` |
 | Append to file | `mcp__mcp-workspace__append_file` |
 | Delete file | `mcp__mcp-workspace__delete_this_file` |
+| Delete directory (`rmdir`; `rm -r` with `recursive=True`) | `mcp__mcp-workspace__delete_directory` |
 | Move file | `mcp__mcp-workspace__move_file` |
 | List directory | `mcp__mcp-workspace__list_directory` |
 | Search files | `mcp__mcp-workspace__search_files` |
@@ -47,6 +50,8 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Format code (project's configured formatter) | `mcp__mcp-tools-py__run_format_code` |
 | Check a Python semantic before claiming it | scratch probe — see [Scratch probes](#scratch-probes) |
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
+| Search installed deps / stdlib source | `mcp__mcp-tools-py__search_library_files` |
+| Run deptry | `mcp__mcp-tools-py__run_deptry_check` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls_tree, ls_files, ls_remote, rev_parse, branch list) | `mcp__mcp-workspace__git` |
 | Git write (switch/create branch, delete branch, commit, push, force-push after rebase) | `mcp__mcp-workspace__git_branch`, `git_branch_delete`, `git_commit`, `git_push`, `git_push_force` |
@@ -57,10 +62,13 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Create GitHub issue | `mcp__mcp-workspace__github_issue_create` |
 | Edit GitHub issue | `mcp__mcp-workspace__github_issue_edit` |
 | Comment on GitHub issue | `mcp__mcp-workspace__github_issue_comment` |
+| Set issue workflow status | `mcp__mcp-workspace__github_issue_set_status` |
+| Sub-issues (list, link, unlink) | `mcp__mcp-workspace__github_subissue_list`, `github_subissue_add`, `github_subissue_remove` |
 | Create GitHub PR | `mcp__mcp-workspace__github_pr_create` |
+| Reply to / resolve PR review comment | `mcp__mcp-workspace__github_review_comment_reply`, `github_review_thread_resolve` |
 | List GitHub labels | `mcp__mcp-workspace__github_label_list` |
 
-**`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, and `.scratch/` is not gitignored (CI blocks PRs carrying it).
+**`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, which commits every untracked file that isn't gitignored (stray downloads, notes, files other sessions left behind).
 
 Sibling repos are readable in full via the reference tools and `git` with `reference_name` (`get_reference_projects` lists them). Check there before asking about another repo. The GitHub issue/PR read tools and the issue write tools also take `reference_name` for reference projects. That is the only cross-repo route; for repos that aren't reference projects, stop and report.
 
@@ -101,7 +109,7 @@ mcp__mcp-workspace__save_file(".scratch/test_probe.py", ...)
 mcp__mcp-tools-py__run_pytest_check(extra_args=["-p", "no:cacheprovider", ".scratch/test_probe.py"])
 ```
 
-A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI blocks any PR carrying one. `.scratch/` is not gitignored: the MCP file tools refuse ignored paths.
+A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI still blocks any PR carrying one. `.scratch/` is gitignored; the `read-write /.scratch/` rule in `.mcp-file-access` keeps it writable for the MCP file tools.
 
 Never use `python -c` via Bash. If you reason instead of running, label the conclusion analytical.
 
@@ -111,12 +119,11 @@ Never use `python -c` via Bash. If you reason instead of running, label the conc
 
 ```
 git add / rebase / push --force-with-lease
-mcp-coder gh-tool set-status <label>
 ```
 
-**Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp-coder gh-tool set-status` to change issue workflow status.
+**Status labels:** `github_issue_create` and `github_issue_edit` reject `status-*` labels; use `mcp__mcp-workspace__github_issue_set_status` to change issue workflow status (`from_status` guards the current status; `reference_name` for reference projects).
 
-**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts their tools normally trigger — `git_commit` and `git_push` for `commit-pusher`, the MCP issue write tools for `issue-updater`, and `github_issue_comment` plus its `Bash` commands (including `mcp-coder gh-tool set-status`) for `issue-approver`. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside `issue-approver`; `commit-pusher` and `issue-updater` have no `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
+**Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` each carry a frontmatter `PreToolUse` hook that allows their extra tools without a prompt — `git_commit` and `git_push` for `commit-pusher`, `github_issue_edit` for `issue-updater`, `github_issue_set_status` for `issue-approver`. No `bypassPermissions`. Frontmatter hooks are skipped in untrusted folders and under `-p` → there the tools prompt (interactive) or are denied (`-p`). That is an ergonomics device, not access control — any session can launch them. None of the three has `Bash`. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
@@ -134,7 +141,7 @@ mcp-coder gh-tool set-status <label>
 - Status check of recent runs: follow `tools/jenkins_status_check.md`.
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
-- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must not be gitignored (e.g. not under `logs/`) — `read_file` refuses gitignored paths; `.scratch/` works, delete it afterwards.
+- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must be readable for MCP (e.g. not under `logs/`) — `read_file` refuses gitignored paths unless `.mcp-file-access` exposes them; `.scratch/` works (its `read-write` rule), delete it afterwards.
 - Without `--job`, `jenkins_builds` and `jenkins_download_logs` default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
 - `--name-pattern` matches the build display name before `--limit` applies; workflow builds are labelled like `mcp_coder - #1346 - implement - #2559` (`" - #\d+$"`).
 - Analyse failures: `tools/jenkins_classify_logs.sh [--logdir .scratch/jenkins_logs]` tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.

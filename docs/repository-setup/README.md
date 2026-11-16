@@ -24,7 +24,7 @@ Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command t
 - [ ] Configure a GitHub token in `~/.mcp_coder/config.toml` ([Configuration Guide](../configuration/config.md)). The token's GitHub user is "you" for `vscodeclaude`: it only opens issues assigned to that user
 - [ ] Set up workflow labels with `mcp-coder gh-tool define-labels` ([Label Setup](../getting-started/label-setup.md))
 - [ ] Install the GitHub Actions workflows that label new issues and handle `/approve` (generate them with `mcp-coder gh-tool define-labels --generate-github-actions`)
-- [ ] Deploy Claude skills and agents with `mcp-coder init`
+- [ ] Deploy Claude skills and agents with `mcp-coder init`; commit the `.gitignore` and `.mcp-file-access` it writes (`.scratch/` gitignored, kept MCP-writable by a rule — [repo.md](repo.md#mcp-file-access-rules-mcp-file-access)). Needs mcp-workspace ≥ `f626cf8` wherever the MCP server runs
 - [ ] Add `.claude/CLAUDE.md`, `.mcp.json` and `docs/architecture/architecture.md` to the repository (the architecture document is required by `/implementation_review` and `/implementation_review_supervisor`)
 - [ ] For interactive sessions: add a `[vscodeclaude]` section (`workspace_base`, `max_sessions`) to `config.toml` and trust the workspace folder once in VS Code ([VSCodeClaude guide](../coordinator-vscodeclaude.md))
 - [ ] For unattended runs: add a `[jenkins]` section and a `[coordinator.repos.<name>]` section (`repo_url`, `executor_job_path`, `github_credentials_id`), and set up the Jenkins executor job ([Jenkins setup](jenkins.md)). Without Jenkins, run the stages by hand
@@ -42,9 +42,9 @@ Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command t
 | GitHub-side: tokens, labels, actions, CI, badges, dependabot | [github.md](github.md) | Any target repo |
 | Jenkins: API user permissions, credentials, coordinator job setup | [jenkins.md](jenkins.md) | Repos dispatched by the coordinator |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any target repo |
-| Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any target repo — reference only, `mcp-coder init` does not deploy `docs/` |
+| Agent permissions: how `.claude/agents/*.md` are wired, and what their allow hooks do and do not enforce | [agent-permissions.md](agent-permissions.md) | Any target repo — reference only, `mcp-coder init` does not deploy `docs/` |
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any target repo |
-| Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any target repo |
+| Generic repo conventions: `.gitattributes`, `.gitignore`, `.mcp-file-access`, file size | [repo.md](repo.md) | Any target repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python target repos only |
 | Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Reference setup for Python repos: the MCP tools work anywhere, the CI jobs and config are mcp-coder's |
 | mcp-coder maintainer tools: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | mcp-coder repo only |
@@ -60,11 +60,14 @@ The following files in this repository serve as references/templates for other p
 
 | File / Folder | Cat | Mandatory? | Copy as-is? | What to adjust |
 |---|---|---|---|---|
-| `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
-| `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
-| `.claude/agents/commit-pusher.md` | G | No | Yes | Requires an mcp-workspace version with the git-write tools (mcp-workspace#220) |
-| `.claude/agents/issue-updater.md` | G | No | Yes | Requires an mcp-workspace version with `github_issue_edit` |
-| `.claude/agents/issue-approver.md` | G | No | Yes | Requires `mcp-coder` on PATH and the status labels; an mcp-workspace version with `github_issue_comment`, `get_reference_projects` and `reference_name` on the issue write tools (`github_issue_create`, `_edit`, `_comment`) and `github_label_list` (mcp-workspace#272) — `github_pr_create` has no `reference_name`; cross-repo approval also needs `approve-command.yml` in the target repo, and the target configured as an mcp-workspace reference project with a `url` (explicit `url=` or detected from its checkout's git `origin`) |
+| `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) and `github_issue_set_status` |
+| `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files; requires an mcp-workspace version with the git-write tools (mcp-workspace#220) and `github_issue_set_status` |
+| `.claude/agents/commit-pusher.md` | G | No | Yes | Requires an mcp-workspace version with the git-write tools (mcp-workspace#220). Its frontmatter hook allows `git_commit` / `git_push` only in a trusted folder; untrusted or `-p` → they prompt (interactive) or are denied (`-p`) |
+| `.claude/agents/issue-updater.md` | G | No | Yes | Requires an mcp-workspace version with `github_issue_edit`. Its frontmatter hook allows `github_issue_edit` only in a trusted folder |
+| `.claude/agents/issue-approver.md` | G | No | Yes | Requires the status labels and an mcp-workspace version with `github_issue_set_status` and `get_reference_projects`; cross-repo approval also needs the target configured as an mcp-workspace reference project with a `url` (explicit `url=` or detected from its checkout's git `origin`). Its frontmatter hook allows `github_issue_set_status` only in a trusted folder |
+| `.claude/agents/issue-analyst.md` | G | No | Yes | Launched by `/issue_analyse_supervisor`; needs `.claude/skills/issue_analyse/` and the tools it lists allow-listed in `.claude/settings.local.json` |
+| `.claude/agents/plan-engineer.md` | G | No | Yes | Launched by `/plan_review_supervisor`; needs `.claude/skills/plan_review/`, `plan_update/` and its tools allow-listed |
+| `.claude/agents/code-engineer.md` | G | No | Yes | Launched by `/implementation_review_supervisor`; needs `.claude/skills/implementation_review/`, `check_branch_status/` and its tools allow-listed |
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
@@ -77,6 +80,7 @@ The following files in this repository serve as references/templates for other p
 | `.github/dependabot.yml` | G | No | Yes | — |
 | `.github/workflows/scorecard.yml` | G | No | Yes | — |
 | `SECURITY.md` | G | No | No | Adjust contact and scope |
+| `.mcp-file-access` | G | Yes | No | Written by `mcp-coder init` (template rules, a subset of this repo's: no `.mcp.linux/macos.json`); add repo-specific rules by hand |
 | `.gitattributes` | G | No | Yes | — |
 | `.large-files-allowlist` | G | No | No | Files exempt from size limits |
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |

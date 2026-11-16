@@ -86,3 +86,6 @@ src/mcp_coder/resources/claude/
 .coverage.*
 coverage.xml
 htmlcov/
+
+# Scratch files for LLM sessions: MCP-writable via .mcp-file-access, never committed
+.scratch/

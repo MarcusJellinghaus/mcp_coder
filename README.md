@@ -75,7 +75,7 @@ The full checklist, with every config key, is in [Repository Setup](docs/reposit
 
 1. Put a GitHub token in `~/.mcp_coder/config.toml` ([Configuration](docs/configuration/config.md)).
 2. Create the status labels with `mcp-coder gh-tool define-labels`, and the GitHub Actions that label new issues and handle `/approve` with `--generate-github-actions` ([Label Setup](docs/getting-started/label-setup.md)).
-3. Deploy the Claude skills and agents with `mcp-coder init`, and add `.claude/CLAUDE.md`, `.mcp.json` and `docs/architecture/architecture.md` to the repository.
+3. Deploy the Claude skills and agents with `mcp-coder init` and commit the `.gitignore` and `.mcp-file-access` it writes. Add `.claude/CLAUDE.md`, `.mcp.json` and `docs/architecture/architecture.md` to the repository.
 4. Configure how stages run: `[vscodeclaude]` for interactive sessions ([guide](docs/coordinator-vscodeclaude.md)), `[jenkins]` and `[coordinator.repos.<name>]` for unattended runs ([Jenkins setup](docs/repository-setup/jenkins.md)). Without Jenkins, run the stages by hand.
 5. Configure a toolkit in `pyproject.toml` (or `mcp-coder.toml`) ([Toolkits](docs/configuration/toolkits.md#configure-a-toolkit)).
 6. Check it all with `mcp-coder verify`.

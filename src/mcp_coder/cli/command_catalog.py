@@ -14,7 +14,7 @@ from __future__ import annotations
 # ``help=COMMAND_DESCRIPTIONS["<display-name>"]`` so the overview text and the
 # per-command ``--help`` text are the same string.
 COMMAND_DESCRIPTIONS: dict[str, str] = {
-    "init": "Initialize project: create config and deploy Claude skills",
+    "init": "Initialize project: create config, deploy Claude skills and agents, write .mcp-file-access",
     "install": "Install mcp-coder into a target environment",
     "setup": "Set up the project as declared in [tool.mcp-coder.setup]",
     "verify": "Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers",

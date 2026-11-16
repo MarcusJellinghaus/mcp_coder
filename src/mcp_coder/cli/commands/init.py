@@ -9,6 +9,7 @@ from pathlib import Path
 from ...utils.log_utils import OUTPUT
 from ...utils.user_config import create_default_config, get_config_file_path
 from ...workflows.vscodeclaude.workspace import update_gitignore
+from .init_file_access import ensure_file_access_rules, ensure_scratch_gitignored
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,17 @@ def execute_init(args: argparse.Namespace) -> int:
     # 3. Gitignore entries (both modes: project-scoped, like the .claude/ deploy)
     gitignore_ok = _write_gitignore_entries(project_dir)
 
-    # 4. Config creation (skip if --just-skills)
+    # 4. .mcp-file-access rules, then .scratch/ gitignored (both modes)
+    rules = ensure_file_access_rules(project_dir)
+    scratch_ok, scratch_added = ensure_scratch_gitignored(project_dir, rules)
+    if rules.changed or scratch_added:
+        logger.log(
+            OUTPUT,
+            "Commit .gitignore and .mcp-file-access so every clone gets them.",
+        )
+    files_ok = gitignore_ok and rules.ok and scratch_ok
+
+    # 5. Config creation (skip if --just-skills)
     if not args.just_skills:
         path = get_config_file_path()
         try:
@@ -181,4 +192,4 @@ def execute_init(args: argparse.Namespace) -> int:
         else:
             logger.log(OUTPUT, "Config already exists: %s", path)
 
-    return 0 if gitignore_ok else 1
+    return 0 if files_ok else 1

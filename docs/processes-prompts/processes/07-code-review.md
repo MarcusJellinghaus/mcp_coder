@@ -36,7 +36,7 @@ These apply to the interactive review (`status-07`). The automated review needs 
 
 | Command | Purpose | Resulting label |
 |---|---|---|
-| [`/implementation_review_supervisor`](../../../.claude/skills/implementation_review_supervisor/SKILL.md) | Autonomous review: runs `/implementation_review`, triages findings against `.claude/knowledge_base/`, has subagents fix accepted findings, repeats in rounds, writes `pr_info/implementation_review_log_*.md`. Escalates only when unsure or a major refactoring is needed. Use for the vscodeclaude flow or when the knowledge base can triage most findings | — |
+| [`/implementation_review_supervisor`](../../../.claude/skills/implementation_review_supervisor/SKILL.md) | Autonomous review: the `code-engineer` agent runs `implementation_review` and fixes the findings accepted against `.claude/knowledge_base/`; `commit-pusher` commits. Repeats in rounds, writes `pr_info/implementation_review_log_*.md`. Escalates only when unsure or a major refactoring is needed. Use for the vscodeclaude flow or when the knowledge base can triage most findings | — |
 | [`/implementation_review`](../../../.claude/skills/implementation_review/SKILL.md) | Human-supervised review: Claude presents findings, you decide what to act on. Use for full control over every finding | — |
 | [`/discuss`](../../../.claude/skills/discuss/SKILL.md) | Go through open findings step by step | — |
 | [`/implementation_finalise`](../../../.claude/skills/implementation_finalise/SKILL.md) | Finish open tasks | — |

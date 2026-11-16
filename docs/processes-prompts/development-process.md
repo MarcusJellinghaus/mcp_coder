@@ -81,11 +81,11 @@ After `create-plan` and `implement`, the review runs in one of two ways:
 
 `/plan_review` and `/implementation_review` start a step-by-step session with the LLM (with `/discuss` and the update commands).
 
-`/plan_review_supervisor` and `/implementation_review_supervisor` run the review through subagents and stop at "ready for approval".
+`/plan_review_supervisor` and `/implementation_review_supervisor` run the review through the `plan-engineer` / `code-engineer` agent and stop at "ready for approval".
 
 Either way, the stage ends with `/plan_approve` or `/implementation_approve`.
 
-`/issue_analyse_supervisor` works the same way for the issue. It runs the analysis through subagents and escalates scope and requirements questions to you. It can approve (→ 02) itself once no questions remain; otherwise approve with `/issue_approve`.
+`/issue_analyse_supervisor` works the same way for the issue. It runs the analysis through the `issue-analyst` agent and escalates scope and requirements questions to you. Once no questions remain, it approves (→ 02) through the `issue-approver` agent; otherwise approve with `/issue_approve`.
 
 Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.github.io/?https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/processes-prompts/github_Issue_Workflow_Matrix.html).
 
@@ -93,7 +93,7 @@ Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.g
 
 | Process | Trigger label | Actor | Slash commands | Doc |
 |---|---|---|---|---|
-| Issue discussion | `status-01:created` | Interactive LLM session | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/01-issue-discussion.md) |
+| Issue discussion | `status-01:created` | Interactive LLM session | `/issue_analyse`, `/issue_requirements`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/01-issue-discussion.md) |
 | Plan creation | `status-02:awaiting-planning` | Automated (`create-plan`) | none | [plan-creation](processes/02-plan-creation.md) |
 | Plan review | `status-04:plan-review` | Interactive LLM session | `/plan_review_supervisor`, `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` | [plan-review](processes/04-plan-review.md) |
 | Implementation | `status-05:plan-ready` | Automated (`implement`) | `/implementation_finalise`, `/commit_push`, `/check_branch_status` | [implementation](processes/05-implementation.md) |

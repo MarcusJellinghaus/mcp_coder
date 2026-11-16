@@ -206,6 +206,8 @@ class TestExecuteInitGitignore:
 
         assert result == 1
         assert "Failed to update .gitignore" in caplog.text
+        # The .scratch/ writer ran too and gave up on the same file
+        assert "Failed to add .scratch/ to .gitignore" in caplog.text
         # The run continued past the failure
         mock_create.assert_called_once()  # type: ignore[attr-defined]
         # The undecodable file is left untouched
