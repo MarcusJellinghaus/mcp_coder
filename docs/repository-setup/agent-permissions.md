@@ -180,3 +180,9 @@ user is consulted.
 adopting repo gets the agents and the skills they use, but not this file. `init` never
 overwrites: to pick up new agent versions, delete the old agent **and** skill files together
 before re-running it — the supervisors name agents that must exist.
+
+`init` doesn't deploy `.claude/settings.local.json`. The engineer agents need no hook only
+because their `tools:` are allow-listed there: copy those `allow` entries into the adopting
+repo's file, or every `issue-analyst` / `plan-engineer` / `code-engineer` call prompts and
+the supervisor loops stop being autonomous. The allow hooks of the privileged agents run
+only once the folder is trusted.
