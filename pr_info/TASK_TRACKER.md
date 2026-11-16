@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `tools/check_sensitive_files.py` with unit tests — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `tests/tools/test_check_sensitive_files.py` (TDD) and `tools/check_sensitive_files.py`
-- [ ] Quality checks (ruff, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/tools/test_check_sensitive_files.py` (TDD) and `tools/check_sensitive_files.py`
+- [x] Quality checks (ruff, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `check-sensitive-files` job in `ci.yml` — [step_2.md](./steps/step_2.md)
 

@@ -554,6 +554,10 @@ _.fixture_client
 # @pytest.fixture(name="patterns") and injected by pytest.
 _.fixture_patterns
 
+# tests/tools/test_check_sensitive_files.py - fixture registered via
+# @pytest.fixture(name="module") and injected by pytest.
+_.fixture_module
+
 # tests/workflows/implement/test_core_failure_routing.py - autouse fixture
 # stubbing the final mypy pass so the round-cap tests never run real checks.
 _._stub_final_mypy_pass
