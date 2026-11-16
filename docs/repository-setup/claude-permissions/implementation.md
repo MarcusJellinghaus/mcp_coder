@@ -160,9 +160,9 @@ Mechanisms: [concept §3](design-concept.md#3-mechanisms).
 | T21 | After T18: `mcp-coder gh-tool set-status` → `github_issue_set_status` in skills, `issue-approver`, CLAUDE.md; drop `issue-approver` Bash (makes T7 obsolete) | inv §6, F4 |
 | T22 | CLAUDE.md tool table: add the ✗ tools — `github_issue_set_status` (after T18; also rewrite "Status labels" and drop `set-status` from the approved Bash list), `github_subissue_list/add/remove`, `github_review_comment_reply`, `github_review_thread_resolve`, `run_deptry_check`, `search_library_files`. "Delete directory" row ✅ added. Propagate via FU7 | inv §1, §2 |
 | T23 | ✅ Tested 2026-11-16 (probe agent, parent in `acceptEdits`, Windows): frontmatter `PreToolUse` hook `allow` runs a non-allow-listed tool (`git_branch`) with no prompt and no bypass; exit 2 + stderr blocks a write outside `.scratch/`, reason reaches the agent; hook fires only for that agent (input has `agent_type`, `agent_id`, `permission_mode`); Git Bash command `"${CLAUDE_PROJECT_DIR}/.venv/Scripts/python.exe" "<script>"` works; agent inherits the allow-list; `skills:` preloads a model-invocable skill but not its tools (`tools:` must list them); a user-only skill was not preloaded. New agent file picked up mid-session after 0.5–2 min; edits to it only after restart. Documented, not tested: frontmatter hooks are skipped in untrusted folders and under `-p`; agent `permissionMode` is ignored when the parent runs `acceptEdits` (confirms F9) | concept §1.1 R3, R4 |
-| T24 | After T23: new agent files `issue-analyst`, `plan-engineer`, `code-engineer`, `rebaser`; supervisors and `rebase` launch them | [roster](skills-agents.md#target-agent-roster) |
+| T24 | New agent files `issue-analyst`, `plan-engineer`, `code-engineer`; supervisors launch them. `rebaser` dropped (2026-11-16) → [issue 3](issues/issue_3_agents.md) | [roster](skills-agents.md#target-agent-roster) |
 | T25 | Apply every "Skill text changes" row of skills-agents §2–§5 (incl. T21 status changes per R8, `pr_comment_triage` U-only, `implement_direct` narrow Bash, untrusted stops, dead `get-url` grant) | skills-agents |
-| T26 | After T23: `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add frontmatter hooks; rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) | concept §1.1 R4 |
+| T26 | `commit-pusher`, `issue-updater`, `issue-approver` — drop `bypassPermissions`, add an inline frontmatter allow hook (decided 2026-11-16: allow only, no write limits yet; docs show no other per-agent grant under `acceptEdits`); rewrite CLAUDE.md "Privileged agents"; update [agent-permissions.md](../agent-permissions.md) → [issue 3](issues/issue_3_agents.md) | concept §1.1 R4 |
 | T27 | Upstream mcp-workspace: rebase tools (#263, comment posted); optional `checkout-issue-branch` tool → then `implement_direct` needs no Bash | skills-agents §4, §5 |
 | T28 | By hand (user config): pin `obsidian-mcp@<version>` in `~/.claude.json`; `/mcp` → check source of `claude-artifacts`, disable if unused | F12, F13 |
 
@@ -183,6 +183,18 @@ T4, T6 merged into T1.
 | FU9 | ✅ (2026-11-15) Add `.mcp-file-access` to this repo with `read-only /.vscodeclaude_status.txt` → `issue_analyse`, `issue_analyse_supervisor`, `issue_approve`, `implement_direct` read the issue number directly via `read_file`, as their SKILL.md already says (today refused: gitignored; no skill change needed). Create by hand (MCP tools can't write the rules file). Also: `read-only` `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json` (MCP `edit_file` is allow-listed and skips Claude Code's own protection of these); `read-write /.scratch/` (prep for FU11) | repo root |
 | FU10 | `mcp-coder init`: create `.mcp-file-access` if missing, else append the `.vscodeclaude_status.txt` rule if absent — idempotent, like `update_gitignore`. Same for `vscodeclaude` session folders if init isn't run there | `cli/commands/init.py`, `workflows/vscodeclaude/workspace.py` |
 | FU11 | Gitignore `.scratch/` (writable via the FU9 rule, never committed). Blocker: `verify` MCP edit smoke test skips when `.scratch/` is gitignored — make `is_path_gitignored` check honour `.mcp-file-access`. Then update CLAUDE.md (`git_commit` note, Scratch probes); CI `check_forbidden_folder .scratch` can stay as a backstop. Needs mcp-workspace with `.mcp-file-access` everywhere (Jenkins, sibling repos) | `cli/commands/verify.py`, `.gitignore`, CLAUDE.md |
+
+### 3.3 Issue drafts
+
+Not yet on GitHub. Analysed with the `issue_analyse_supervisor` loop (2026-11-16).
+
+| Draft | Covers | Analysis | Depends on |
+|---|---|---|---|
+| [issue 1](issues/issue_1_settings_json.md) | deny-only `settings.json` (T2), `settings.local.json` cleanup (T11, T15 part) | 4 rounds, converged | — |
+| [issue 2](issues/issue_2_skill_text.md) | status tool switch, untrusted stops, narrower Bash (T21, T22, T25 part) | 3 rounds, converged | T18 |
+| [issue 3](issues/issue_3_agents.md) | 3 new agents, inline allow hooks, no bypass (T24, T26) | 2 rounds, converged | issues 1, 2 |
+| [issue 4](issues/issue_4_init_mcp_file_access.md) | `init` writes `.mcp-file-access`; gitignore `.scratch/` (FU10, FU11) | not analysed | issue 1 |
+| [issue 5](issues/issue_5_settings_layout.md) | allows to `settings.json`, untrack `settings.local.json` (T1, F8, FU3, FU5, FU6) | not analysed | issue 1 |
 
 ## 4. Open questions (facts)
 

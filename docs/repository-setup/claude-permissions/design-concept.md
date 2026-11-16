@@ -49,7 +49,7 @@ Background: [how-it-works §5–§10](how-it-works.md#5-skills).
 | 1 | Same settings as Tier 2 via `--settings` (Q4, no change), `--tools ToolSearch`, `--strict-mcp-config`, toolkit grants via `--allowedTools`. Rebase: generated settings — add only, narrow nothing ([F11](implementation.md#15-findings)) |
 | 2 | Committed `.claude/settings.json`: allow = mcp-workspace read/file tools + `mcp__mcp-tools-py`; `git_*` writes not allowed (ask); `deny` native `Edit`/`Write` on protected files (T2). `defaultMode: acceptEdits` kept from the user file (T9) |
 | 3 skill | `allowed-tools` (turn-scoped) + `disable-model-invocation` on every skill with write extras |
-| 3 agent | Agent frontmatter `hooks:` `PreToolUse` (runs only for that agent) returning `allow` for its extras, refusing writes outside its paths (T23) |
+| 3 agent | Agent frontmatter `hooks:` `PreToolUse` (runs only for that agent; tested T23) — inline one-liner returning `allow` for its extras. The only documented per-agent grant under `acceptEdits` (agent `permissionMode` is ignored there). Write limits (path-parsing hook) later. Skipped in untrusted folders and under `-p` |
 | 4 | User-only skill (e.g. `/issue_bulk_edit`) with `allowed-tools: github_issue_*` — expires on next message; added when a real need appears (Q8). No TTL hook |
 
 ## 4. Skill / agent extras

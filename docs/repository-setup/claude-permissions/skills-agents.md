@@ -346,7 +346,7 @@ Review checklist R1–R8: [concept §1.1](design-concept.md#11-skill--agent-patt
 | Checklist | R1 partly — conflict handling has no MCP tool → narrow Bash, turn-scoped: OK. `git remote get-url` is never used (dead grant) |
 | Skill text changes | `allowed-tools`: delete `"Bash(git remote get-url *)"` |
 | Proposal | Split into skill + agent. **Skill `rebase`** (U; vscodeclaude unchanged): pre-flight, `get_base_branch` + confirm non-main base, Branch Moved Check (`PRE_SHA`), launch `rebaser`, repeat check, push (`git_push` / `git_push_force`; Bash `--force-with-lease` fallback only). **Agent `rebaser`**: fetch, rebase, resolve conflicts, checks + fixes, abort rules; reports done / aborted (rule N) / needs user. `tools:` MCP read + file tools, mcp-tools-py, MCP `git`, Bash; hook allows only `git rebase/add/rm/restore/stash/checkout --ours/--theirs` (other Bash prompts); no push, no GitHub. Keeps test output out of the main context. Delete the dead `get-url` grant. Later: mcp-workspace `git_rebase` / `git_resolve` (no LLM needed; mcp-workspace #263) → rebaser without Bash. After T23 |
-| Decision | ✅ As proposed (2026-11-15) |
+| Decision | ✅ As proposed (2026-11-15). **Revised 2026-11-16:** no `rebaser` for now — vscodeclaude runs `/rebase` headless at `status-74` (no `Agent` tool, no frontmatter hooks under `-p`); `/rebase` stays self-contained until mcp-workspace #263. Dead `get-url` grant still deleted ([issue 2](issues/issue_2_skill_text.md)) |
 
 ### pr_comment_triage
 
@@ -418,14 +418,15 @@ Review checklist R1–R8: [concept §1.1](design-concept.md#11-skill--agent-patt
 
 ### Target agent roster
 
-| Agent | Launched by | Tools beyond MCP read + mcp-tools-py | Write limit (hook) | Bash | `skills:` |
-|---|---|---|---|---|---|
-| `issue-analyst` 🆕 | issue_analyse_supervisor | `save_file`, `delete_directory` | `.scratch/` | last resort (prompts) | `issue_analyse` |
-| `plan-engineer` 🆕 | plan_review_supervisor | file write tools | `pr_info/`, `.scratch/` | last resort | `plan_review`, `plan_update` |
-| `code-engineer` 🆕 | implementation_review_supervisor | file write tools, `check_branch_status` | none (whole repo; `.mcp-file-access` guards settings) | last resort | `implementation_review`, `check_branch_status` |
-| `rebaser` 🆕 | rebase | file write tools | none | hook allows rebase commands only; until mcp-workspace #263 | – |
-| `commit-pusher` | plan / implementation review supervisors | `git_commit`, `git_push` (hook allow) | — | none | – |
-| `issue-updater` | issue_analyse_supervisor | `github_issue_edit` (hook allow), file tools | `.scratch/` | none | – |
-| `issue-approver` | issue_analyse_supervisor | `github_issue_set_status` (hook allow) | — | none | – |
+Revised 2026-11-16 after T23 and the issue analysis ([issue 3](issues/issue_3_agents.md)).
 
-All: no `bypassPermissions`, no `Skill`, no GitHub / git writes unless listed. 🆕 = new agent file. All hooks depend on T23.
+| Agent | Launched by | Tools beyond MCP read + mcp-tools-py | Hook | Write limit | Bash | `skills:` |
+|---|---|---|---|---|---|---|
+| `issue-analyst` 🆕 | issue_analyse_supervisor | `save_file`, `delete_this_file`, `delete_directory` | none (all allow-listed) | none yet — `.scratch/` by instruction | none | `issue_analyse` |
+| `plan-engineer` 🆕 | plan_review_supervisor | file write tools | none | none yet — `pr_info/` by instruction | none | `plan_review`, `plan_update` |
+| `code-engineer` 🆕 | implementation_review_supervisor | file write tools, `check_branch_status` | none | none (`.mcp-file-access` guards settings) | none | `implementation_review`, `check_branch_status` |
+| `commit-pusher` | plan / implementation review supervisors | `git_commit`, `git_push` | inline allow | — | none | – |
+| `issue-updater` | issue_analyse_supervisor | `github_issue_edit`, file tools | inline allow | none yet — `.scratch/` by instruction | none | – |
+| `issue-approver` | issue_analyse_supervisor | `github_issue_set_status` | inline allow | — | none | – |
+
+All: no `bypassPermissions`, no `Skill`, no GitHub / git writes unless listed; `tools:` lists every tool the preloaded skills call (`skills:` injects text, not tools). 🆕 = new agent file. Inline allow = one-line frontmatter `PreToolUse` hook printing the `allow` JSON, matcher = the agent's extra tools. Write limits need a hook with path parsing — later. `rebaser` dropped (see `rebase`).
