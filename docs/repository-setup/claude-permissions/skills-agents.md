@@ -6,6 +6,8 @@ Per skill / agent: facts, proposal, decision. Rows: Purpose / caller · Launches
 
 Review checklist R1–R8: [concept §1.1](design-concept.md#11-skill--agent-patterns).
 
+Launches / Uses / Pre-approved / Risk rows are the 2026-11-15 review snapshot (before issues 1–4); ✅ in "Skill text changes" marks what was applied. Current agents: [target agent roster](#target-agent-roster).
+
 ## 1. Overview (snapshot 2026-11-15, before issues 1–4)
 
 | Caller | Meaning |

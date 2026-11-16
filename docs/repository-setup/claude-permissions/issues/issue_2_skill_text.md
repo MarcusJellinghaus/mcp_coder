@@ -89,4 +89,4 @@ Apply the "Skill text changes" from the permission review that don't need the ne
   - [ ] `plan_approve` on its branch with the issue at `status-06`/`07` reports "not changed"
   - [ ] `issue_approve` on a cross-repo issue outside its status table reports "nothing to approve"
   - [ ] `implement_direct` step 7 logic: a direct `github_issue_set_status(number=…, status="status-07:code-review")` on an issue already at `07` returns "already has status", which the skill text treats as success
-- [ ] pylint, pytest, mypy pass
+- [x] pylint, pytest, mypy pass (known pre-existing failures only)
