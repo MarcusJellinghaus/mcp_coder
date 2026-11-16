@@ -1,5 +1,7 @@
 # chore(permissions): committed .claude/settings.json with protected-file deny
 
+> **Reversed 2026-11-16:** the deny-only `.claude/settings.json` was removed — no deny rules ([implementation T2](../implementation.md#31-decisions--config)). The rest of this issue stands: the `.mcp-file-access` rules, the `settings.local.json` cleanup, and the stop-and-hand-off rule for protected files.
+
 Add a committed `.claude/settings.json` that denies native writes to the protected config files, and clean dead and redundant entries out of `.claude/settings.local.json`. The settings layout itself (allows moving to `settings.json`, untracking `settings.local.json`) is **not** part of this issue.
 
 **Manual / interactive issue — not for `mcp-coder implement`:** headless runs have native Write/Edit off, and `.mcp-file-access` makes both settings files and itself read-only for MCP tools. Once the deny is active, Claude's native `Edit`/`Write` and MCP tools can no longer change the protected files — edit them in an editor (also in later issues; the built-in `update-config` / `fewer-permission-prompts` skills are locked out too). Intended — headless runs (`mcp-coder rebase` / `fix-conflict` / `implement`) included. Side effect: in a rebase conflict inside a protected file Claude can still pick one side (`git checkout --ours/--theirs`, pre-approved in the `rebase` skill), but can't merge the content — that's an editor job.

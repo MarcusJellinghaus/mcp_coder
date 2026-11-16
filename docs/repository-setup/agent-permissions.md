@@ -173,8 +173,8 @@ user is consulted.
   `github_issue_set_status` changes nothing unless the issue's sole status label is the
   expected one. Followed by instruction, not enforced: a call without `from_status` changes
   the status from any status.
-- **`deny` rules** abort a call in every mode, hook `allow` included — e.g. the native
-  `Edit` deny on the protected config files in `.claude/settings.json`.
+- **`deny` rules** abort a call in every mode, hook `allow` included. This repository
+  sets none.
 
 ## Deployment
 

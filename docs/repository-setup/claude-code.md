@@ -222,7 +222,7 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 The issue write tools (`github_issue_create`, `github_issue_edit`, `github_issue_comment`, `github_issue_set_status`) are deliberately left out so issue writes prompt in the main session (see [agent-permissions.md](agent-permissions.md)).
 
-This repository also commits a deny-only `.claude/settings.json` that blocks native writes to `.mcp*.json`, `.claude/settings*.json` and `.mcp-file-access` ([issue 1](claude-permissions/issues/issue_1_settings_json.md)); `mcp-coder init` does not deploy it.
+This repository commits no `.claude/settings.json` and no `deny` rules. Protected config files rest on Claude Code's built-in protection (native writes to `.mcp.json` and `.claude/` prompt), `.mcp-file-access` (MCP tools refuse writes) and git review ([implementation T2](claude-permissions/implementation.md#31-decisions--config)).
 
 ### Pinning the settings file with `--settings`
 

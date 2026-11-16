@@ -36,7 +36,7 @@ Review checklist for every skill and agent ([skills-agents.md](skills-agents.md)
 | Tier | Context | Allowed without asking | Asks | Off |
 |---|---|---|---|---|
 | 1 Headless | `mcp-coder implement`, `create-plan`, `fix-ci`, … | Tier 2 list (Q4) | — (no one to ask → denied) | Bash (except grants), built-in Read/Write/Edit, other MCP servers |
-| 2 Interactive | your Claude session | workspace files, git read, mcp-tools-py, GitHub read, reference projects | everything else, incl. all `git_*` writes (T18) | native writes to protected files (T2) |
+| 2 Interactive | your Claude session | workspace files, git read, mcp-tools-py, GitHub read, reference projects | everything else, incl. all `git_*` writes (T18); native writes to `.mcp.json`, `.claude/` (built-in) | — (no deny, T2 reversed); MCP writes to `.mcp-file-access` read-only files |
 | 3 Skill / agent | `/skill`, `.claude/agents/*` | Tier 2 + its own extras (§4) | rest | — |
 | 4 Special mode | "edit all issues per plan" | Tier 2 + one tool group, for one turn | rest | — |
 
@@ -47,7 +47,7 @@ Background: [how-it-works §5–§10](how-it-works.md#5-skills).
 | Tier | Mechanism |
 |---|---|
 | 1 | Same settings as Tier 2 via `--settings` (Q4, no change), `--tools ToolSearch`, `--strict-mcp-config`, toolkit grants via `--allowedTools`. Rebase: generated settings — add only, narrow nothing ([F11](implementation.md#15-findings)) |
-| 2 | Committed `.claude/settings.json`: allow = mcp-workspace read/file tools + `mcp__mcp-tools-py`; `git_*` writes not allowed (ask); `deny` native `Edit`/`Write` on protected files (T2). `defaultMode: acceptEdits` kept from the user file (T9) |
+| 2 | Tracked `.claude/settings.local.json` (allows only; committed `settings.json` layout shelved, issue 5): allow = mcp-workspace read/file tools + `mcp__mcp-tools-py`; `git_*` writes not allowed (ask). No `deny` (T2 reversed 2026-11-16): protected files rest on Claude Code's built-in protection (`.mcp.json`, `.claude/` prompt), `.mcp-file-access` (MCP refuses) and the #1431 CI warning (T29); native writes to `.mcp-file-access`, `.mcp.linux.json`, `.mcp.macos.json` run unprompted (accepted gap). `defaultMode: acceptEdits` kept from the user file (T9) |
 | 3 skill | `allowed-tools` (turn-scoped) + `disable-model-invocation` on every skill with write extras |
 | 3 agent | Agent frontmatter `hooks:` `PreToolUse` (runs only for that agent; tested T23) — inline one-liner returning `allow` for its extras. The only documented per-agent grant under `acceptEdits` (agent `permissionMode` is ignored there). Write limits (path-parsing hook) later. Skipped in untrusted folders and under `-p` |
 | 4 | User-only skill (e.g. `/issue_bulk_edit`) with `allowed-tools: github_issue_*` — expires on next message; added when a real need appears (Q8). No TTL hook |

@@ -8,14 +8,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_JSON = REPO_ROOT / ".claude" / "settings.json"
 SETTINGS_LOCAL_JSON = REPO_ROOT / ".claude" / "settings.local.json"
 
-PROTECTED_DENY_RULES = [
-    "Edit(/.mcp.json)",
-    "Edit(/.mcp.linux.json)",
-    "Edit(/.mcp.macos.json)",
-    "Edit(/.mcp-file-access)",
-    "Edit(/.claude/settings.json)",
-    "Edit(/.claude/settings.local.json)",
-]
 GIT_WRITE_TOOLS = {
     "mcp__mcp-workspace__git_branch",
     "mcp__mcp-workspace__git_branch_delete",
@@ -39,9 +31,13 @@ def _local_allow() -> list[str]:
     return allow
 
 
-def test_settings_json_is_exactly_the_protected_deny() -> None:
-    expected = {"permissions": {"deny": PROTECTED_DENY_RULES}}
-    assert _load(SETTINGS_JSON) == expected
+def test_no_committed_settings_json() -> None:
+    """Deny rules dropped 2026-11-16: no committed `.claude/settings.json`."""
+    assert not SETTINGS_JSON.exists()
+
+
+def test_settings_local_json_has_no_deny() -> None:
+    assert "deny" not in _load(SETTINGS_LOCAL_JSON)["permissions"]
 
 
 def test_settings_local_json_has_no_git_write_tools() -> None:
