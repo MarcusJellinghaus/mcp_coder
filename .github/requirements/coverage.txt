@@ -166,11 +166,11 @@ coverage==7.17.0 \
     --hash=sha256:f72640e02a470b57b15cd655820133f6892760209283a363a60e2df932d5f0fe \
     --hash=sha256:f8bc2cd4c6aa58be1ca243fb8cddb6c3c42031fe4403991ad9cf2b3baed03d9f \
     --hash=sha256:fb5745048ee20f796b0e3ab61831049e749acff188563e2af32f58ede957ac1b
-    # via -r .github/requirements/coverage.in
-diff-cover==11.0.0 \
-    --hash=sha256:5450247cc885ac0c252f0d7a4cf91608f454377c6f88e579bc9ead410af50c36 \
-    --hash=sha256:8b0a5b356d525718ee18c14b163ce179c75ccdc5b8d5474ef22ade6a0e1fa65d
-    # via -r .github/requirements/coverage.in
+    # via -r coverage.in
+diff-cover==11.0.1 \
+    --hash=sha256:18fff3b9df6f28c62953859fb16302d1dec0189d79f3ea437c0bcad5cc60dcf3 \
+    --hash=sha256:40d559e47ee9bcec35194fd9726d408a242608c54fbd0cdab244ae4324c1c7da
+    # via -r coverage.in
 jinja2==3.1.6 \
     --hash=sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d \
     --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
