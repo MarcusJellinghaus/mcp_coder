@@ -163,6 +163,8 @@ Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_
 
 - `PYTHONPATH`: `${MCP_CODER_VENV_DIR}\Lib\` — for finding installed packages
 
+**File access rules (`.mcp-file-access`):** the server refuses gitignored paths unless a rule in the root `.mcp-file-access` exposes them, and a `read-only` rule blocks writes to committed files. `mcp-coder init` creates the file with `read-write /.scratch/` (so the gitignored `.scratch/` stays usable for probes and temp files) and `read-only` rules for `.vscodeclaude_status.txt`, `.mcp.json` and `.claude/settings*.json` — commit it. Needs an mcp-workspace version with `.mcp-file-access` support; an older one ignores the file and hides `.scratch/`. Details: [repo.md](repo.md#mcp-file-access-rules-mcp-file-access).
+
 ### Example for using MCP Configuration
 
 **With mcp-coder commands:**

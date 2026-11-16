@@ -198,13 +198,102 @@ class TestMcpEditSmokeTest:
         assert not test_file.exists()
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    def test_smoke_test_skipped_when_scratch_gitignored(
+    def test_smoke_test_skipped_when_scratch_gitignored_without_rule(
         self,
         mock_prompt_llm: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Smoke test is skipped, creating nothing, when .scratch/ is gitignored."""
+        """Skipped, creating nothing, when .scratch/ is gitignored and no rule exposes it."""
         (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert result.marker == "[WARN]"
+        assert "skipped: .scratch/mcp_coder_verify.md not exposed" in result.value
+        mock_prompt_llm.assert_not_called()
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_runs_when_scratch_gitignored_with_rule(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A read-write rule keeps the smoke test running with .scratch/ gitignored."""
+        (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
+        (tmp_path / ".mcp-file-access").write_text(
+            "read-write /.scratch/\n", encoding="utf-8"
+        )
+        test_file = tmp_path / ".scratch" / "mcp_coder_verify.md"
+
+        def fake_llm(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            test_file.write_text("A\nB\nC\n", encoding="utf-8")
+            return {"text": "done"}
+
+        mock_prompt_llm.side_effect = fake_llm
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        mock_prompt_llm.assert_called_once()
+        assert result.marker == "[OK]"
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_skipped_when_read_only_rule(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A read-only rule on .scratch/ skips the smoke test."""
+        (tmp_path / ".mcp-file-access").write_text(
+            "read-only /.scratch/\n", encoding="utf-8"
+        )
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert result.marker == "[WARN]"
+        assert "read-only rule" in result.value
+        mock_prompt_llm.assert_not_called()
+        assert not (tmp_path / ".scratch").exists()
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_skipped_when_rules_file_invalid(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An invalid rules file skips the smoke test and names the problem."""
+        (tmp_path / ".mcp-file-access").write_text(
+            "writable /.scratch/\n", encoding="utf-8"
+        )
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+        )
+
+        assert result.marker == "[WARN]"
+        assert "skipped: invalid rules file" in result.value
+        assert "unknown level 'writable'" in result.value
+        mock_prompt_llm.assert_not_called()
+
+    @patch(f"{_VERIFY}.FILE_ACCESS_SUPPORTED", False)
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_without_support_skips_when_gitignored(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Without rules support only gitignore counts; a rule does not help."""
+        (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
+        (tmp_path / ".mcp-file-access").write_text(
+            "read-write /.scratch/\n", encoding="utf-8"
+        )
 
         result = _run_mcp_edit_smoke_test(
             tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
@@ -213,7 +302,6 @@ class TestMcpEditSmokeTest:
         assert result.marker == "[WARN]"
         assert "skipped: .scratch/mcp_coder_verify.md is gitignored" in result.value
         mock_prompt_llm.assert_not_called()
-        assert not (tmp_path / ".scratch").exists()
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_fail_displays_warning(
@@ -298,9 +386,9 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """An error from the gitignore check becomes a warning row."""
+        """An error from the access check becomes a warning row."""
         with patch(
-            f"{_VERIFY}.is_path_gitignored",
+            f"{_VERIFY}.get_file_access",
             side_effect=OSError("gitignore unreadable"),
         ):
             result = _run_mcp_edit_smoke_test(
@@ -312,7 +400,27 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm.assert_not_called()
         assert not (tmp_path / ".scratch").exists()
 
-    @patch(f"{_VERIFY}.is_path_gitignored", side_effect=OSError("gitignore unreadable"))
+    @patch(f"{_VERIFY}.FILE_ACCESS_SUPPORTED", False)
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_gitignore_check_error_without_support(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Without rules support, a gitignore check error becomes a warning row."""
+        with patch(
+            f"{_VERIFY}.is_path_gitignored",
+            side_effect=OSError("gitignore unreadable"),
+        ):
+            result = _run_mcp_edit_smoke_test(
+                tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
+            )
+
+        assert result.marker == "[WARN]"
+        assert "edit not verified (gitignore unreadable)" in result.value
+        mock_prompt_llm.assert_not_called()
+
+    @patch(f"{_VERIFY}.get_file_access", side_effect=OSError("gitignore unreadable"))
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")

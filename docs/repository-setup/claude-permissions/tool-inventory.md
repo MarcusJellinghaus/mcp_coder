@@ -9,11 +9,11 @@ Part 2 of 5 · [How it works](how-it-works.md) · [Design concept](design-concep
 
 `C` matters: Claude sees every tool's own description, but CLAUDE.md decides which one it prefers. Servers can also ship their own instructions (`mcp-workspace`, `claude-artifacts` do).
 
-**Versions** (tool env `C:\Jenkins\environments\mcp-coder-dev\.venv`, 2026-11-14):
+**Versions** (tool env `C:\Jenkins\environments\mcp-coder-dev\.venv`, 2026-11-16):
 
 | Server | Installed | Upstream main | Tools missing locally |
 |---|---|---|---|
-| mcp-workspace | `f13d197` (2026-10-28) | `1a55e99` (2026-11-14), 21 commits ahead | 6 (now installed; 🆕 kept on the git-write tools) |
+| mcp-workspace | upstream main, upgraded 2026-11-15 (T18; was `f13d197`) — includes `f626cf8` (`.mcp-file-access`: `file_access` module present) | `1a55e99` (2026-11-14) | none (🆕 kept on the git-write tools) |
 | mcp-tools-py | not compared | — | none (upstream README tool list = installed list) |
 
 ## 1. mcp-workspace

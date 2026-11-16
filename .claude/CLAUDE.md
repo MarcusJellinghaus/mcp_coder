@@ -68,7 +68,7 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 | Reply to / resolve PR review comment | `mcp__mcp-workspace__github_review_comment_reply`, `github_review_thread_resolve` |
 | List GitHub labels | `mcp__mcp-workspace__github_label_list` |
 
-**`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, and `.scratch/` is not gitignored (CI blocks PRs carrying it).
+**`git_commit`:** always pass `paths`, never `all=True` — `all` is `git add -A`, which commits every untracked file that isn't gitignored (stray downloads, notes, files other sessions left behind).
 
 Sibling repos are readable in full via the reference tools and `git` with `reference_name` (`get_reference_projects` lists them). Check there before asking about another repo. The GitHub issue/PR read tools and the issue write tools also take `reference_name` for reference projects. That is the only cross-repo route; for repos that aren't reference projects, stop and report.
 
@@ -109,7 +109,7 @@ mcp__mcp-workspace__save_file(".scratch/test_probe.py", ...)
 mcp__mcp-tools-py__run_pytest_check(extra_args=["-p", "no:cacheprovider", ".scratch/test_probe.py"])
 ```
 
-A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI blocks any PR carrying one. `.scratch/` is not gitignored: the MCP file tools refuse ignored paths.
+A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI still blocks any PR carrying one. `.scratch/` is gitignored; the `read-write /.scratch/` rule in `.mcp-file-access` keeps it writable for the MCP file tools.
 
 Never use `python -c` via Bash. If you reason instead of running, label the conclusion analytical.
 
@@ -141,7 +141,7 @@ git add / rebase / push --force-with-lease
 - Status check of recent runs: follow `tools/jenkins_status_check.md`.
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
-- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must not be gitignored (e.g. not under `logs/`) — `read_file` refuses gitignored paths; `.scratch/` works, delete it afterwards.
+- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must be readable for MCP (e.g. not under `logs/`) — `read_file` refuses gitignored paths unless `.mcp-file-access` exposes them; `.scratch/` works (its `read-write` rule), delete it afterwards.
 - Without `--job`, `jenkins_builds` and `jenkins_download_logs` default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
 - `--name-pattern` matches the build display name before `--limit` applies; workflow builds are labelled like `mcp_coder - #1346 - implement - #2559` (`" - #\d+$"`).
 - Analyse failures: `tools/jenkins_classify_logs.sh [--logdir .scratch/jenkins_logs]` tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.

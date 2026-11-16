@@ -31,35 +31,35 @@
 - [ ] Upgrade mcp-workspace (≥ f626cf8) in the tool env and every Jenkins executor env; check per env: with `.scratch/` listed in `.git/info/exclude` (not committed), MCP `list_directory` shows `(read-write, not committed)` for a `.scratch/` file; then remove the exclude line
 
 ### A — init (FU10)
-- [ ] Shim: `FILE_ACCESS_SUPPORTED`, `get_file_access`, `FileAccess`, `validate_access_rules` with fallback stand-ins
-- [ ] Template constant with the rules above
-- [ ] `cli/commands/init.py`: ensure `.mcp-file-access` per the Decisions (create / validate / append / warn), both modes
-- [ ] Init-only `.scratch/` gitignore writer, conditions as above
-- [ ] Tests:
-  - [ ] new file (also under `--just-skills`); existing file with/without the rules; second run = no change
-  - [ ] overlapping user rule → warning; same-pattern user rule kept
-  - [ ] invalid file byte-identical, exit 0, `.scratch/` line skipped
-  - [ ] rules file not writable → exit 1, run finishes
-  - [ ] `FILE_ACCESS_SUPPORTED` false → rules file appended, no `.scratch/` line
-  - [ ] `validate_access_rules(project) == []` after init; real `get_file_access` with `.scratch/` absent returns `READ_WRITE`
-  - [ ] drift test — every template rule is in this repo's `.mcp-file-access` (`REPO_ROOT` pattern)
-  - [ ] existing `test_init_gitignore.py` tests stay green: entry count unchanged (patch the flag where needed), `test_non_utf8_gitignore_does_not_abort_init` also covers the new writer, `test_gitignore_write_failure_exits_1_but_finishes_run`
+- [x] Shim: `FILE_ACCESS_SUPPORTED`, `get_file_access`, `FileAccess`, `validate_access_rules` with fallback stand-ins
+- [x] Template constant with the rules above
+- [x] `cli/commands/init.py`: ensure `.mcp-file-access` per the Decisions (create / validate / append / warn), both modes
+- [x] Init-only `.scratch/` gitignore writer, conditions as above
+- [x] Tests:
+  - [x] new file (also under `--just-skills`); existing file with/without the rules; second run = no change
+  - [x] overlapping user rule → warning; same-pattern user rule kept
+  - [x] invalid file byte-identical, exit 0, `.scratch/` line skipped
+  - [x] rules file not writable → exit 1, run finishes
+  - [x] `FILE_ACCESS_SUPPORTED` false → rules file appended, no `.scratch/` line
+  - [x] `validate_access_rules(project) == []` after init; real `get_file_access` with `.scratch/` absent returns `READ_WRITE`
+  - [x] drift test — every template rule is in this repo's `.mcp-file-access` (`REPO_ROOT` pattern)
+  - [x] existing `test_init_gitignore.py` tests stay green: entry count unchanged (patch the flag where needed), `test_non_utf8_gitignore_does_not_abort_init` also covers the new writer, `test_gitignore_write_failure_exits_1_but_finishes_run`
 
 ### B — this repo + verify (FU11)
-- [ ] `cli/commands/verify.py::_run_mcp_edit_smoke_test`: `validate_access_rules` problems → skip "invalid rules file"; else run only when `get_file_access(_SMOKE_TEST_FILE)` is `READ_WRITE`; `HIDDEN` → skip "not exposed", `READ_ONLY` → skip "read-only rule"; without support → today's `is_path_gitignored` check
-- [ ] Update `tests/cli/commands/test_verify_mcp_edit_smoke.py` (patches of `is_path_gitignored`, the skip-text test)
-- [ ] This repo's `.gitignore`: `.scratch/` (via the new `init` step)
-- [ ] CLAUDE.md: `git_commit` note (keep the `all=True` ban; restate the reason — other untracked files), "Scratch probes" (no longer "not gitignored"), Jenkins log-download bullet ("`.scratch/` works" — via the rule)
-- [ ] Keep CI `check_forbidden_folder .scratch` as a backstop
+- [x] `cli/commands/verify.py::_run_mcp_edit_smoke_test`: `validate_access_rules` problems → skip "invalid rules file"; else run only when `get_file_access(_SMOKE_TEST_FILE)` is `READ_WRITE`; `HIDDEN` → skip "not exposed", `READ_ONLY` → skip "read-only rule"; without support → today's `is_path_gitignored` check
+- [x] Update `tests/cli/commands/test_verify_mcp_edit_smoke.py` (patches of `is_path_gitignored`, the skip-text test)
+- [x] This repo's `.gitignore`: `.scratch/` (via the new `init` step)
+- [x] CLAUDE.md: `git_commit` note (keep the `all=True` ban; restate the reason — other untracked files), "Scratch probes" (no longer "not gitignored"), Jenkins log-download bullet ("`.scratch/` works" — via the rule)
+- [x] Keep CI `check_forbidden_folder .scratch` as a backstop
 
 ### Docs
-- [ ] `docs/cli-reference.md` (init), `docs/repository-setup/repo.md` (`.gitignore` list; commit `.mcp-file-access`), `docs/repository-setup/README.md` (checklist, file table), `docs/repository-setup/claude-code.md`, `tools/jenkins_status_check.md` (`.scratch/` log wording)
-- [ ] `tool-inventory.md`: mcp-workspace version table (stale); `implementation.md`: FU10 (all template rules; session-folder part reversed), FU11 done
-- [ ] Issue 1 draft: "its `init` template is this repo's `.mcp-file-access`" → "issue 4's template is a subset (no `.mcp.linux/macos.json`)"
+- [x] `docs/cli-reference.md` (init), `docs/repository-setup/repo.md` (`.gitignore` list; commit `.mcp-file-access`), `docs/repository-setup/README.md` (checklist, file table), `docs/repository-setup/claude-code.md`, `tools/jenkins_status_check.md` (`.scratch/` log wording)
+- [x] `tool-inventory.md`: mcp-workspace version table (stale); `implementation.md`: FU10 (all template rules; session-folder part reversed), FU11 done
+- [x] Issue 1 draft: "its `init` template is this repo's `.mcp-file-access`" → "issue 4's template is a subset (no `.mcp.linux/macos.json`)"
 
 ## Acceptance
 
-- [ ] Unit: the tests above; `verify` smoke test runs (`prompt_llm` called) when `.scratch/` is gitignored and the rule is present
-- [ ] Unit: the vscodeclaude session launch does not gitignore `.scratch/`
+- [x] Unit: the tests above; `verify` smoke test runs (`prompt_llm` called) when `.scratch/` is gitignored and the rule is present
+- [x] Unit: the vscodeclaude session launch does not gitignore `.scratch/`
 - [ ] Manual, interactive, after task 0 and the merge: in this repo, MCP `save_file` and `read_file` under `.scratch/`, `github_issue_view(body_file=".scratch/body.md")` (the write path `issue_update` uses), and `delete_directory(".scratch", recursive=True)` all work; `git status` doesn't show `.scratch/`
-- [ ] pylint, pytest, mypy pass
+- [x] pylint, pytest, mypy pass

@@ -8,7 +8,7 @@ Add a committed `.claude/settings.json` that denies native writes to the protect
 
 - **Read first:** `docs/repository-setup/claude-permissions/implementation.md` §3.1 T1, T2, T11, T15, T18; §1.5 F11
 - Concept: `docs/repository-setup/claude-permissions/design-concept.md` §2 (Tier 2), §3
-- Before issue 4: its `init` template is this repo's `.mcp-file-access`, extended here
+- Before issue 4: this repo's `.mcp-file-access` is extended here; issue 4's `init` template is a subset (no `.mcp.linux/macos.json`)
 - Follow-up (separate issue): settings layout — allows to `settings.json`, untrack `settings.local.json`, Copilot (FU3), init (FU5), docs
 - Not in scope: T3 (`WebFetch` domain list), T5 / `gh-tool` narrowing (issue 2 removes `set-status` first), T20 (Jenkins scripts — no Jenkins allow is added or changed beyond dropping `.bat`), user `~/.claude/settings.json` (cleaned by hand)
 

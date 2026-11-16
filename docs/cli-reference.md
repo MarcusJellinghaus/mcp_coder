@@ -118,7 +118,7 @@ Full setup checklist: [Repository Setup](repository-setup/README.md).
 
 ### init
 
-Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, and add the VSCodeClaude entries to the project's `.gitignore`.
+Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, add the VSCodeClaude entries to the project's `.gitignore`, and set up the `.mcp-file-access` rules file with `.scratch/` gitignored.
 
 ```bash
 mcp-coder init [--project-dir PATH] [--just-skills]
@@ -127,6 +127,14 @@ mcp-coder init [--project-dir PATH] [--just-skills]
 `--just-skills` deploys only the bundled resources (all three sets, despite the name) and skips config creation. Use it to refresh them after upgrading mcp-coder. Existing files are never overwritten; delete a file first to refresh it.
 
 The `.gitignore` step runs in both modes and is idempotent. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails.
+
+Also in both modes, init creates or completes the mcp-workspace rules file `.mcp-file-access` and then gitignores `.scratch/`:
+
+- **Rules file:** created with the template rules (`read-only` for `/.vscodeclaude_status.txt`, `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json`; `read-write /.scratch/`). An existing file gets only the template rules whose pattern it lacks, appended at the end, so they win over earlier rules; init warns when an appended rule changes the level an existing rule gives. An invalid file is left unchanged with a warning. If the file cannot be written, the command fails after the remaining steps.
+- **`.scratch/`:** added to `.gitignore` only when the rules file is valid and keeps `.scratch/` writable for MCP. Skipped when mcp-workspace in the mcp-coder environment does not support `.mcp-file-access` (the rules file is then written without validation).
+- Report lines: `File access rules: created | N rules added | unchanged | invalid (<problem>)` and `Gitignore: .scratch/ added | present | skipped (<reason>)`.
+
+Commit `.gitignore` and `.mcp-file-access` afterwards.
 
 ```bash
 mcp-coder init                                   # config + bundled resources

@@ -279,6 +279,14 @@ class TestWorkspaceSetup:
         assert after.count(".vscodeclaude_session.json") == 1
         assert added == []
 
+    def test_update_gitignore_never_ignores_scratch(self, tmp_path: Path) -> None:
+        """The session launch's gitignore step leaves .scratch/ to init."""
+        added = update_gitignore(tmp_path)
+
+        content = (tmp_path / ".gitignore").read_text(encoding="utf-8")
+        assert ".scratch" not in content
+        assert not any(".scratch" in line for line in added)
+
     def test_create_workspace_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
     ) -> None:

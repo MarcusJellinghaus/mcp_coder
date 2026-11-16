@@ -19,7 +19,13 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_verify import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
-from ...mcp_workspace import is_path_gitignored
+from ...mcp_workspace import (
+    FILE_ACCESS_SUPPORTED,
+    FileAccess,
+    get_file_access,
+    is_path_gitignored,
+    validate_access_rules,
+)
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import (
@@ -69,8 +75,35 @@ from .verify_sections import (
 
 logger = logging.getLogger(__name__)
 
-# POSIX spelling on all platforms: used in the LLM prompt and the gitignore check
+# POSIX spelling on all platforms: used in the LLM prompt and the access check
 _SMOKE_TEST_FILE = ".scratch/mcp_coder_verify.md"
+
+
+def _smoke_test_skip_reason(project_dir: Path) -> str | None:
+    """Tell why mcp-workspace would refuse to edit the smoke-test file.
+
+    Honours ``.mcp-file-access`` when mcp-workspace supports it; otherwise
+    only gitignore counts.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        The skip text, or None when the file is writable for MCP.
+    """
+    if not FILE_ACCESS_SUPPORTED:
+        if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
+            return f"skipped: {_SMOKE_TEST_FILE} is gitignored"
+        return None
+    problems = validate_access_rules(project_dir)
+    if problems:
+        return f"skipped: invalid rules file .mcp-file-access ({'; '.join(problems)})"
+    access = get_file_access(_SMOKE_TEST_FILE, project_dir)
+    if access == FileAccess.HIDDEN:
+        return f"skipped: {_SMOKE_TEST_FILE} not exposed (gitignored, no rule)"
+    if access == FileAccess.READ_ONLY:
+        return f"skipped: {_SMOKE_TEST_FILE} has a read-only rule"
+    return None
 
 
 def _run_mcp_edit_smoke_test(
@@ -100,13 +133,10 @@ def _run_mcp_edit_smoke_test(
     test_file = project_dir / _SMOKE_TEST_FILE
     created_scratch = not scratch_dir.exists()
     try:
-        # mcp-workspace refuses gitignored paths, so the edit could never succeed
-        if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
-            return Row(
-                label,
-                symbols["warning"],
-                f"skipped: {_SMOKE_TEST_FILE} is gitignored",
-            )
+        # mcp-workspace refuses paths it can't write, so the edit could never succeed
+        skip_reason = _smoke_test_skip_reason(project_dir)
+        if skip_reason is not None:
+            return Row(label, symbols["warning"], skip_reason)
         scratch_dir.mkdir(exist_ok=True)
         write_lf_text(test_file, "A\n\nC\n")
         prompt_llm(
