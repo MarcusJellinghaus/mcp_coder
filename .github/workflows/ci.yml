@@ -97,6 +97,69 @@ jobs:
           echo "✅ All checks passed! No forbidden folders found."
         fi
 
+  # PR only, advisory: warns when a PR changes sensitive files (#1431); never fails on findings.
+  # HEAD^1 is the base tip of GitHub's merge commit (needs fetch-depth: 2).
+  check-sensitive-files:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Check for sensitive files in PR
+        run: |
+          # Flags files that are read-only under the base branch's .mcp-file-access,
+          # the rules file itself, and the watch list. Patterns are literal paths from
+          # the repo root; a trailing / covers the folder. Last matching rule wins,
+          # case-insensitive like the MCP server on Windows.
+          WATCH_LIST=(/pyproject.toml /.claude/agents/ /.claude/skills/ /.github/workflows/)
+          shopt -s nocasematch
+
+          matches() {  # <path> <pattern>
+            local pattern="${2#/}"
+            [[ "$1" == "$pattern" || "$1" == "${pattern%/}/"* ]]
+          }
+
+          reasons() {  # <path>
+            local level="" rule="" lvl pattern out=""
+            while read -r lvl pattern _; do
+              if [[ "$lvl" == read-* ]] && matches "$1" "$pattern"; then level=$lvl; rule=$pattern; fi
+            done <<< "$RULES"
+            if [[ "$level" == read-only ]]; then out="read-only rule $rule"; fi
+            if [[ "$1" == .mcp-file-access ]]; then out="${out:+$out; }rules file"; fi
+            for pattern in "${WATCH_LIST[@]}"; do
+              if matches "$1" "$pattern"; then out="${out:+$out; }watch list $pattern"; fi
+            done
+            echo "$out"
+          }
+
+          # Base rules only, so a PR can't drop a rule for itself.
+          if ! RULES=$(git show "HEAD^1:.mcp-file-access" 2>/dev/null); then
+            echo "No .mcp-file-access on the base branch: read-only rule check skipped."
+          fi
+          RULES=${RULES//$'\r'/}
+          # --no-renames: a rename lists the old path too.
+          CHANGED=$(git -c core.quotePath=false diff --name-only --no-renames HEAD^1 HEAD)
+
+          TABLE=""
+          while IFS= read -r path; do
+            [[ -n "$path" ]] || continue
+            r=$(reasons "$path")
+            [[ -n "$r" ]] || continue
+            file=${path//%/%25}; file=${file//:/%3A}; file=${file//,/%2C}
+            echo "::warning file=$file::${r//%/%25}"
+            TABLE+="| ${path//|/\\|} | $r |"$'\n'
+          done <<< "$CHANGED"
+
+          # Annotations show only ~10 per step; the summary lists every file.
+          if [[ -n "$TABLE" ]]; then
+            SUMMARY=$'## Sensitive files changed\n\n| File | Reasons |\n|---|---|\n'"$TABLE"
+          else
+            SUMMARY="No sensitive files changed."
+          fi
+          echo "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+
   # Matrix approach: Each check runs as independent job with individual pass/fail status
   # fail-fast: false ensures all checks complete even if one fails
   # First-line checks: run on every push, not again on the PR.

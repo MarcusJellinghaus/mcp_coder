@@ -19,7 +19,7 @@ linked config files, docs and issues.
 | [Coverage](#coverage) | pytest-cov, diff-cover | Show what tests reach, without gating | `run_pytest_check` | [`ci.yml`](../../.github/workflows/ci.yml), [`github.md`](github.md#coverage-badge), #1178 |
 | [Security scanning](#security-scanning) | ruff `S`, `PLE2502`, CodeQL, OpenSSF Scorecard | Find insecure code and supply-chain risks | `run_ruff_check`; CodeQL/Scorecard — | [`pyproject.toml`](../../pyproject.toml), [`scorecard.yml`](../../.github/workflows/scorecard.yml), #1170, #1177 |
 | [Tests](#tests) | pytest | Behaviour stays correct | `run_pytest_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml) |
-| [Repo hygiene](#repo-hygiene) | CI job, `tools/check_*.py` | Keep scratch files, URL deps and forbidden calls out | — | [`ci.yml`](../../.github/workflows/ci.yml), [`check_no_url_deps.py`](../../tools/check_no_url_deps.py), [`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py) |
+| [Repo hygiene](#repo-hygiene) | CI job, `tools/check_*.py` | Keep scratch files, URL deps and forbidden calls out; flag sensitive-file changes | — | [`ci.yml`](../../.github/workflows/ci.yml), [`check_no_url_deps.py`](../../tools/check_no_url_deps.py), [`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py) |
 | [Repo settings](#repo-settings) | `mcp-coder verify` | Report whether GitHub security features are on; `main` has no required checks | — | [`github.md`](github.md#repo-security-configuration-checks), #1179, #1180, #1294 |
 | [Badges](#badges) | README badges | Check state visible at a glance | — | [`github.md`](github.md#readme-badges), #1291 |
 
@@ -53,6 +53,7 @@ or redundant with earlier gates. Every check runs at least once before merge (#1
 | tach, deptry | — | ✅ | ✅ | Backup: rarely triggered |
 | vscodeclaude-template-install | — | ✅ | ✅ | Backup: its inputs (installer, `pyproject.toml`, sibling HEADs) rarely change |
 | check-forbidden-folders | — | ✅ | — | `pr_info/` is allowed on branches, not in a merge |
+| check-sensitive-files | — | ✅ | — | Advisory, PR diff only: warns, never fails on findings |
 | langchain-integration, coverage | — | ✅ | main push only | Calls real LLM APIs; `coverage` combines the test jobs of its own run and updates the badge on main |
 
 ## Lint
@@ -129,6 +130,22 @@ See [`pyproject.toml`](../../pyproject.toml) `[tool.pytest.ini_options]`.
 
 - `check-forbidden-folders` (PR-only): blocks `pr_info/`, `.scratch/` and non-empty profiler
   output.
+- `check-sensitive-files` (PR-only, advisory, not required; shell step in `ci.yml`):
+  warns with annotations and a job-summary table when a PR changes a file that is
+  `read-only` under the **base** branch's `.mcp-file-access`, the rules file itself, or a
+  watch-list path (`pyproject.toml`, `.claude/agents/`, `.claude/skills/`,
+  `.github/workflows/`). Last matching rule wins; matching is case-insensitive; renames
+  count for both paths. Known limits:
+  - Rule patterns are matched as literal paths from the repo root (trailing `/` = folder).
+    Wildcards, `**`, and patterns without a leading `/` that should match at any depth
+    are not handled — fine while every rule is a plain rooted path.
+  - An invalid base rules file is not detected (the MCP server treats it as all
+    read-only).
+  - A PR can suppress the check by editing `ci.yml` (`pull_request` runs the head's
+    workflow; possible follow-up: `pull_request_target`). Advisory signal, not a security
+    control.
+  - Canonical spellings (`.mcp.json.`, `:stream`) are not matched.
+  - Dependabot action bumps under `.github/workflows/` warn by design.
 - `no-url-deps` ([`check_no_url_deps.py`](../../tools/check_no_url_deps.py)): no direct URL
   dependencies in `[project]` dependencies or extras; PyPI rejects them.
 - `forbidden-calls` ([`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py)):
