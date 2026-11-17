@@ -107,21 +107,58 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: 3.11
-
-      - name: Install mcp-workspace
+      - name: Check for sensitive files in PR
         run: |
-          SPEC=$(python tools/read_github_deps.py --specs | grep '^mcp-workspace ')
-          uv pip install --system "$SPEC"
+          # Flags files that are read-only under the base branch's .mcp-file-access,
+          # the rules file itself, and the watch list. Patterns are literal paths from
+          # the repo root; a trailing / covers the folder. Last matching rule wins,
+          # case-insensitive like the MCP server on Windows.
+          WATCH_LIST=(/pyproject.toml /.claude/agents/ /.claude/skills/ /.github/workflows/)
+          shopt -s nocasematch
 
-      - name: Run check-sensitive-files
-        run: python tools/check_sensitive_files.py --base HEAD^1 --head HEAD
+          matches() {  # <path> <pattern>
+            local pattern="${2#/}"
+            [[ "$1" == "$pattern" || "$1" == "${pattern%/}/"* ]]
+          }
+
+          reasons() {  # <path>
+            local level="" rule="" lvl pattern out=""
+            while read -r lvl pattern _; do
+              if [[ "$lvl" == read-* ]] && matches "$1" "$pattern"; then level=$lvl; rule=$pattern; fi
+            done <<< "$RULES"
+            if [[ "$level" == read-only ]]; then out="read-only rule $rule"; fi
+            if [[ "$1" == .mcp-file-access ]]; then out="${out:+$out; }rules file"; fi
+            for pattern in "${WATCH_LIST[@]}"; do
+              if matches "$1" "$pattern"; then out="${out:+$out; }watch list $pattern"; fi
+            done
+            echo "$out"
+          }
+
+          # Base rules only, so a PR can't drop a rule for itself.
+          if ! RULES=$(git show "HEAD^1:.mcp-file-access" 2>/dev/null); then
+            echo "No .mcp-file-access on the base branch: read-only rule check skipped."
+          fi
+          RULES=${RULES//$'\r'/}
+          # --no-renames: a rename lists the old path too.
+          CHANGED=$(git -c core.quotePath=false diff --name-only --no-renames HEAD^1 HEAD)
+
+          TABLE=""
+          while IFS= read -r path; do
+            [[ -n "$path" ]] || continue
+            r=$(reasons "$path")
+            [[ -n "$r" ]] || continue
+            file=${path//%/%25}; file=${file//:/%3A}; file=${file//,/%2C}
+            echo "::warning file=$file::${r//%/%25}"
+            TABLE+="| ${path//|/\\|} | $r |"$'\n'
+          done <<< "$CHANGED"
+
+          # Annotations show only ~10 per step; the summary lists every file.
+          if [[ -n "$TABLE" ]]; then
+            SUMMARY=$'## Sensitive files changed\n\n| File | Reasons |\n|---|---|\n'"$TABLE"
+          else
+            SUMMARY="No sensitive files changed."
+          fi
+          echo "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
 
   # Matrix approach: Each check runs as independent job with individual pass/fail status
   # fail-fast: false ensures all checks complete even if one fails
