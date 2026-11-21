@@ -29,7 +29,7 @@ def _get_tool_environment() -> tuple[str, str]:
     points at the project venv, which need not contain the MCP server
     executables -- using it would make the servers fail to start. The project
     venv reaches the servers via ``${VIRTUAL_ENV}`` in ``.mcp.json`` (for
-    ``--venv-path`` / ``--python-executable``), not through this value.
+    ``--python-executable``), not through this value.
 
     Resolution order:
         1. A pre-set ``MCP_CODER_VENV_DIR`` (a two-env-aware launcher already

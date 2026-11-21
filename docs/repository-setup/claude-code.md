@@ -146,7 +146,6 @@ Provides Python code-quality MCP tools.
 
 - `--project-dir`: Project root (typically `${MCP_CODER_PROJECT_DIR}`)
 - `--python-executable`: Python interpreter in your venv
-- `--venv-path`: Virtual environment root
 - `--test-folder`: Test directory (usually `tests`)
 - `--log-level`: Log verbosity (`DEBUG`, `INFO`)
 

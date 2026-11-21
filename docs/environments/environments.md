@@ -89,7 +89,7 @@ env_vars = {
 }
 ```
 
-`MCP_CODER_VENV_DIR` / `MCP_CODER_VENV_PATH` identify the **tool env** — where the MCP server executables live. The reliable signal is the prefix of the running mcp-coder interpreter (`sys.prefix`), or a value the launcher already set; **`VIRTUAL_ENV` is deliberately not used** for these, since in the two-env model it points at the *project* venv, which need not contain the MCP server executables. (The project's Python still reaches the servers through `${VIRTUAL_ENV}` in `.mcp.json` — `--venv-path` / `--python-executable`.)
+`MCP_CODER_VENV_DIR` / `MCP_CODER_VENV_PATH` identify the **tool env** — where the MCP server executables live. The reliable signal is the prefix of the running mcp-coder interpreter (`sys.prefix`), or a value the launcher already set; **`VIRTUAL_ENV` is deliberately not used** for these, since in the two-env model it points at the *project* venv, which need not contain the MCP server executables. (The project's Python still reaches the servers through `${VIRTUAL_ENV}` in `.mcp.json` — `--python-executable`.)
 
 > Earlier this was derived from `VIRTUAL_ENV` first, so running a workflow against a project whose `.venv` lacked `mcp-tools-py`/`mcp-workspace` made the servers fail to start (`tools: []`) and the model run blind. Fixed in #995; the CLI now also aborts fast when a configured MCP server isn't `connected`.
 
@@ -163,7 +163,7 @@ The `python -m` form always runs the local source code, regardless of PATH order
 | MCP server processes (`mcp-tools-py`, `mcp-workspace`) | Tool env | MCP servers are tools |
 | `pytest` / `pylint` / `mypy` | Project env | Tests import project code and its dependencies |
 
-The MCP server runs in the tool env but launches pytest/pylint/mypy using the **project's Python** via `--venv-path`.
+The MCP server runs in the tool env but launches pytest/pylint/mypy using the **project's Python** via `--python-executable`.
 
 ## Configuration (`.mcp.json`)
 
@@ -175,7 +175,6 @@ The MCP server runs in the tool env but launches pytest/pylint/mypy using the **
     "command": "${MCP_CODER_VENV_PATH}\\mcp-tools-py.exe",
     "args": [
       "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-      "--venv-path", "${VIRTUAL_ENV}",
       "--python-executable", "${VIRTUAL_ENV}\\Scripts\\python.exe"
     ]
   },
@@ -186,7 +185,7 @@ The MCP server runs in the tool env but launches pytest/pylint/mypy using the **
 }
 ```
 
-`command` uses `${MCP_CODER_VENV_PATH}` (tool env Scripts dir), while `--venv-path` and `--python-executable` stay as `${VIRTUAL_ENV}` (project env).
+`command` uses `${MCP_CODER_VENV_PATH}` (tool env Scripts dir), while `--python-executable` stays on `${VIRTUAL_ENV}` (project env).
 
 ## Observed Issue: Python Version Mismatch
 
