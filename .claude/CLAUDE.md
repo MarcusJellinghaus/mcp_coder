@@ -13,7 +13,7 @@
 
 If you can't name the gap, use the MCP tool. Exempt: the approved commands under Git operations.
 
-**Protected files** (`.mcp*.json`, `.claude/settings*.json`, `.mcp-file-access`): if MCP refuses or a native write is denied, stop and ask the user to edit the file — never write it via Bash or PowerShell.
+**Protected files** (`.mcp*.json`, `.claude/settings*.json`, `.mcp-file-access`): MCP refuses writes to them by design. Stop and ask the user to edit the file — a refusal is not a gap, so never fall back to Edit/Write, Bash or PowerShell.
 
 **No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`.
 
