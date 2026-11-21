@@ -348,7 +348,7 @@ class TestEnvironmentSection:
         _print_environment_section(SectionBuilder())
         assert "(not set)" in capsys.readouterr().out
 
-    def test_missing_package_shows_err_not_installed(
+    def test_missing_package_optional_warn_required_err(
         self,
         capsys: pytest.CaptureFixture[str],
         monkeypatch: pytest.MonkeyPatch,
@@ -356,7 +356,7 @@ class TestEnvironmentSection:
         from importlib.metadata import PackageNotFoundError
 
         def fake_version(pkg: str) -> str:
-            if pkg == "mcp-tools-py":
+            if pkg in ("mcp-tools-py", "mcp-workspace"):
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
@@ -365,7 +365,11 @@ class TestEnvironmentSection:
         )
         _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
-        assert _format_row("mcp-tools-py", "[ERR]", "not installed", indent=2) in out
+        optional = _format_row(
+            "mcp-tools-py", "[WARN]", "not installed (optional)", indent=2
+        )
+        assert optional in out
+        assert _format_row("mcp-workspace", "[ERR]", "not installed", indent=2) in out
 
     def test_virtualenv_none_when_not_in_venv(
         self,
@@ -409,7 +413,7 @@ class TestEnvironmentSection:
         from importlib.metadata import PackageNotFoundError
 
         def fake_version(pkg: str) -> str:
-            if pkg == "mcp-tools-py":
+            if pkg == "mcp-workspace":
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
@@ -419,7 +423,7 @@ class TestEnvironmentSection:
         _print_environment_section(SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         python_line = next(line for line in lines if "Python version" in line)
-        err_line = next(line for line in lines if "mcp-tools-py" in line)
+        err_line = next(line for line in lines if "mcp-workspace" in line)
         expected_col = _expected_value_column()
         for line in (python_line, err_line):
             _assert_value_at_column(line, expected_col)

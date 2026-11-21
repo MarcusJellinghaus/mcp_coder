@@ -38,6 +38,8 @@ _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-tools-py",
     "mcp-workspace",
 )
+# Packages behind an extra: missing is a warning, not an error
+_OPTIONAL_PACKAGES: frozenset[str] = frozenset({"mcp-tools-py"})
 
 # Retired MCP_CODER_* environment variables mapped to their replacement.
 # Unknown-key detection scans config *sections*, so a still-exported retired
@@ -347,7 +349,10 @@ def _print_environment_section(out: SectionBuilder) -> None:
             value = version(pkg)
             out.add(Row(pkg, "", value))
         except PackageNotFoundError:
-            out.add(Row(pkg, STATUS_SYMBOLS["failure"], "not installed"))
+            if pkg in _OPTIONAL_PACKAGES:
+                out.add(Row(pkg, STATUS_SYMBOLS["warning"], "not installed (optional)"))
+            else:
+                out.add(Row(pkg, STATUS_SYMBOLS["failure"], "not installed"))
     out.close()
 
 

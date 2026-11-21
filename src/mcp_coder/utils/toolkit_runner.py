@@ -36,6 +36,13 @@ DEFAULT_TOOLKIT = "mcp-tools-py"
 ENTRY_POINT_GROUP = "mcp_coder.toolkits"
 WORKSPACE_SERVER = "mcp-workspace"
 
+# Shipped as the python extra; a missing registration gets an install hint
+_PYTHON_TOOLKIT = "mcp-tools-py"
+_PYTHON_EXTRA_HINT = (
+    'install or upgrade the python extra: pip install --upgrade "mcp-coder[python]"; '
+    "if the entry point is still missing, reinstall the tool env"
+)
+
 # Depths that fall back to the nearest lower declared one, lowest first
 _STANDARD_DEPTHS = ("quick", "standard", "full")
 
@@ -264,10 +271,13 @@ def _toolkit_class(name: str) -> type[Toolkit]:
                 raise ValueError(f"Toolkit '{name}' failed to load: {exc}") from exc
             return cls
     names = ", ".join(sorted(ep.name for ep in registered)) or "none"
-    raise ValueError(
+    message = (
         f"Toolkit '{name}' is not registered in the {ENTRY_POINT_GROUP} "
         f"entry-point group; registered: {names}"
     )
+    if name == _PYTHON_TOOLKIT:
+        message += f" — {_PYTHON_EXTRA_HINT}"
+    raise ValueError(message)
 
 
 def _request_params(loaded: LoadedToolkit, action: str, depth: str) -> dict[str, Any]:

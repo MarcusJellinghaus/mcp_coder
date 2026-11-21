@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -142,6 +143,29 @@ class TestLoadToolkit:
         _write_config(tmp_path)
         with pytest.raises(ValueError, match="'fake'"):
             load_toolkit(tmp_path)
+
+    def test_unregistered_python_toolkit_hints_extra(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """mcp-tools-py not registered → install hint for the python extra."""
+        command = SimpleNamespace(name="command")
+        monkeypatch.setattr(toolkit_runner, "entry_points", lambda **_: [command])
+        with pytest.raises(ValueError) as excinfo:
+            _REAL_TOOLKIT_CLASS("mcp-tools-py")
+        message = str(excinfo.value)
+        assert "registered: command" in message
+        assert 'pip install --upgrade "mcp-coder[python]"' in message
+        assert "reinstall the tool env" in message
+
+    def test_unregistered_other_toolkit_no_python_hint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Any other unregistered name gets no python-extra hint."""
+        command = SimpleNamespace(name="command")
+        monkeypatch.setattr(toolkit_runner, "entry_points", lambda **_: [command])
+        with pytest.raises(ValueError) as excinfo:
+            _REAL_TOOLKIT_CLASS("other")
+        assert "mcp-coder[python]" not in str(excinfo.value)
 
     def test_constructor_raising(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
