@@ -22,11 +22,7 @@ from ...mcp_tools_py import resolve_steps
 from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
 from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.env_placeholders import resolve_placeholders
-from ...utils.pyproject_config import (
-    get_format_code,
-    get_implement_config,
-    has_legacy_format_code_key,
-)
+from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
 from ...utils.toolkit_runner import (
     DEFAULT_TOOLKIT,
     load_toolkit,
@@ -41,6 +37,7 @@ from .verify_formatting import (
 )
 from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
+from .verify_toolkit_rows import check_type_hints_row
 
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
@@ -566,18 +563,7 @@ def _print_project_section(
             )
         )
         ok = False
-    config = get_implement_config(project_dir)
-    if config.check_type_hints:
-        out.add(Row("check_type_hints", symbols["success"], "enabled", 4))
-    else:
-        out.add(
-            Row(
-                "check_type_hints",
-                symbols["warning"],
-                "disabled (set in pyproject.toml)",
-                4,
-            )
-        )
+    ok = check_type_hints_row(project_dir, symbols, out) and ok
     out.close()
     return ok and file_access_ok
 

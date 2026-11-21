@@ -7,12 +7,11 @@ import pytest
 
 from mcp_coder.utils.pyproject_config import (
     FormatCodeSetting,
-    ImplementConfig,
     _load_pyproject,
     get_format_code,
     get_github_install_config,
-    get_implement_config,
     get_install_extras,
+    get_leftover_check_type_hints,
     get_post_install_checks,
     get_prompts_config,
     has_legacy_format_code_key,
@@ -126,63 +125,38 @@ packages-no-deps = ["pkg-b @ git+https://example.com/b.git"]
         assert key in str(exc_info.value)
 
 
-class TestGetImplementConfig:
-    """Tests for get_implement_config."""
+class TestGetLeftoverCheckTypeHints:
+    """Tests for get_leftover_check_type_hints."""
 
-    def test_returns_true_when_configured(self, tmp_path: Path) -> None:
-        """check_type_hints set to true is returned."""
+    @pytest.mark.parametrize(
+        ("toml_value", "expected"),
+        [("true", True), ("false", False), ('"no"', "no")],
+    )
+    def test_returns_raw_value(
+        self, tmp_path: Path, toml_value: str, expected: object
+    ) -> None:
+        """The raw TOML value is returned, whatever its type."""
         (tmp_path / "pyproject.toml").write_text(
-            """\
-[tool.mcp-coder.implement]
-check_type_hints = true
-""",
+            f"[tool.mcp-coder.implement]\ncheck_type_hints = {toml_value}\n",
             encoding="utf-8",
         )
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is True
+        assert get_leftover_check_type_hints(tmp_path) == expected
 
-    def test_returns_false_when_explicitly_disabled(self, tmp_path: Path) -> None:
-        """check_type_hints set to false opts out."""
+    def test_none_when_key_missing(self, tmp_path: Path) -> None:
+        """A section without the key → None."""
         (tmp_path / "pyproject.toml").write_text(
-            """\
-[tool.mcp-coder.implement]
-check_type_hints = false
-""",
-            encoding="utf-8",
+            "[tool.mcp-coder.implement]\nformat_code = true\n", encoding="utf-8"
         )
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is False
+        assert get_leftover_check_type_hints(tmp_path) is None
 
-    def test_defaults_to_true_when_section_missing(self, tmp_path: Path) -> None:
-        """Missing [tool.mcp-coder.implement] returns True."""
+    def test_none_when_section_missing(self, tmp_path: Path) -> None:
+        """Missing [tool.mcp-coder.implement] → None."""
         (tmp_path / "pyproject.toml").write_text("[tool.mcp-coder]\n", encoding="utf-8")
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is True
+        assert get_leftover_check_type_hints(tmp_path) is None
 
-    def test_defaults_to_true_when_file_missing(self, tmp_path: Path) -> None:
-        """No pyproject.toml returns True."""
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is True
-
-    def test_legacy_format_code_key_is_ignored(self, tmp_path: Path) -> None:
-        """A leftover format_code key does not affect the config."""
-        (tmp_path / "pyproject.toml").write_text(
-            """\
-[tool.mcp-coder.implement]
-format_code = true
-""",
-            encoding="utf-8",
-        )
-        config = get_implement_config(tmp_path)
-        assert config == ImplementConfig(check_type_hints=True)
-
-    def test_handles_invalid_toml(self, tmp_path: Path) -> None:
-        """Malformed TOML file returns defaults."""
-        (tmp_path / "pyproject.toml").write_text(
-            "this is not valid toml {{{", encoding="utf-8"
-        )
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is True
+    def test_none_when_file_missing(self, tmp_path: Path) -> None:
+        """No pyproject.toml → None."""
+        assert get_leftover_check_type_hints(tmp_path) is None
 
 
 class TestGetFormatCode:
@@ -481,8 +455,7 @@ class TestMalformedTomlRegression:
         assert config.packages == []
         assert config.packages_no_deps == []
 
-    def test_implement_config_returns_defaults(self, tmp_path: Path) -> None:
-        """get_implement_config does not raise on malformed TOML."""
+    def test_leftover_check_type_hints_returns_none(self, tmp_path: Path) -> None:
+        """get_leftover_check_type_hints does not raise on malformed TOML."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
-        config = get_implement_config(tmp_path)
-        assert config.check_type_hints is True
+        assert get_leftover_check_type_hints(tmp_path) is None

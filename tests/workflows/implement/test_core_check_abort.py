@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.pyproject_config import ImplementConfig
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
@@ -37,10 +36,6 @@ def _mocks_fixture() -> Iterator[_Mocks]:
         patch(f"{_CORE}.check_prerequisites", return_value=True),
         patch(f"{_CORE}._attempt_rebase_and_push", return_value=RebaseOutcome("ok")),
         patch(f"{_CORE}.check_formatter_config", return_value=None),
-        patch(
-            f"{_CORE}.get_implement_config",
-            return_value=ImplementConfig(check_type_hints=True),
-        ),
         patch(f"{_CORE}.prepare_task_tracker"),
         patch(f"{_CORE}.log_progress_summary"),
         patch(f"{_CORE}.get_step_progress", return_value={}),

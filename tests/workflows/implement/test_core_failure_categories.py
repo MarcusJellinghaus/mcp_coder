@@ -20,7 +20,6 @@ class TestRunImplementWorkflowFailureCategories:
         new=MagicMock(return_value="pushed abc1234"),
     )
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -57,13 +56,9 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
         """A final-check timeout outcome is categorized to LLM_TIMEOUT."""
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -87,7 +82,6 @@ class TestRunImplementWorkflowFailureCategories:
         new=MagicMock(return_value="pushed abc1234"),
     )
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -124,13 +118,9 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
         """A final-check mcp_unavailable outcome is categorized to MCP_UNAVAILABLE."""
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -150,7 +140,6 @@ class TestRunImplementWorkflowFailureCategories:
         assert failure_arg.stage == "Final checks"
 
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -190,14 +179,11 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
         """A CI-analysis LLMTimeoutError propagates and is categorized to LLM_TIMEOUT."""
         from mcp_coder.llm.interface import LLMTimeoutError
-        from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -217,7 +203,6 @@ class TestRunImplementWorkflowFailureCategories:
         assert failure_arg.stage == "CI pipeline analysis"
 
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -257,16 +242,13 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
         """A CI-analysis McpServersUnavailableError is categorized to MCP_UNAVAILABLE."""
         from mcp_coder.llm.providers.claude.claude_code_cli import (
             McpServersUnavailableError,
         )
-        from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -289,7 +271,6 @@ class TestRunImplementWorkflowFailureCategories:
         assert failure_arg.stage == "CI pipeline analysis"
 
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
@@ -329,14 +310,11 @@ class TestRunImplementWorkflowFailureCategories:
         mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
         """A PushRejectedError from the CI loop is reported as branch_moved."""
-        from mcp_coder.utils.pyproject_config import ImplementConfig
         from mcp_coder.workflow_steps.commit import PushRejectedError
 
-        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True

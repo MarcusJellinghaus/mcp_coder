@@ -106,11 +106,7 @@ class TestProcessSingleTask:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        outcome = process_single_task(
-            Path("/test/project"),
-            "claude",
-            check_type_hints=True,
-        )
+        outcome = process_single_task(Path("/test/project"), "claude")
 
         assert outcome.success is True
         assert outcome.reason == "completed"
@@ -312,9 +308,7 @@ class TestProcessSingleTask:
         mock_check_mypy.return_value = CheckOutcome("clean")
         mock_run_formatters.return_value = False
 
-        outcome = process_single_task(
-            Path("/test/project"), "claude", check_type_hints=True
-        )
+        outcome = process_single_task(Path("/test/project"), "claude")
 
         assert outcome.success is False
         assert outcome.reason == "error"
@@ -377,7 +371,7 @@ class TestProcessSingleTask:
 
 
 class TestProcessSingleTaskGating:
-    """Test formatter and check_type_hints gating in process_single_task."""
+    """Test formatter gating in process_single_task."""
 
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
     @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
@@ -424,19 +418,15 @@ class TestProcessSingleTaskGating:
     def test_process_task_with_retry_forwards_config_params(
         self, mock_process: MagicMock
     ) -> None:
-        """Verify process_task_with_retry passes check_type_hints through."""
+        """Verify process_task_with_retry forwards no config booleans."""
         mock_process.return_value = TaskOutcome(True, "completed")
 
-        process_task_with_retry(
-            Path("/test/project"),
-            "claude",
-            check_type_hints=True,
-        )
+        process_task_with_retry(Path("/test/project"), "claude")
 
         mock_process.assert_called_once()
         call_kwargs = mock_process.call_args
         assert "format_code" not in call_kwargs.kwargs
-        assert call_kwargs.kwargs["check_type_hints"] is True
+        assert "check_type_hints" not in call_kwargs.kwargs
 
 
 class TestIntegration:
@@ -487,7 +477,7 @@ class TestIntegration:
         mock_push.return_value = True
 
         # Execute workflow
-        outcome = process_single_task(project_dir, "claude", check_type_hints=True)
+        outcome = process_single_task(project_dir, "claude")
 
         # Verify success
         assert outcome.success is True
@@ -538,7 +528,6 @@ Please implement this task step by step."""
             None,
             None,
             entry="implement_task",
-            check_type_hints=True,
         )
         mock_run_formatters.assert_called_once_with(project_dir)
         mock_commit.assert_called_once_with(

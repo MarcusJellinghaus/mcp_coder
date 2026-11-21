@@ -421,8 +421,5 @@ packages = [
 packages-no-deps = [
 ]
 
-[tool.mcp-coder.implement]
-check_type_hints = true
-
 [tool.mcp-coder.toolkit]
 toolkit = "mcp-tools-py"

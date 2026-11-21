@@ -336,28 +336,16 @@ class TestMissingFragment:
         env.fix_turn.assert_not_called()
 
 
-class TestCheckTypeHints:
-    def test_false_drops_check_requests_and_logs(
-        self, env: _Env, caplog: pytest.LogCaptureFixture
-    ) -> None:
+class TestBindingSelection:
+    def test_check_requests_always_run(self, env: _Env, tmp_path: Path) -> None:
+        """A leftover check_type_hints = false no longer drops check@*."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.implement]\ncheck_type_hints = false\n", encoding="utf-8"
+        )
         env.binding("check@standard", "test@quick")
 
-        with caplog.at_level("INFO"):
-            assert _run(check_type_hints=False).status == "clean"
-
-        assert env.requests_run() == ["test@quick"]
-        assert "check@standard" in caplog.text
-
-    def test_false_with_only_checks_skips(
-        self, env: _Env, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        env.binding("check@quick")
-
-        with caplog.at_level("INFO"):
-            assert _run(check_type_hints=False) == CheckOutcome("clean")
-
-        env.run.assert_not_called()
-        assert "implement_final skipped" in caplog.text
+        assert check_and_fix(tmp_path, 1, "claude").status == "clean"
+        assert env.requests_run() == ["check@standard", "test@quick"]
 
     def test_empty_binding_skips(
         self, env: _Env, caplog: pytest.LogCaptureFixture

@@ -14,7 +14,6 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
@@ -152,9 +151,6 @@ def run_implement_workflow(
                 "general", stage="Formatter configuration", message=formatter_err
             )
 
-        # Read implement config from pyproject.toml
-        implement_config = get_implement_config(project_dir)
-
         # Step 2: Prepare task tracker if needed
         try:
             prepare_task_tracker(project_dir, provider, mcp_config, settings_file)
@@ -185,11 +181,7 @@ def run_implement_workflow(
         round_cap = max(progress.total + 10, 20)
         for _ in range(round_cap):
             outcome = process_task_with_retry(
-                project_dir,
-                provider,
-                mcp_config,
-                settings_file,
-                check_type_hints=implement_config.check_type_hints,
+                project_dir, provider, mcp_config, settings_file
             )
 
             if not outcome.success:
@@ -287,7 +279,6 @@ def run_implement_workflow(
                 mcp_config,
                 settings_file,
                 entry="implement_final",
-                check_type_hints=implement_config.check_type_hints,
             )
         finally:
             # The fix turns run their own LLM sessions, so drop any marker

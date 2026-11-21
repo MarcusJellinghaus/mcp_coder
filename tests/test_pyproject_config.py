@@ -3,6 +3,8 @@
 import tomllib
 from pathlib import Path
 
+from mcp_coder.utils.pyproject_config import get_leftover_check_type_hints
+
 
 def test_pyproject_install_from_github_config_exists() -> None:
     """Verify [tool.mcp-coder.install-from-github] section exists with expected keys."""
@@ -19,15 +21,10 @@ def test_pyproject_install_from_github_config_exists() -> None:
     assert isinstance(install_from_github["packages-no-deps"], list)
 
 
-def test_pyproject_implement_config_exists() -> None:
-    """Verify [tool.mcp-coder.implement] section exists with expected keys."""
-    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
-    with open(pyproject_path, "rb") as f:
-        config = tomllib.load(f)
-
-    implement = config["tool"]["mcp-coder"]["implement"]
-
-    assert implement["check_type_hints"] is True
+def test_pyproject_has_no_leftover_check_type_hints() -> None:
+    """Verify this repo no longer sets the retired check_type_hints key."""
+    root = Path(__file__).parent.parent
+    assert get_leftover_check_type_hints(root) is None
 
 
 def test_pyproject_typecheck_extra_exists() -> None:
