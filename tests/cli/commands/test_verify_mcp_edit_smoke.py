@@ -268,7 +268,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """An invalid rules file skips the smoke test and names the problem."""
+        """An invalid rules file skips the smoke test and points to PROJECT."""
         (tmp_path / ".mcp-file-access").write_text(
             "writable /.scratch/\n", encoding="utf-8"
         )
@@ -278,8 +278,7 @@ class TestMcpEditSmokeTest:
         )
 
         assert result.marker == "[WARN]"
-        assert "skipped: invalid rules file" in result.value
-        assert "unknown level 'writable'" in result.value
+        assert result.value == "skipped: invalid .mcp-file-access (see PROJECT)"
         mock_prompt_llm.assert_not_called()
 
     @patch(f"{_VERIFY}.FILE_ACCESS_SUPPORTED", False)
