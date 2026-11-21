@@ -29,7 +29,7 @@ def _stub_task_checks(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
         return
     with patch(
-        "mcp_coder.workflows.implement.task_processing.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.task_processing.check_and_fix",
         return_value=CheckOutcome("clean"),
     ):
         yield

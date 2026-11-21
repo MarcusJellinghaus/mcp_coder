@@ -12,7 +12,7 @@ from mcp_coder.utils.toolkit_runner import get_fragment as real_get_fragment
 from mcp_coder.workflows.implement.check_loop import (
     MAX_FIX_TURNS,
     CheckOutcome,
-    check_and_fix_mypy,
+    check_and_fix,
 )
 
 _PROJECT = Path("/test/project")
@@ -36,7 +36,7 @@ def _loaded(*requests: str, entry: str = "implement_final") -> MagicMock:
 
 
 class _Env:
-    """Patched collaborators of check_and_fix_mypy."""
+    """Patched collaborators of check_and_fix."""
 
     def __init__(
         self,
@@ -86,7 +86,7 @@ def env() -> Iterator[_Env]:
 
 
 def _run(**kwargs: Any) -> CheckOutcome:
-    return check_and_fix_mypy(_PROJECT, 1, "claude", **kwargs)
+    return check_and_fix(_PROJECT, 1, "claude", **kwargs)
 
 
 class TestCleanAndGrouping:
@@ -222,7 +222,7 @@ class TestFixTurns:
         env.binding("check@quick")
         env.results({"check@quick": _findings("x")}, {})
 
-        check_and_fix_mypy(
+        check_and_fix(
             _PROJECT,
             7,
             "copilot",

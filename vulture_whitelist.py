@@ -555,8 +555,8 @@ _.fixture_client
 _.fixture_patterns
 
 # tests/workflows/implement/test_core_failure_routing.py - autouse fixture
-# stubbing the final mypy pass so the round-cap tests never run real checks.
-_._stub_final_mypy_pass
+# stubbing the final check pass so the round-cap tests never run real checks.
+_._stub_final_check_pass
 
 # tests/cli/commands/coordinator/conftest.py - autouse fixture patching
 # find_untrusted_launch_keys so the status command stays off GitHub.

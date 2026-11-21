@@ -52,9 +52,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             ],
         ) as task,
         patch(f"{_CORE}.prepare_llm_environment", return_value={}),
-        patch(
-            f"{_CORE}.check_and_fix_mypy", return_value=CheckOutcome("clean")
-        ) as check,
+        patch(f"{_CORE}.check_and_fix", return_value=CheckOutcome("clean")) as check,
         patch(f"{_CORE}.rescue_commit", return_value="pushed abc1234") as rescue,
         patch(f"{_CORE}.run_formatters", return_value=True),
         patch(
@@ -132,7 +130,7 @@ class TestFinalCheckAbort:
         mocks.rescue.assert_called_once_with(tmp_path, "checks_exhausted")
         reason, stage, message = _failure(mocks)
         assert reason == "checks_exhausted"
-        assert stage == "Final mypy check"
+        assert stage == "Final checks"
         assert message.endswith(_SUFFIX)
 
     @pytest.mark.parametrize(
@@ -178,6 +176,6 @@ class TestFinalCheckAbort:
 
         assert _failure(mocks) == (
             "general",
-            "Final mypy check",
+            "Final checks",
             f"bad toolkit config{_SUFFIX}",
         )

@@ -1,7 +1,7 @@
 """Task processing functions for implement workflow.
 
 This module contains functions for processing individual implementation tasks,
-including LLM integration, mypy fixes, formatting, and git operations.
+including LLM integration, check fixes, formatting, and git operations.
 """
 
 import logging
@@ -31,7 +31,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 from .blocked import read_and_clear_blocked
-from .check_loop import CheckOutcome, check_and_fix_mypy
+from .check_loop import CheckOutcome, check_and_fix
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
@@ -293,7 +293,7 @@ Please implement this task step by step."""
 
     # Step 7: Run the implement_task checks and their fix loop
     try:
-        checks = check_and_fix_mypy(
+        checks = check_and_fix(
             project_dir,
             step_num,
             provider,

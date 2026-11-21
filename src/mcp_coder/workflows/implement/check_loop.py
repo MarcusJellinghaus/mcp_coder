@@ -207,7 +207,7 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
             response_data=llm_response,
             prompt=prompt,
             store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
-            step_name=f"step_{step_num}_mypy_{turn}",
+            step_name=f"step_{step_num}_check_{turn}",
             branch_name=branch_name,
         )
     except Exception as store_err:  # pylint: disable=broad-exception-caught
@@ -220,7 +220,7 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
     return None
 
 
-def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def check_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     project_dir: Path,
     step_num: int,
     provider: str,
@@ -249,7 +249,7 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
         or an ``error`` result; ``blocked`` / ``timeout`` / ``mcp_unavailable``
         from a fix turn. Typed LLM failures are returned, never raised.
     """
-    logger.info("Running mypy type checking...")
+    logger.info("Running checks...")
     turn = 0
     while True:
         try:
@@ -268,7 +268,7 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
             return CheckOutcome("error", str(e))
 
         if text is None:
-            logger.info("Mypy check passed after %d fix turns", turn)
+            logger.info("Checks passed after %d fix turns", turn)
             return CheckOutcome("clean")
 
         fragment = get_fragment(loaded, key)

@@ -28,7 +28,7 @@ class TestRunImplementWorkflowFailureCategories:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix")
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -80,7 +80,7 @@ class TestRunImplementWorkflowFailureCategories:
         mock_handle_failure.assert_called_once()
         failure_arg = mock_handle_failure.call_args[1]["failure"]
         assert failure_arg.category == "llm_timeout"
-        assert failure_arg.stage == "Final mypy check"
+        assert failure_arg.stage == "Final checks"
 
     @patch(
         "mcp_coder.workflows.implement.core.rescue_commit",
@@ -95,7 +95,7 @@ class TestRunImplementWorkflowFailureCategories:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix")
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
     )
@@ -147,7 +147,7 @@ class TestRunImplementWorkflowFailureCategories:
         mock_handle_failure.assert_called_once()
         failure_arg = mock_handle_failure.call_args[1]["failure"]
         assert failure_arg.category == "mcp_unavailable"
-        assert failure_arg.stage == "Final mypy check"
+        assert failure_arg.stage == "Final checks"
 
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
@@ -159,7 +159,7 @@ class TestRunImplementWorkflowFailureCategories:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -226,7 +226,7 @@ class TestRunImplementWorkflowFailureCategories:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -298,7 +298,7 @@ class TestRunImplementWorkflowFailureCategories:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(

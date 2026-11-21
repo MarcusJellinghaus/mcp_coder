@@ -16,7 +16,7 @@ from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 _CORE = "mcp_coder.workflows.implement.core"
-_STAGE = "Final mypy check"
+_STAGE = "Final checks"
 _SUFFIX = " — rescue commit: pushed abc1234"
 
 
@@ -56,9 +56,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             ],
         ) as process,
         patch(f"{_CORE}.prepare_llm_environment", return_value={}),
-        patch(
-            f"{_CORE}.check_and_fix_mypy", return_value=CheckOutcome("clean")
-        ) as check,
+        patch(f"{_CORE}.check_and_fix", return_value=CheckOutcome("clean")) as check,
         patch(f"{_CORE}.rescue_commit", return_value="pushed abc1234"),
         patch(f"{_CORE}.run_formatters", return_value=True) as formatters,
         patch(
@@ -165,7 +163,7 @@ class TestFinalCheckGate:
         reason, stage, message = _failure(mocks)
         assert reason == status
         assert stage == _STAGE
-        assert message.startswith("LLM failure during final mypy check")
+        assert message.startswith("LLM failure during final checks")
         assert "server hung" in message
 
     @pytest.mark.parametrize("check_type_hints", [True, False])

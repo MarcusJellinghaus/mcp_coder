@@ -429,15 +429,15 @@ class TestRoundCap:
     """Test that the task loop is bounded by max(progress.total + 10, 20)."""
 
     @pytest.fixture(autouse=True)
-    def _stub_final_mypy_pass(self) -> Iterator[None]:
-        """Stub the final mypy pass (on by default); these tests cover the round cap."""
+    def _stub_final_check_pass(self) -> Iterator[None]:
+        """Stub the final check pass (on by default); these tests cover the round cap."""
         with (
             patch(
                 "mcp_coder.workflows.implement.core.prepare_llm_environment",
                 return_value={},
             ),
             patch(
-                "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+                "mcp_coder.workflows.implement.core.check_and_fix",
                 return_value=CheckOutcome("clean"),
             ),
             patch(

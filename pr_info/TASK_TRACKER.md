@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Neutral names for the implement check loop — [step_1.md](./steps/step_1.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Retire `check_type_hints`; `verify` leftover row — [step_2.md](./steps/step_2.md)
 - [ ] Implementation (tests + production code)

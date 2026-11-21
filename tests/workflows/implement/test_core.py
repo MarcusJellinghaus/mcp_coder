@@ -20,7 +20,7 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -218,7 +218,7 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
@@ -253,7 +253,7 @@ class TestRunImplementWorkflow:
         mock_check_mypy.assert_called_once()
 
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
@@ -298,7 +298,7 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -358,7 +358,7 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -419,7 +419,7 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(
@@ -493,7 +493,7 @@ class TestRunImplementWorkflow:
         return_value={"staged": [], "modified": [], "untracked": []},
     )
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch(

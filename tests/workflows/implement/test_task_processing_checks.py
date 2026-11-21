@@ -39,7 +39,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             f"{_TP}.get_full_status",
             return_value={"staged": ["a.py"], "modified": [], "untracked": []},
         ),
-        patch(f"{_TP}.check_and_fix_mypy", return_value=CheckOutcome("clean")) as check,
+        patch(f"{_TP}.check_and_fix", return_value=CheckOutcome("clean")) as check,
         patch(f"{_TP}.run_formatters", return_value=True) as formatters,
         patch(f"{_TP}.commit_changes", return_value=True) as commit,
         patch(f"{_TP}.push_changes", return_value=True) as push,

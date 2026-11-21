@@ -36,7 +36,7 @@ from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .blocked import read_and_clear_blocked
-from .check_loop import CheckOutcome, check_and_fix_mypy, rescue_commit
+from .check_loop import CheckOutcome, check_and_fix, rescue_commit
 from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
@@ -67,7 +67,7 @@ def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
         checks: The final check's outcome; its status is not ``clean``.
 
     Returns:
-        (failure reason, message) for the "Final mypy check" stage.
+        (failure reason, message) for the "Final checks" stage.
     """
     if checks.status == "cap":
         # The detail carries the real turn count: the loop can cap early
@@ -78,7 +78,7 @@ def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
         logger.error("Implementation blocked: %s", checks.detail)
         return "blocked", checks.detail
     return checks.status, append_detail(
-        "LLM failure during final mypy check", checks.detail
+        "LLM failure during final checks", checks.detail
     )
 
 
@@ -274,12 +274,12 @@ def run_implement_workflow(
             )
 
         # Step 5: Run the final check over the implement_final binding - a gate
-        logger.info("Running final mypy check after all tasks...")
+        logger.info("Running final checks after all tasks...")
         env_vars = prepare_llm_environment(project_dir)
 
-        # Use step number 0 for final mypy check conversation
+        # Use step number 0 for final checks conversation
         try:
-            checks = check_and_fix_mypy(
+            checks = check_and_fix(
                 project_dir,
                 0,
                 provider,
@@ -298,45 +298,45 @@ def run_implement_workflow(
             checks = CheckOutcome("blocked", marker)
         if checks.status != "clean":
             reason, message = _final_check_failure(checks)
-            return abort_checks(reason, stage="Final mypy check", message=message)
+            return abort_checks(reason, stage="Final checks", message=message)
 
-        # Format code after mypy fixes
+        # Format code after check fixes
         if not run_formatters(project_dir):
-            logger.error("Formatting failed after final mypy check")
+            logger.error("Formatting failed after final checks")
             return fail(
                 "general",
                 stage="Post-implementation formatting",
-                message="Formatting failed after final mypy check",
+                message="Formatting failed after final checks",
             )
 
-        # Commit mypy fixes if any changes were made.
+        # Commit check fixes if any changes were made.
         status = get_full_status(project_dir)
         all_changes = status["staged"] + status["modified"] + status["untracked"]
 
         if all_changes:
-            logger.info("Committing final mypy fixes...")
+            logger.info("Committing final check fixes...")
             if not commit_changes(
                 project_dir,
                 provider,
                 mcp_config=mcp_config,
                 settings_file=settings_file,
             ):
-                logger.error("Failed to commit final mypy fixes")
+                logger.error("Failed to commit final check fixes")
                 return fail(
                     "general",
                     stage="Post-implementation commit",
-                    message="Failed to commit final mypy fixes",
+                    message="Failed to commit final check fixes",
                 )
 
             if not push_changes(project_dir):
-                logger.error("Failed to push final mypy fixes")
+                logger.error("Failed to push final check fixes")
                 return fail(
                     "general",
                     stage="Post-implementation commit",
-                    message="Failed to push final mypy fixes",
+                    message="Failed to push final check fixes",
                 )
         else:
-            logger.info("No changes from final mypy check - skipping commit")
+            logger.info("No changes from final checks - skipping commit")
 
         # Step 5.5: Run finalisation to complete any remaining tasks
         finalisation_success = run_finalisation(
