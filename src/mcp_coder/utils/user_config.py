@@ -77,6 +77,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
         "auto_merge": FieldDef(bool),
         "setup_commands_windows": FieldDef(list),
         "setup_commands_linux": FieldDef(list),
+        "setup_commands_macos": FieldDef(list),
     },
     "vscodeclaude": {
         "workspace_base": FieldDef(str, required=True),

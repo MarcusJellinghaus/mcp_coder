@@ -647,8 +647,9 @@ executor_os = "windows"
 | `auto_review_plan` | boolean | Gate automated plan review (routes create-plan success to `status-14:plan-review-bot` for coordinator pickup). | No | `false` |
 | `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
 | `auto_merge` | boolean | Squash-merge the PR after CI passes on its HEAD (`create-pr`, `fix-ci`, `fix-conflict`). See [Auto-merge](#auto-merge). | No | `false` |
-| `setup_commands_windows` | list | Shell commands run during environment setup on Windows executors | No | — |
-| `setup_commands_linux` | list | Shell commands run during environment setup on Linux executors | No | — |
+| `setup_commands_windows` | list | `vscodeclaude` only: shell commands run in the session's working folder after clone, before VSCode launches (Windows). Each must be on PATH; a failure aborts the launch. Not used by Jenkins executors. | No | — |
+| `setup_commands_linux` | list | Same as above, on Linux. Also the macOS fallback. | No | — |
+| `setup_commands_macos` | list | Same as above, on macOS. Falls back to `setup_commands_linux` if unset. | No | — |
 
 **Example:**
 
