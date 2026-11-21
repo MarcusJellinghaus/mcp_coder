@@ -107,7 +107,7 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
         repo_name: Repository name from config (e.g., "mcp_coder")
 
     Returns:
-        RepoVSCodeClaudeConfig with optional setup_commands_windows/linux
+        RepoVSCodeClaudeConfig with optional setup_commands_windows/linux/macos
     """
     section = f"coordinator.repos.{repo_name}"
 
