@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Coordinator test templates — [step_6.md](./steps/step_6.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: `verify` checks every binding — [step_7.md](./steps/step_7.md)
 - [ ] Implementation (tests + production code)
