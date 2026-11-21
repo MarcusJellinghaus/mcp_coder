@@ -32,7 +32,6 @@ from .toolkit import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TOOLKIT = "mcp-tools-py"
 ENTRY_POINT_GROUP = "mcp_coder.toolkits"
 WORKSPACE_SERVER = "mcp-workspace"
 
@@ -73,6 +72,19 @@ _RESERVED_KEYS = frozenset({"toolkit", "bindings", "params"})
 # Per-action keys are reserved for a later version of the config format
 _PER_ACTION_KEYS = frozenset({"format", "check", "test"})
 
+_CONFIGURE_URL = (
+    "https://github.com/MarcusJellinghaus/mcp_coder/blob/main/"
+    "docs/configuration/toolkits.md#configure-a-toolkit"
+)
+# One line: shown in a verify row, a failure comment and a log
+_NO_TOOLKIT_HELP = (
+    'For Python, add to pyproject.toml: [tool.mcp-coder.toolkit] toolkit = "mcp-tools-py". '
+    'For any other stack, add to a root mcp-coder.toml: [tool.mcp-coder.toolkit] toolkit = "command" '
+    "— the command toolkit also needs its [tool.mcp-coder.toolkit.command] step tables for the "
+    "actions and depths the bindings request (with the default bindings more than format, "
+    f"e.g. test@quick and test@unattended). See {_CONFIGURE_URL}"
+)
+
 _BASH_PREFIX = "Bash("
 # Warn once per process when Bash grants are dropped for a non-Claude provider
 _bash_drop_warned = False
@@ -86,7 +98,7 @@ class ToolkitConfig:
     bindings: dict[str, tuple[str, ...]]  # every entry, defaults merged
     params: dict[str, dict[str, Any]]  # raw [..toolkit.params] tables
     section: dict[str, Any]  # [tool.mcp-coder.toolkit.<toolkit>] or {}
-    source: str | None  # file name the table came from, None = default
+    source: str  # file name the table came from
 
 
 def _validate_bindings(source: str, raw: Any) -> dict[str, tuple[str, ...]]:
@@ -175,15 +187,18 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
         project_dir: Project root containing pyproject.toml / mcp-coder.toml.
 
     Returns:
-        The resolved ToolkitConfig; defaults when no file defines the table.
+        The resolved ToolkitConfig, with default bindings merged.
 
     Raises:
-        ValueError: If a config file is malformed, both files define the
-            table, or the table is invalid. The message names the file.
+        ValueError: If no file defines the table or the table has no toolkit
+            key, a config file is malformed, both files define the table, or
+            the table is invalid. The message names the file.
     """
     found = find_mcp_coder_table(project_dir, "toolkit")
     if found is None:
-        return ToolkitConfig(DEFAULT_TOOLKIT, dict(DEFAULT_BINDINGS), {}, {}, None)
+        raise ValueError(
+            f"No {_TABLE} table in pyproject.toml or mcp-coder.toml. {_NO_TOOLKIT_HELP}"
+        )
 
     source, table = found
     if not isinstance(table, dict):
@@ -191,8 +206,10 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
             f"Invalid {_TABLE} in {source}: expected a table, "
             f"got {type(table).__name__}: {table!r}"
         )
+    if "toolkit" not in table:
+        raise ValueError(f"{_TABLE} in {source} has no toolkit key. {_NO_TOOLKIT_HELP}")
 
-    name: Any = table.get("toolkit", DEFAULT_TOOLKIT)
+    name: Any = table["toolkit"]
     if not isinstance(name, str):
         raise ValueError(
             f"Invalid {_TABLE} toolkit in {source}: expected a string, "

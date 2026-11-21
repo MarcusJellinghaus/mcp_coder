@@ -17,25 +17,44 @@ def _write(directory: Path, name: str, content: str) -> None:
     (directory / name).write_text(content, encoding="utf-8")
 
 
-class TestDefaults:
-    """No config table anywhere."""
+@pytest.mark.real_toolkit_config
+class TestNoToolkit:
+    """No config table, or a table without the toolkit key."""
 
     def test_no_files(self, tmp_path: Path) -> None:
-        """No pyproject.toml and no mcp-coder.toml → defaults."""
+        """No pyproject.toml and no mcp-coder.toml → error."""
+        with pytest.raises(ValueError, match="No \\[tool.mcp-coder.toolkit\\] table"):
+            load_toolkit_config(tmp_path)
+
+    def test_no_table(self, tmp_path: Path) -> None:
+        """pyproject.toml without the table → error."""
+        _write(tmp_path, "pyproject.toml", "[project]\nname = 'x'\n")
+        with pytest.raises(ValueError, match="No \\[tool.mcp-coder.toolkit\\] table"):
+            load_toolkit_config(tmp_path)
+
+    def test_empty_table(self, tmp_path: Path) -> None:
+        """An empty table → error naming the file."""
+        _write(tmp_path, "pyproject.toml", "[tool.mcp-coder.toolkit]\n")
+        with pytest.raises(ValueError, match="in pyproject.toml has no toolkit key"):
+            load_toolkit_config(tmp_path)
+
+
+class TestDefaults:
+    """Default bindings and params when only the toolkit is named."""
+
+    def test_defaults(self, tmp_path: Path) -> None:
+        """Only the toolkit key → default bindings, no params, no section."""
+        _write(
+            tmp_path,
+            "pyproject.toml",
+            '[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n',
+        )
         config = load_toolkit_config(tmp_path)
         assert config.toolkit == "mcp-tools-py"
         assert config.bindings == DEFAULT_BINDINGS
         assert config.params == {}
         assert config.section == {}
-        assert config.source is None
-
-    def test_no_table(self, tmp_path: Path) -> None:
-        """pyproject.toml without the table → defaults."""
-        _write(tmp_path, "pyproject.toml", "[project]\nname = 'x'\n")
-        config = load_toolkit_config(tmp_path)
-        assert config.toolkit == "mcp-tools-py"
-        assert config.bindings == DEFAULT_BINDINGS
-        assert config.source is None
+        assert config.source == "pyproject.toml"
 
     def test_defaults_not_shared(self, tmp_path: Path) -> None:
         """The returned bindings dict is a copy of DEFAULT_BINDINGS."""
@@ -67,13 +86,6 @@ class TestSource:
         config = load_toolkit_config(tmp_path)
         assert config.toolkit == "other-kit"
         assert config.source == "mcp-coder.toml"
-
-    def test_toolkit_key_defaults(self, tmp_path: Path) -> None:
-        """An empty table selects the default toolkit."""
-        _write(tmp_path, "pyproject.toml", "[tool.mcp-coder.toolkit]\n")
-        config = load_toolkit_config(tmp_path)
-        assert config.toolkit == "mcp-tools-py"
-        assert config.source == "pyproject.toml"
 
     def test_both_files_with_table(self, tmp_path: Path) -> None:
         """Both files defining the table is an error."""

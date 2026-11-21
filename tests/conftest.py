@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import Generator
 from importlib.resources.abc import Traversable
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import git
@@ -236,13 +237,18 @@ def reset_logging() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def _resolvable_formatter() -> Generator[None, None, None]:
-    """Let formatter pre-flights pass in project dirs without pyproject.toml.
+def _resolvable_formatter(
+    request: pytest.FixtureRequest,
+) -> Generator[None, None, None]:
+    """Let toolkit loads and formatter pre-flights pass in bare project dirs.
 
-    Patches the toolkit verify behind check_formatter_config to report nothing,
-    and the toolkit registry lookup to return PythonToolkit, so tests never
-    depend on installed mcp_coder.toolkits entry-point metadata. Tests of the
-    helper and of the registry re-patch them.
+    Patches the toolkit verify behind check_formatter_config and the verify
+    toolkit rows to report nothing. Unless the test is marked
+    ``real_toolkit_config``, also supplies ``toolkit = "mcp-tools-py"`` where
+    no config names a toolkit, and makes the registry lookup return
+    PythonToolkit, so tests never depend on installed mcp_coder.toolkits
+    entry-point metadata. Tests of the helpers and of the registry re-patch
+    them.
 
     Uses patch() rather than monkeypatch: requesting monkeypatch here would
     delay its teardown past cleanup_test_artifacts, which then runs with the
@@ -250,20 +256,46 @@ def _resolvable_formatter() -> Generator[None, None, None]:
     """
     from mcp_tools_py.toolkit import PythonToolkit
 
-    with (
-        patch(
-            "mcp_coder.workflow_steps.commit.verify_toolkit",
-            lambda _l, _p, _a: [],
-        ),
-        patch(
-            "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
-            lambda _l, _p, _a: [],
-        ),
-        patch(
-            "mcp_coder.utils.toolkit_runner._toolkit_class",
-            lambda _name: PythonToolkit,
-        ),
-    ):
+    from mcp_coder.utils.toml_utils import find_mcp_coder_table as real_find
+
+    def _with_toolkit(project_dir: Path, table: str) -> tuple[str, Any] | None:
+        found = real_find(project_dir, table)
+        if table != "toolkit":
+            return found
+        if found is None:
+            return ("pyproject.toml", {"toolkit": "mcp-tools-py"})
+        source, raw = found
+        if isinstance(raw, dict) and "toolkit" not in raw:
+            return (source, {**raw, "toolkit": "mcp-tools-py"})
+        return found
+
+    real = request.node.get_closest_marker("real_toolkit_config") is not None
+    with contextlib.ExitStack() as stack:
+        stack.enter_context(
+            patch(
+                "mcp_coder.workflow_steps.commit.verify_toolkit",
+                lambda _l, _p, _a: [],
+            )
+        )
+        stack.enter_context(
+            patch(
+                "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
+                lambda _l, _p, _a: [],
+            )
+        )
+        if not real:
+            stack.enter_context(
+                patch(
+                    "mcp_coder.utils.toolkit_runner.find_mcp_coder_table",
+                    _with_toolkit,
+                )
+            )
+            stack.enter_context(
+                patch(
+                    "mcp_coder.utils.toolkit_runner._toolkit_class",
+                    lambda _name: PythonToolkit,
+                )
+            )
         yield
 
 

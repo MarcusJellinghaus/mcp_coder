@@ -72,9 +72,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 11: No toolkit configured is an error — [step_11.md](./steps/step_11.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
+- [x] Commit message prepared
 
 ### Step 12: Docs: toolkits, toolkit interface, migration note, transitional-section links — [step_12.md](./steps/step_12.md)
 - [ ] Implementation (docs changes)

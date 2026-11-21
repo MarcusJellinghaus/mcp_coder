@@ -410,3 +410,19 @@ class TestExecuteVerifyProjectExit:
             ),
         ):
             assert execute_verify(_make_args(project_dir=str(tmp_path))) == expected
+
+    @pytest.mark.real_toolkit_config
+    def test_no_toolkit_configured_exits_1(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        with (
+            _make_verify_mocks(),
+            patch(
+                "mcp_coder.cli.commands.verify._print_project_section",
+                _print_project_section,
+            ),
+        ):
+            assert execute_verify(_make_args(project_dir=str(tmp_path))) == 1
+        toolkit = _row(capsys.readouterr().out.splitlines(), "Toolkit")
+        assert "[ERR]" in toolkit
+        assert "No [tool.mcp-coder.toolkit] table" in toolkit
