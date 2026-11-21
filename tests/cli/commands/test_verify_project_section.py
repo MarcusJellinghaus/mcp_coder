@@ -1,7 +1,7 @@
-"""Tests for the PROJECT section's format_code, Formatter, Toolkit, leftover-key rows."""
+"""Tests for the PROJECT section's .mcp-file-access, format_code, Formatter, Toolkit, leftover-key rows."""
 
 from collections.abc import Generator
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -59,6 +59,91 @@ def _row(lines: list[str], label: str) -> str:
     matches = [line for line in lines if line.strip().startswith(label + " ")]
     assert len(matches) == 1, f"expected exactly one {label!r} row, got {matches!r}"
     return matches[0]
+
+
+def _squash(text: str) -> str:
+    """Remove all whitespace, so wrapped rows compare like single lines."""
+    return "".join(text.split())
+
+
+_NOT_PRESENT = ".mcp-file-access [OK] not present (gitignore defaults)"
+_INVALID_WRITABLE = (
+    ".mcp-file-access [ERR] invalid (",
+    "unknown level 'writable'",
+)
+_NOT_CHECKED = (
+    ".mcp-file-access [WARN] not checked (mcp-workspace in this environment"
+    " does not support .mcp-file-access)"
+)
+
+
+class TestFileAccessRow:
+    """.mcp-file-access row reports the rules file right after Language."""
+
+    @pytest.mark.parametrize("with_pyproject", [True, False])
+    @pytest.mark.parametrize(
+        ("rules", "supported", "expected", "expected_ok"),
+        [
+            (None, True, (_NOT_PRESENT,), True),
+            (None, False, (_NOT_PRESENT,), True),
+            ("read-write /.scratch/\n", True, (".mcp-file-access [OK] valid",), True),
+            ("writable /.scratch/\n", True, _INVALID_WRITABLE, False),
+            (
+                "<dir>",
+                True,
+                (".mcp-file-access [ERR] invalid (is a directory)",),
+                False,
+            ),
+            ("writable /.scratch/\n", False, (_NOT_CHECKED,), True),
+        ],
+        ids=[
+            "absent",
+            "absent-unsupported",
+            "valid",
+            "invalid",
+            "directory",
+            "unsupported",
+        ],
+    )
+    def test_row(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        with_pyproject: bool,
+        rules: str | None,
+        supported: bool,
+        expected: tuple[str, ...],
+        expected_ok: bool,
+    ) -> None:
+        rules_path = tmp_path / ".mcp-file-access"
+        if rules == "<dir>":
+            rules_path.mkdir()
+        elif rules is not None:
+            rules_path.write_text(rules, encoding="utf-8")
+        with (
+            patch(
+                "mcp_coder.cli.commands.verify_sections.FILE_ACCESS_SUPPORTED",
+                supported,
+            ),
+            patch(
+                "mcp_coder.cli.commands.verify_sections._uses_mcp_tools_py",
+                return_value=False,
+            )
+            if not with_pyproject
+            else nullcontext(),
+        ):
+            ok, lines = _run(
+                tmp_path, "[tool.black]\n" if with_pyproject else None, capsys
+            )
+
+        language = next(
+            i for i, line in enumerate(lines) if line.strip().startswith("Language ")
+        )
+        assert lines[language + 1].startswith("  .mcp-file-access ")
+        output = _squash("\n".join(lines))
+        for fragment in expected:
+            assert _squash(fragment) in output
+        assert ok is expected_ok
 
 
 class TestFormatterRow:
