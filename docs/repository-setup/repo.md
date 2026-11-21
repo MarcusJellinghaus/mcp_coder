@@ -88,3 +88,6 @@ read-write  /.scratch/
   `.scratch/` — breaking scratch probes, `.scratch/` issue body files, Jenkins
   log reads and the `verify` smoke test. Check: `mcp-coder verify` → MCP edit
   smoke test.
+- **An invalid file** (unknown level, unparsable line, not UTF-8, a directory
+  at the path) makes mcp-workspace refuse every MCP write. `mcp-coder verify`
+  shows it as `[ERR]` in the PROJECT `.mcp-file-access` row and exits 1.

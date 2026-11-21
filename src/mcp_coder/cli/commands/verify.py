@@ -95,9 +95,8 @@ def _smoke_test_skip_reason(project_dir: Path) -> str | None:
         if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
             return f"skipped: {_SMOKE_TEST_FILE} is gitignored"
         return None
-    problems = validate_access_rules(project_dir)
-    if problems:
-        return f"skipped: invalid rules file .mcp-file-access ({'; '.join(problems)})"
+    if validate_access_rules(project_dir):
+        return "skipped: invalid .mcp-file-access (see PROJECT)"
     access = get_file_access(_SMOKE_TEST_FILE, project_dir)
     if access == FileAccess.HIDDEN:
         return f"skipped: {_SMOKE_TEST_FILE} not exposed (gitignored, no rule)"

@@ -25,7 +25,7 @@ def _compute_exit_code(
     Exit 1 when the config has errors, the active provider fails, when MLflow
     is enabled but broken, when the test prompt failed, when GitHub verification
     failed, when git verification failed, when a configured prompt path does not
-    resolve, when the project's formatter configuration is invalid, when MCP
+    resolve, when the PROJECT section reports an ``[ERR]`` row, when MCP
     servers failed (langchain only), or when Claude MCP servers failed (claude
     only).
 
@@ -53,9 +53,12 @@ def _compute_exit_code(
             provider-independent).
         prompts_ok: Whether every *configured* prompt path resolved. False when
             one was configured but not found (exit 1, provider-independent).
-        project_ok: Whether the PROJECT section printed no ``[ERR]`` row
-            (format_code, formatter resolution, leftover key). False → exit 1,
-            provider-independent.
+        project_ok: Whether the PROJECT section printed no ``[ERR]`` row:
+            format_code, formatter resolution, leftover
+            ``[tool.mcp-coder.implement] format_code`` key, Toolkit (load or
+            verify failure, or an error item), Setup (invalid config or an
+            unresolvable command), or an invalid ``.mcp-file-access``.
+            False → exit 1, provider-independent.
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -73,7 +76,7 @@ def _compute_exit_code(
     if not prompts_ok:
         return 1
 
-    # Invalid formatter configuration is provider-independent (exit 1).
+    # An [ERR] row in the PROJECT section is provider-independent (exit 1).
     if not project_ok:
         return 1
 

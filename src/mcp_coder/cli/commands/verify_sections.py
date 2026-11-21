@@ -19,6 +19,7 @@ from typing import Any
 import yaml
 
 from ...mcp_tools_py import resolve_steps
+from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
 from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import (
@@ -360,6 +361,38 @@ def _print_environment_section(out: SectionBuilder) -> None:
     out.close()
 
 
+def _file_access_row(
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+) -> bool:
+    """Add the ``.mcp-file-access`` row (indent 2) to *out*.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the row is added to.
+
+    Returns:
+        False if the rules file is invalid (row added as [ERR]).
+    """
+    ok = True
+    if not (project_dir / ".mcp-file-access").exists():
+        marker, value = symbols["success"], "not present (gitignore defaults)"
+    elif not FILE_ACCESS_SUPPORTED:
+        # The old-version stand-in for validate_access_rules always returns [].
+        marker = symbols["warning"]
+        value = (
+            "not checked (mcp-workspace in this environment"
+            " does not support .mcp-file-access)"
+        )
+    elif problems := validate_access_rules(project_dir):
+        marker, value = symbols["failure"], f"invalid ({'; '.join(problems)})"
+        ok = False
+    else:
+        marker, value = symbols["success"], "valid"
+    out.add(Row(".mcp-file-access", marker, value, wrap=True))
+    return ok
+
+
 def _format_code_row(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
@@ -487,7 +520,7 @@ def _toolkit_rows(
 def _print_project_section(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
-    """Print the PROJECT section showing language detection and tool config.
+    """Print the PROJECT section: language detection, the ``.mcp-file-access`` rules file and tool config.
 
     Opens and closes the section on *out*.
 
@@ -504,15 +537,17 @@ def _print_project_section(
     if not pyproject_exists:
         out.add(Row("pyproject.toml", symbols["warning"], "not found"))
         out.add(Row("Language", symbols["success"], "(none detected)"))
+        file_access_ok = _file_access_row(project_dir, symbols, out)
         ok = not _uses_mcp_tools_py(project_dir) or _formatter_row(
             project_dir, symbols, out, indent=2
         )
         ok = _toolkit_rows(project_dir, symbols, out, indent=2) and ok
         ok = setup_rows(project_dir, symbols, out, indent=2) and ok
         out.close()
-        return ok
+        return ok and file_access_ok
     out.add(Row("pyproject.toml", symbols["success"], "found"))
     out.add(Row("Language", symbols["success"], "Python (detected)"))
+    file_access_ok = _file_access_row(project_dir, symbols, out)
     out.add("")
     out.add("  [Python]")
     ok = _format_code_row(project_dir, symbols, out)
@@ -544,7 +579,7 @@ def _print_project_section(
             )
         )
     out.close()
-    return ok
+    return ok and file_access_ok
 
 
 def _prompt_source(configured: str | None, default_label: str) -> str:
