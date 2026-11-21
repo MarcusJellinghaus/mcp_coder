@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `generate_pr_summary` uses `get_pr_diff`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `test_generation.py` patches `get_pr_diff`, git-diff-exception test removed + `core.py` call site switched, `get_branch_diff` import dropped
-- [ ] Quality checks (format, pylint, mypy, pytest unit + `git_integration`, lint-imports, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `test_generation.py` patches `get_pr_diff`, git-diff-exception test removed + `core.py` call site switched, `get_branch_diff` import dropped
+- [x] Quality checks (format, pylint, mypy, pytest unit + `git_integration`, lint-imports, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Prompts explain the move markers
 See [step_3.md](./steps/step_3.md)
