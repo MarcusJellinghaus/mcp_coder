@@ -100,10 +100,10 @@ Supporting files referenced by skills. Deployed automatically by `mcp-coder init
 
 > **Customize:** Server paths, project name, `--test-folder`, reference projects.
 
-**Model Context Protocol (MCP)** enables Claude Code to use specialized servers. mcp-coder ships with two MCP servers:
+**Model Context Protocol (MCP)** enables Claude Code to use specialized servers. Two MCP servers are used with mcp-coder:
 
-- **`mcp-tools-py`** — Python code-quality tools (pylint, pytest, mypy, vulture, formatting, etc.)
-- **`mcp-workspace`** — Workspace file operations (read, write, edit, list) for the project plus optional reference projects
+- **`mcp-workspace`** — Workspace file operations (read, write, edit, list) for the project plus optional reference projects. Installed with mcp-coder; every repo needs it.
+- **`mcp-tools-py`** — Python code-quality tools (pylint, pytest, mypy, vulture, formatting, etc.). Installed by the `python` extra (`pip install "mcp-coder[python]"`); only repos with `toolkit = "mcp-tools-py"` list it in `.mcp.json`. A non-Python repo drops it — every `.mcp.json` server is fatal at session start ([Required MCP servers](../configuration/toolkits.md#required-mcp-servers)).
 
 ### Platform-Specific Configuration
 
@@ -132,7 +132,7 @@ Set by the launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat
 | Variable | Set by launcher | Purpose |
 |---|---|---|
 | `MCP_CODER_PROJECT_DIR` | `%CD%` (current dir) | Absolute path to your project directory |
-| `MCP_CODER_VENV_PATH` | Yes | Path to the venv `Scripts/` directory containing `mcp-tools-py.exe` and `mcp-workspace.exe` |
+| `MCP_CODER_VENV_PATH` | Yes | Path to the venv `Scripts/` directory containing `mcp-workspace.exe` (and `mcp-tools-py.exe` with the `python` extra) |
 | `MCP_CODER_VENV_DIR` | Parent of `MCP_CODER_VENV_PATH` | The venv root |
 | `VIRTUAL_ENV` | Set if no venv was active | Standard Python venv variable |
 
@@ -189,6 +189,8 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 - **`claude.bat`** — Standard launcher using the installed mcp-coder package (recommended for general use)
 - **`claude_local.bat`** — Development launcher using local source, for testing changes to mcp-coder itself
+
+Both check the tool env for `mcp-workspace.exe` and `mcp-tools-py.exe`. A missing `mcp-tools-py.exe` prints a warning ("only Python projects need it") with an install hint, and the launcher continues.
 
 ## Enhanced Claude Permissions
 

@@ -82,9 +82,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 13: Docs: install pages and remaining mentions — [step_13.md](./steps/step_13.md)
-- [ ] Implementation (docs changes)
-- [ ] Quality checks (format, pylint, mypy, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs changes)
+- [x] Quality checks (format, pylint, mypy, pytest) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review the full branch diff against the base branch and address findings
