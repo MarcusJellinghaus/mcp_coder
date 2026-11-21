@@ -249,6 +249,17 @@ class TestConfigSchema:
         assert lc["base_url"].env_var == "MCP_CODER_LLM_LANGCHAIN_BASE_URL"
         assert lc["api_version"].env_var == "MCP_CODER_LLM_LANGCHAIN_API_VERSION"
 
+    def test_schema_repo_setup_commands(self) -> None:
+        """Repo sections declare setup command lists for all three platforms."""
+        for key in (
+            "setup_commands_windows",
+            "setup_commands_linux",
+            "setup_commands_macos",
+        ):
+            field = _get_field_def("coordinator.repos.myrepo", key)
+            assert field is not None, key
+            assert field.field_type is list
+
     def test_schema_langchain_endpoint_is_removed(self) -> None:
         """The retired 'endpoint' key is no longer a recognised config key."""
         assert "endpoint" not in _CONFIG_SCHEMA["llm.langchain"]
