@@ -11,6 +11,7 @@ from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.workflow_steps.pr_description import (
     closing_issue_numbers,
+    get_pr_diff,
     refresh_pr_description,
 )
 
@@ -34,6 +35,47 @@ class TestClosingIssueNumbers:
         assert closing_issue_numbers(body) == expected
 
 
+class TestGetPrDiff:
+    """Test get_pr_diff function."""
+
+    def test_returns_compact_diff(self) -> None:
+        """Compact diff succeeds -> returned, no full diff built."""
+        with (
+            patch(
+                f"{_MODULE}.get_compact_diff", return_value="compact"
+            ) as compact_diff,
+            patch(f"{_MODULE}.get_branch_diff") as branch_diff,
+        ):
+            result = get_pr_diff(Path("/repo"), "main")
+
+        assert result == "compact"
+        compact_diff.assert_called_once_with(
+            Path("/repo"), "main", exclude_paths=["pr_info/"]
+        )
+        branch_diff.assert_not_called()
+
+    def test_falls_back_to_full_diff_on_error(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Compact diff raises -> full branch diff with a warning."""
+        with (
+            patch(
+                f"{_MODULE}.get_compact_diff", side_effect=IndexError("boom")
+            ) as compact_diff,
+            patch(f"{_MODULE}.get_branch_diff", return_value="full") as branch_diff,
+            caplog.at_level(logging.WARNING, logger=_MODULE),
+        ):
+            result = get_pr_diff(Path("/repo"), "main")
+
+        assert result == "full"
+        assert compact_diff.call_args.kwargs["exclude_paths"] == ["pr_info/"]
+        branch_diff.assert_called_once_with(
+            Path("/repo"), base_branch="main", exclude_paths=["pr_info/"]
+        )
+        assert "Compact diff failed" in caplog.text
+        assert "boom" in caplog.text
+
+
 _LLM_TEXT = "TITLE: feat(x): new title\nBODY:\n## Summary\nNew body"
 
 
@@ -43,7 +85,7 @@ def _mocks() -> Iterator[dict[str, MagicMock]]:
     with (
         patch(f"{_MODULE}.PullRequestManager") as mgr_cls,
         patch(f"{_MODULE}.detect_base_branch", return_value="main") as base,
-        patch(f"{_MODULE}.get_branch_diff", return_value="diff --git a b") as diff,
+        patch(f"{_MODULE}.get_pr_diff", return_value="diff --git a b") as diff,
         patch(f"{_MODULE}.prompt_llm", return_value={"text": _LLM_TEXT}) as llm,
         patch(f"{_MODULE}.prepare_llm_environment", return_value={}),
         patch(f"{_MODULE}.get_branch_name_for_logging", return_value="b"),
@@ -81,6 +123,7 @@ class TestRefreshPrDescription:
         assert "old title" in prompt
         assert "Old body" in prompt
         assert "diff --git a b" in prompt
+        mocks["diff"].assert_called_once_with(Path("/repo"), "main")
 
     def test_keeps_all_closing_refs(self, mocks: dict[str, MagicMock]) -> None:
         """Every issue the current body closes stays closed."""

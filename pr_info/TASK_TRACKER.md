@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: `get_pr_diff` helper, used by `refresh_pr_description`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests (`TestGetPrDiff`, fixture patches `get_pr_diff`) + `get_pr_diff` in `pr_description.py`, `refresh_pr_description` switched to it
-- [ ] Quality checks (format, pylint, mypy, pytest unit, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`TestGetPrDiff`, fixture patches `get_pr_diff`) + `get_pr_diff` in `pr_description.py`, `refresh_pr_description` switched to it
+- [x] Quality checks (format, pylint, mypy, pytest unit, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `generate_pr_summary` uses `get_pr_diff`
 See [step_2.md](./steps/step_2.md)
