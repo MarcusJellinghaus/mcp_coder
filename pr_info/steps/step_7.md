@@ -79,6 +79,10 @@ rows: shared items once (own severity); per action: header, raised row (error if
       non-shared items (error → warning if multi and action != "format"), depth rows; ok = no [ERR] row added
 ```
 
+An action header is printed only when its group has at least one row (a
+raised row, an item or a depth row). An empty group prints nothing, including
+a group emptied because its items were lifted into the global items.
+
 Depth row for `(action, depth)` with `entries`:
 
 ```
@@ -107,5 +111,7 @@ else: resolved = resolve_depth(declared_depths, depth)
   items; raising for `format` → `[ERR]`
 - `format_code = false` → `format` neither verified nor depth-checked
 - `formatter` item is shown
+- `verify_toolkit` returning `[]` for every action, every default depth
+  declared → no bare action header (`format` / `check` / `test`) in the output
 - Done-when: a `command` project declaring all requested depths passes
   (`toolkit_rows` True) with mcp-tools-py's entry point absent
