@@ -64,9 +64,8 @@ if exist "%CD%\.venv\Scripts\activate.bat" (
 
 REM === Step 4: MCP tool verification ===
 if not exist "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" (
-    echo ERROR: mcp-tools-py.exe not found in !MCP_CODER_VENV_PATH!
-    echo Please reinstall mcp-coder: pip install mcp-coder
-    exit /b 1
+    echo WARNING: mcp-tools-py.exe not found in !MCP_CODER_VENV_PATH! - only Python projects need it
+    echo To install: pip install "mcp-coder[python]"
 )
 if not exist "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" (
     echo ERROR: mcp-workspace.exe not found in !MCP_CODER_VENV_PATH!
@@ -76,7 +75,7 @@ if not exist "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" (
 
 REM === Step 4b: Print MCP server versions ===
 "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" --version
-"!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" --version
+if exist "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" --version
 
 REM === Step 5: Set env vars and launch ===
 set "MCP_CODER_PROJECT_DIR=%CD%"

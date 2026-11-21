@@ -31,7 +31,7 @@ fi
 if [ -z "$MC" ]; then
     echo "[FAIL] No mcp-coder found outside $REPO_DIR/.venv."
     echo "       reinstall_local rewrites the repo venv, so it cannot be driven from it."
-    echo "       Install the tool env first (pip install mcp-coder) or set"
+    echo '       Install the tool env first (pip install "mcp-coder[python]") or set'
     echo "       MCP_CODER_VENV_PATH to its Scripts/bin directory."
     [ "$_SOURCED" = "1" ] && return 1 || exit 1
 fi

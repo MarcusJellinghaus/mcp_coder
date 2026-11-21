@@ -20,7 +20,8 @@ def _get_tool_environment() -> tuple[str, str]:
 
     The "tool environment" is where mcp-coder *and the MCP server executables*
     (``mcp-tools-py``, ``mcp-workspace``) are installed. Because the servers are
-    co-installed with mcp-coder, the reliable signal is the prefix of the
+    installed alongside mcp-coder (``mcp-tools-py`` via the ``mcp-coder[python]``
+    extra), the reliable signal is the prefix of the
     **running** mcp-coder interpreter (``sys.prefix``) -- NOT ``VIRTUAL_ENV``.
 
     In the two-environment model a launcher activates the *project* venv

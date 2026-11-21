@@ -55,9 +55,8 @@ fi
 
 # === Step 4: MCP tool verification ===
 if [ ! -x "$MCP_CODER_VENV_PATH/mcp-tools-py" ]; then
-    echo "ERROR: mcp-tools-py not found in $MCP_CODER_VENV_PATH"
-    echo "Please reinstall mcp-coder: pip install mcp-coder"
-    exit 1
+    echo "WARNING: mcp-tools-py not found in $MCP_CODER_VENV_PATH - only Python projects need it"
+    echo 'To install: pip install "mcp-coder[python]"'
 fi
 if [ ! -x "$MCP_CODER_VENV_PATH/mcp-workspace" ]; then
     echo "ERROR: mcp-workspace not found in $MCP_CODER_VENV_PATH"
@@ -67,7 +66,7 @@ fi
 
 # === Step 4b: Print MCP server versions ===
 "$MCP_CODER_VENV_PATH/mcp-workspace" --version
-"$MCP_CODER_VENV_PATH/mcp-tools-py" --version
+if [ -x "$MCP_CODER_VENV_PATH/mcp-tools-py" ]; then "$MCP_CODER_VENV_PATH/mcp-tools-py" --version; fi
 
 # === Step 5: Set env vars and launch ===
 export MCP_CODER_VENV_PATH

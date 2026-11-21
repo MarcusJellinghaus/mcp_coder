@@ -61,9 +61,8 @@ if !errorlevel! NEQ 0 (
 
 REM === Step 5: MCP tool verification ===
 if not exist "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" (
-    echo ERROR: mcp-tools-py.exe not found in !MCP_CODER_VENV_PATH!
+    echo WARNING: mcp-tools-py.exe not found in !MCP_CODER_VENV_PATH! - only Python projects need it
     echo Please run: tools\reinstall_local.bat
-    exit /b 1
 )
 if not exist "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" (
     echo ERROR: mcp-workspace.exe not found in !MCP_CODER_VENV_PATH!
@@ -73,7 +72,7 @@ if not exist "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" (
 
 REM === Step 5b: Print MCP server versions ===
 "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" --version
-"!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" --version
+if exist "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" "!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" --version
 
 REM === Step 6: Set env vars and launch ===
 set "MCP_CODER_PROJECT_DIR=%CD%"
