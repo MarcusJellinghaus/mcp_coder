@@ -94,11 +94,10 @@ def run_finalisation(
             bash_grants=bash_grants,
         )
     finally:
-        # Never let a marker reach a commit: commit_all_changes stages everything,
-        # and create_pr's get_branch_diff excludes only pr_info/steps/. Must run
-        # after the LLM turn (to catch a marker the agent just wrote), before the
-        # changes check below, and on the early exits too. Return value unused -
-        # run_finalisation has no blocked outcome.
+        # Never let a marker reach a commit: commit_all_changes stages everything.
+        # Must run after the LLM turn (to catch a marker the agent just wrote),
+        # before the changes check below, and on the early exits too. Return value
+        # unused - run_finalisation has no blocked outcome.
         read_and_clear_blocked(project_dir)
 
     response = llm_response["text"]

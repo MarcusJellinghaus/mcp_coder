@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Docs and stale comment
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: `08-pr-creation.md`, `cli-reference.md`, `finalisation.py` comment
-- [ ] Quality checks (format, pylint, mypy, pytest unit, "full branch diff|full git diff" search) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `08-pr-creation.md`, `cli-reference.md`, `finalisation.py` comment
+- [x] Quality checks (format, pylint, mypy, pytest unit, "full branch diff|full git diff" search) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
