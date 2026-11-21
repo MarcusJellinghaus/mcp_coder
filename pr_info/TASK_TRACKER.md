@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Required MCP servers: parsing, `verify`, icoder start-up and `/info` — [step_4.md](./steps/step_4.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: icoder banner and event log show the required servers — [step_5.md](./steps/step_5.md)
 - [ ] Implementation (tests + production code)

@@ -7,16 +7,21 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.utils import toolkit_runner
 from mcp_coder.utils.mcp_verification import (
-    MCP_SERVER_NAMES,
     ClaudeMCPStatus,
     MCPServerInfo,
     _exe_name,
     get_bin_dir,
     parse_claude_mcp_list,
+    required_mcp_servers,
     verify_mcp_servers,
 )
 from mcp_coder.utils.subprocess_runner import CommandResult
+from mcp_coder.utils.toolkit import ActionRequest, ActionResult, Toolkit, ToolkitInfo
+
+_SHIPPED = ("mcp-workspace",)
+_REQUIRED = ["mcp-tools-py", "mcp-workspace"]
 
 
 class TestGetBinDir:
@@ -72,7 +77,7 @@ class TestVerifyMcpServers:
         monkeypatch.setattr(sys, "platform", "linux")
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
-        for name in MCP_SERVER_NAMES:
+        for name in _SHIPPED:
             (bin_dir / name).touch()
         return bin_dir
 
@@ -95,11 +100,34 @@ class TestVerifyMcpServers:
 
         results = verify_mcp_servers(tmp_path)
 
-        assert len(results) == len(MCP_SERVER_NAMES)
+        assert len(results) == len(_SHIPPED)
         for info in results:
             assert isinstance(info, MCPServerInfo)
             assert info.version == "1.0.0"
-            assert info.name in MCP_SERVER_NAMES
+            assert info.name in _SHIPPED
+
+    def test_only_mcp_workspace_checked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A missing mcp-tools-py binary doesn't raise; only mcp-workspace runs."""
+        bin_dir = self._create_fake_executables(tmp_path, monkeypatch)
+        assert not (bin_dir / "mcp-tools-py").exists()
+        invoked: list[str] = []
+
+        def _capture(command: list[str], **_kw: object) -> CommandResult:
+            invoked.append(Path(command[0]).name)
+            return CommandResult(
+                return_code=0, stdout="1.0.0\n", stderr="", timed_out=False
+            )
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.mcp_verification.execute_command", _capture
+        )
+
+        results = verify_mcp_servers(tmp_path)
+
+        assert [info.name for info in results] == ["mcp-workspace"]
+        assert invoked == ["mcp-workspace"]
 
     def test_verify_mcp_servers_missing_binary(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -253,7 +281,7 @@ class TestParseClaudeMcpList:
         )
 
         result = parse_claude_mcp_list(
-            env_vars={"PATH": "/usr/bin"}, claude_executable="/usr/bin/claude"
+            {"PATH": "/usr/bin"}, _REQUIRED, claude_executable="/usr/bin/claude"
         )
 
         assert result is not None
@@ -269,7 +297,7 @@ class TestParseClaudeMcpList:
         )
 
         result = parse_claude_mcp_list(
-            env_vars={"PATH": "/usr/bin"}, claude_executable="/usr/bin/claude"
+            {"PATH": "/usr/bin"}, _REQUIRED, claude_executable="/usr/bin/claude"
         )
 
         assert result is not None
@@ -278,7 +306,21 @@ class TestParseClaudeMcpList:
         assert by_name["mcp-workspace"].ok is False
         assert by_name["mcp-workspace"].status_text == "Failed to start"
 
-    def test_filters_to_known_servers_only(
+    def test_unrequired_servers_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.utils.mcp_verification.execute_command",
+            lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
+        )
+
+        result = parse_claude_mcp_list(
+            {}, ["mcp-workspace"], claude_executable="/usr/bin/claude"
+        )
+
+        assert result == [
+            ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True)
+        ]
+
+    def test_missing_required_server_is_not_listed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
@@ -286,14 +328,33 @@ class TestParseClaudeMcpList:
             lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, ["mcp-workspace", "x"], claude_executable="/usr/bin/claude"
+        )
 
         assert result is not None
-        names = {s.name for s in result}
-        assert names == {"mcp-tools-py", "mcp-workspace"}
+        assert result[1] == ClaudeMCPStatus(
+            name="x", status_text="not listed", ok=False
+        )
+
+    def test_order_follows_required_servers(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.utils.mcp_verification.execute_command",
+            lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
+        )
+
+        result = parse_claude_mcp_list(
+            {}, ["x", "mcp-workspace", "mcp-tools-py"], claude_executable="claude"
+        )
+
+        assert result is not None
+        assert [s.name for s in result] == ["x", "mcp-workspace", "mcp-tools-py"]
+        assert [s.ok for s in result] == [False, True, True]
 
     def test_returns_none_when_claude_not_found(self) -> None:
-        result = parse_claude_mcp_list(env_vars={}, claude_executable=None)
+        result = parse_claude_mcp_list({}, _REQUIRED, claude_executable=None)
 
         assert result is None
 
@@ -305,7 +366,9 @@ class TestParseClaudeMcpList:
             lambda *_a, **_kw: self._make_result(return_code=1),
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, _REQUIRED, claude_executable="/usr/bin/claude"
+        )
 
         assert result is None
 
@@ -315,7 +378,9 @@ class TestParseClaudeMcpList:
             lambda *_a, **_kw: self._make_result(timed_out=True),
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, _REQUIRED, claude_executable="/usr/bin/claude"
+        )
 
         assert result is None
 
@@ -328,7 +393,9 @@ class TestParseClaudeMcpList:
             _raise,
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, _REQUIRED, claude_executable="/usr/bin/claude"
+        )
 
         assert result is None
 
@@ -341,10 +408,12 @@ class TestParseClaudeMcpList:
             lambda *_a, **_kw: self._make_result(stdout=output),
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, _REQUIRED, claude_executable="/usr/bin/claude"
+        )
 
         assert result is not None
-        assert len(result) == 0
+        assert [s.status_text for s in result] == ["not listed", "not listed"]
 
     def test_unparseable_lines_skipped_gracefully(
         self, monkeypatch: pytest.MonkeyPatch
@@ -355,11 +424,13 @@ class TestParseClaudeMcpList:
             lambda *_a, **_kw: self._make_result(stdout=output),
         )
 
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
+        result = parse_claude_mcp_list(
+            {}, ["mcp-tools-py"], claude_executable="/usr/bin/claude"
+        )
 
-        assert result is not None
-        assert len(result) == 1
-        assert result[0].name == "mcp-tools-py"
+        assert result == [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True)
+        ]
 
     def test_env_vars_passed_to_subprocess(
         self, monkeypatch: pytest.MonkeyPatch
@@ -376,7 +447,7 @@ class TestParseClaudeMcpList:
         )
 
         env = {"MY_VAR": "hello"}
-        parse_claude_mcp_list(env_vars=env, claude_executable="/usr/bin/claude")
+        parse_claude_mcp_list(env, _REQUIRED, claude_executable="/usr/bin/claude")
 
         assert captured_kwargs.get("env") == env
 
@@ -393,7 +464,8 @@ class TestParseClaudeMcpList:
         )
 
         parse_claude_mcp_list(
-            env_vars={},
+            {},
+            _REQUIRED,
             mcp_config_path="custom.json",
             claude_executable="/usr/bin/claude",
         )
@@ -404,3 +476,50 @@ class TestParseClaudeMcpList:
         assert "--mcp-config" in command
         idx = command.index("--mcp-config")
         assert command[idx + 1] == "custom.json"
+
+
+class _GrantingToolkit(Toolkit):
+    """Fake toolkit granting a tool of MCP server ``x``."""
+
+    def describe(self) -> ToolkitInfo:
+        return ToolkitInfo(
+            actions={"check": ["quick"]},
+            params_schema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+            llm_permissions={"check": {"quick": ["mcp__x__tool", "Bash(make)"]}},
+        )
+
+    def run(self, request: ActionRequest) -> ActionResult:
+        return ActionResult("ok", "")
+
+
+class TestRequiredMcpServers:
+    """Tests for required_mcp_servers()."""
+
+    def test_workspace_plus_granted_servers(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            toolkit_runner, "_toolkit_class", lambda _name: _GrantingToolkit
+        )
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.toolkit]\ntoolkit = "fake"\n', encoding="utf-8"
+        )
+
+        assert required_mcp_servers(tmp_path) == ["mcp-workspace", "x"]
+
+    def test_load_failure_gives_workspace_only(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _unknown(name: str) -> type[Toolkit]:
+            raise ValueError(f"toolkit '{name}' is not registered")
+
+        monkeypatch.setattr(toolkit_runner, "_toolkit_class", _unknown)
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.toolkit]\ntoolkit = "missing"\n', encoding="utf-8"
+        )
+
+        assert required_mcp_servers(tmp_path) == ["mcp-workspace"]

@@ -280,6 +280,9 @@ _.branch_moved
 # utils/test_toolkit_permissions.py - Fixture registered under alias name="perm_project"
 _._perm_project
 
+# cli/commands/test_verify_required_servers.py - Fixture registered under alias name="claude_mcp_list"
+_._claude_mcp_list
+
 # workflows/rebase/test_command_toolkit_binding.py - Autouse fixture, never requested by name
 _.command_toolkit_only
 
