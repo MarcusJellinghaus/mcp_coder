@@ -15,7 +15,7 @@
 ### `docs/processes-prompts/processes/08-pr-creation.md` (the **Process:** list)
 
 - Replace the bullet `Generates PR summary from git diff using LLM (the diff excludes `pr_info/`)` with:
-  `Generates PR summary using LLM from the compact branch diff: moved-but-unchanged blocks keep a short preview and collapse to a marker line; the diff excludes `pr_info/`. If the compact diff fails, the full branch diff is used.`
+  `Generates PR summary using LLM from the compact branch diff: moved-but-unchanged blocks keep a short preview and collapse to a marker line; the diff excludes `pr_info/`. If the compact diff fails, the plain branch diff is used.`
 - Replace the stale bullet `Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)` with:
   `Deletes the `pr_info/` folder`
 - In the refresh bullet (`If the rebase pushed new commits, refreshes the PR title/body ...`), state that the refresh uses the same compact diff, e.g. `refreshes the PR title/body from the same compact diff (best-effort, never changes the label); `fix-ci` does the same after pushing fixes`.
