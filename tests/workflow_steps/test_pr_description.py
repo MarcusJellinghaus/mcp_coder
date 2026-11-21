@@ -197,3 +197,9 @@ def test_refresh_prompt_has_placeholders() -> None:
     for placeholder in ("[pr_title]", "[pr_body]", "[git_diff_content]"):
         assert placeholder in prompt
     assert "UNCHANGED" in prompt
+
+
+@pytest.mark.parametrize("name", ["PR Summary Generation", "PR Description Refresh"])
+def test_pr_prompts_explain_moved_markers(name: str) -> None:
+    """Both PR prompts explain the compact diff's moved-code markers."""
+    assert "moved from" in get_prompt(str(PROMPTS_FILE_PATH), name)

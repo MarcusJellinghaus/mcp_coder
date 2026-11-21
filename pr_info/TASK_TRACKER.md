@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Prompts explain the move markers
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: `test_pr_prompts_explain_moved_markers` + marker sentence in both PR prompts, "full git diff" → "branch diff"
-- [ ] Quality checks (format, pylint, mypy, pytest unit) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `test_pr_prompts_explain_moved_markers` + marker sentence in both PR prompts, "full git diff" → "branch diff"
+- [x] Quality checks (format, pylint, mypy, pytest unit) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Docs and stale comment
 See [step_4.md](./steps/step_4.md)
