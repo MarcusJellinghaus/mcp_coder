@@ -28,6 +28,12 @@
   - `tests/conftest.py::_resolvable_formatter` — add
     `patch("mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit", lambda _l, _p, _a: [])`
   - `tests/cli/commands/conftest.py::toolkit_with_ruff` — patch target → `verify_toolkit_rows.verify_toolkit`
+  - `tests/cli/commands/test_verify_render.py` (patch at ~line 246) and
+    `tests/cli/commands/test_verify_setup.py` (patch at ~line 214) — patch target
+    `mcp_coder.cli.commands.verify_sections.verify_toolkit` →
+    `mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit`; in
+    `test_verify_render.py` (~line 255) the item indent assertion `"      ruff "`
+    (indent + 2) → `"        ruff "` (indent + 4, under the action header)
   - `tests/cli/commands/test_verify_project_section.py` — `_VERIFY_TOOLKIT` → new
     target; delete `TestFormatterRow`, `TestUsesMcpToolsPy`,
     `test_false_is_disabled_formatter_still_evaluated` and every assertion on

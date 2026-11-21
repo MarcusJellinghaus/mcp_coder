@@ -24,7 +24,9 @@ line to `pr_info/.blocked.txt` and stop.
   - **new** `tests/utils/test_no_toolkit_error.py`
   - `tests/utils/test_toolkit_config.py` — fallback tests become error tests
     with the opt-out marker; drop any `DEFAULT_TOOLKIT` import
-  - any test asserting `source is None`
+  - tests asserting `ToolkitConfig.source is None`
+    (`tests/utils/test_toolkit_config.py` ~lines 30, 38). `tests/utils/test_setup_config.py:75`
+    asserts `SetupConfig.source is None` and stays unchanged
 
 ## WHAT
 
