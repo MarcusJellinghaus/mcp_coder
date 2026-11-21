@@ -74,7 +74,7 @@ def test_parse_coverage_xml_aggregates_by_top_level(tmp_path: Path) -> None:
     </package>
     <package name=".">
       <classes>
-        <class name="mcp_tools_py.py" filename="mcp_tools_py.py">
+        <class name="mcp_workspace_git.py" filename="mcp_workspace_git.py">
           <lines>
             <line number="1" hits="1"/>
           </lines>

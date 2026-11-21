@@ -61,7 +61,7 @@ def top_level_package_name(full_name: str) -> str:
     ``coverage xml`` for ``--cov=src/mcp_coder`` reports package names
     relative to that measured root, dropping the ``mcp_coder`` prefix:
     ``llm.providers`` -> ``llm``, ``cli.commands`` -> ``cli``. The root
-    package itself (loose top-level modules like ``mcp_tools_py.py``) is
+    package itself (loose top-level modules like ``mcp_workspace_git.py``) is
     reported as ``.``, which buckets into the readable ``mcp_coder`` row.
     """
     if full_name == ".":

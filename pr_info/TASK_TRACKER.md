@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 8: `python` extra; delete the wrapper — [step_8.md](./steps/step_8.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (format, pylint, mypy, pytest; lint-imports + tach where imports change) — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Messages for a missing mcp-tools-py (registry hint, ENVIRONMENT row) — [step_9.md](./steps/step_9.md)
 - [ ] Implementation (tests + production code)
