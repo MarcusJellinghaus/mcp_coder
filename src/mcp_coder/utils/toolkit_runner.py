@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TOOLKIT = "mcp-tools-py"
 ENTRY_POINT_GROUP = "mcp_coder.toolkits"
+WORKSPACE_SERVER = "mcp-workspace"
 
 # Depths that fall back to the nearest lower declared one, lowest first
 _STANDARD_DEPTHS = ("quick", "standard", "full")
@@ -511,3 +512,17 @@ def bash_grants_of(permissions: Sequence[str]) -> list[str]:
         The ``Bash(...)`` entries, in order.
     """
     return [p for p in permissions if p.startswith(_BASH_PREFIX)]
+
+
+def mcp_servers_of(permissions: Sequence[str]) -> list[str]:
+    """MCP servers named by the ``mcp__<server>__`` prefixes of permissions.
+
+    Args:
+        permissions: Permission strings, e.g. from llm_permissions.
+
+    Returns:
+        ``"mcp-workspace"`` first, then the other servers sorted. ``Bash(``
+        entries and anything not starting with ``mcp__`` are ignored.
+    """
+    others = {p.split("__")[1] for p in permissions if p.startswith("mcp__")}
+    return [WORKSPACE_SERVER] + sorted(others - {WORKSPACE_SERVER})

@@ -39,11 +39,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
+from mcp_coder.utils.toolkit_runner import (
+    bash_grants_of,
+    llm_permissions,
+    mcp_servers_of,
+)
 
 logger = logging.getLogger(__name__)
 
-_WORKSPACE_SERVER = "mcp-workspace"
 _WORKSPACE_TOOLS: tuple[str, ...] = (
     "mcp__mcp-workspace__git",
     "mcp__mcp-workspace__get_base_branch",
@@ -74,12 +77,10 @@ def rebase_settings(project_dir: Path, entry: str) -> dict[str, Any]:
     bash = bash_grants_of(perms)
     extra = [p for p in perms if p not in bash]
     allow = list(_WORKSPACE_TOOLS) + [p for p in extra if p not in _WORKSPACE_TOOLS]
-    other_servers = {p.split("__")[1] for p in extra if p.startswith("mcp__")}
-    servers = [_WORKSPACE_SERVER] + sorted(other_servers - {_WORKSPACE_SERVER})
     return {
         "permissions": {"allow": allow},
         "enableAllProjectMcpServers": True,
-        "enabledMcpjsonServers": servers,
+        "enabledMcpjsonServers": mcp_servers_of(extra),
     }
 
 
