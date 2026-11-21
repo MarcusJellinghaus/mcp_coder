@@ -335,7 +335,7 @@ def load_toolkit(project_dir: Path) -> LoadedToolkit:
     return loaded
 
 
-def _resolve_depth(declared: list[str], depth: str) -> str | None:
+def resolve_depth(declared: list[str], depth: str) -> str | None:
     """Pick the depth to run for a requested one.
 
     Args:
@@ -371,7 +371,7 @@ def run_request(loaded: LoadedToolkit, project_dir: Path, request: str) -> Actio
     """
     action, depth = request.split("@")
     declared = loaded.info.actions.get(action)
-    resolved = _resolve_depth(declared, depth) if declared else None
+    resolved = resolve_depth(declared, depth) if declared else None
     if resolved is None:
         return ActionResult(
             "error", f"{request}: not declared by toolkit '{loaded.name}'"
@@ -479,7 +479,7 @@ def llm_permissions(
     else:
         for request in loaded.config.bindings[entry]:
             action, depth = request.split("@", 1)
-            resolved = _resolve_depth(loaded.info.actions.get(action, []), depth)
+            resolved = resolve_depth(loaded.info.actions.get(action, []), depth)
             if resolved is not None:
                 pairs.append((action, resolved))
 

@@ -256,6 +256,10 @@ def _resolvable_formatter() -> Generator[None, None, None]:
             lambda _l, _p, _a: [],
         ),
         patch(
+            "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
+            lambda _l, _p, _a: [],
+        ),
+        patch(
             "mcp_coder.utils.toolkit_runner._toolkit_class",
             lambda _name: PythonToolkit,
         ),

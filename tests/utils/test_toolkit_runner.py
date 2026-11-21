@@ -17,10 +17,10 @@ from mcp_coder.utils.toolkit import (
 )
 from mcp_coder.utils.toolkit_runner import (
     LoadedToolkit,
-    _resolve_depth,
     get_fragment,
     load_toolkit,
     load_toolkit_config,
+    resolve_depth,
     run_binding,
     run_request,
     verify_toolkit,
@@ -217,7 +217,7 @@ class TestLoadToolkit:
 )
 def test_resolve_depth(declared: list[str], depth: str, expected: str | None) -> None:
     """Declared runs; standard depths fall back downward; others don't."""
-    assert _resolve_depth(declared, depth) == expected
+    assert resolve_depth(declared, depth) == expected
 
 
 class TestRunRequest:

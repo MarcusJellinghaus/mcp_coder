@@ -243,8 +243,8 @@ class TestSectionHelpersThroughBuilder:
     ) -> None:
         (tmp_path / "pyproject.toml").write_text("[tool.black]\n", encoding="utf-8")
         with patch(
-            "mcp_coder.cli.commands.verify_sections.verify_toolkit",
-            lambda _l, _p, _a: [VerifyItem("ruff", "ok")],
+            "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
+            lambda _l, _p, a: [VerifyItem("ruff", "ok")] if a == "format" else [],
         ):
             with SectionBuilder() as out:
                 _print_project_section(tmp_path, STATUS_SYMBOLS, out)
@@ -252,7 +252,7 @@ class TestSectionHelpersThroughBuilder:
         lines = output.splitlines()
         assert "  [Python]" in lines
         assert _assert_section_aligned(output) >= 5
-        for prefix in ("  pyproject.toml ", "    format_code ", "      ruff "):
+        for prefix in ("  pyproject.toml ", "    format_code ", "        ruff "):
             line = next(line for line in lines if line.startswith(prefix))
             _assert_value_at_column(line, _DEFAULT_COL)
 

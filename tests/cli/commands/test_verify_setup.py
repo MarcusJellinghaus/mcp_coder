@@ -211,7 +211,7 @@ class TestProjectSectionWiring:
     @pytest.fixture(autouse=True)
     def _no_toolkit_verify(self) -> Generator[None, None, None]:
         with patch(
-            "mcp_coder.cli.commands.verify_sections.verify_toolkit",
+            "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
             lambda _l, _p, _a: [],
         ):
             yield
