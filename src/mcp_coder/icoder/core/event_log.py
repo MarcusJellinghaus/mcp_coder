@@ -261,6 +261,7 @@ def emit_session_start(
         payload["tool_env"] = runtime_info.tool_env_path
         payload["project_venv"] = runtime_info.project_venv_path
         payload["project_dir"] = runtime_info.project_dir
+        payload["required_mcp_servers"] = list(runtime_info.required_mcp_servers)
         payload["mcp_servers"] = {s.name: s.version for s in runtime_info.mcp_servers}
         payload["mcp_connection_status"] = {
             s.name: {"ok": s.ok, "status_text": s.status_text}

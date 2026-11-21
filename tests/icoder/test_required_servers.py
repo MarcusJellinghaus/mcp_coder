@@ -10,12 +10,17 @@ import pytest
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
 from mcp_coder.icoder.core.commands.info import register_info
-from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.core.event_log import EventLog, emit_session_start, iter_events
 from mcp_coder.icoder.core.types import OutputText
 from mcp_coder.icoder.env_setup import RuntimeInfo, setup_icoder_environment
+from mcp_coder.icoder.ui.runtime_banner import (
+    format_runtime_banner,
+    format_runtime_info,
+)
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.mcp_verification import (
     ClaudeMCPStatus,
+    MCPServerInfo,
     _exe_name,
     get_bin_dir,
 )
@@ -192,3 +197,84 @@ def test_info_passes_required_list_and_prints_not_listed(
     text = "\n".join(a.text for a in response.actions if isinstance(a, OutputText))
     assert "  x: ✗ not listed" in text
     assert "  mcp-workspace: ✓ Connected" in text
+
+
+# --- Step 5: banner and session_start show the required servers ---
+
+_REQUIRED = ("mcp-workspace", "mcp-tools-py")
+_EXPECTED_SERVER_LINES = [
+    "mcp-workspace 1.2.3  ✓ Connected",
+    "mcp-tools-py  ✗ not listed",
+]
+
+
+def _required_runtime_info() -> RuntimeInfo:
+    return _runtime_info(
+        required_mcp_servers=_REQUIRED,
+        mcp_servers=[
+            MCPServerInfo(
+                name="mcp-workspace", path=Path("/mcp-workspace"), version="1.2.3"
+            )
+        ],
+        mcp_connection_status=[
+            ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="not listed", ok=False),
+        ],
+    )
+
+
+def _server_lines(lines: list[str]) -> list[str]:
+    return [line for line in lines if line.split(" ", 1)[0] in _REQUIRED]
+
+
+def test_live_banner_lists_required_servers() -> None:
+    """A required server without a binary check shows name + status only."""
+    lines = format_runtime_info(_required_runtime_info())
+
+    assert _server_lines(lines) == _EXPECTED_SERVER_LINES
+
+
+def test_session_start_writes_required_servers(tmp_path: Path) -> None:
+    """emit_session_start persists the required list under its own key."""
+    with EventLog(logs_dir=tmp_path) as log:
+        emit_session_start(
+            log, provider="claude", runtime_info=_required_runtime_info()
+        )
+        path = log.current_path
+
+    payload = next(iter_events(path))
+    assert payload["required_mcp_servers"] == list(_REQUIRED)
+    assert payload["mcp_servers"] == {"mcp-workspace": "1.2.3"}
+
+
+def test_replayed_banner_lists_required_servers(tmp_path: Path) -> None:
+    """A replayed session_start renders the same server lines as live."""
+    with EventLog(logs_dir=tmp_path) as log:
+        emit_session_start(
+            log, provider="claude", runtime_info=_required_runtime_info()
+        )
+        path = log.current_path
+
+    lines = format_runtime_banner(next(iter_events(path)))
+
+    assert _server_lines(lines) == _EXPECTED_SERVER_LINES
+
+
+def test_old_log_without_required_key_falls_back_to_mcp_servers() -> None:
+    """A log written before required_mcp_servers existed keeps today's lines."""
+    data: dict[str, object] = {
+        "mcp_coder_version": "1",
+        "mcp_servers": {"mcp-tools-py": "0.9", "mcp-workspace": "1.2.3"},
+        "mcp_connection_status": {
+            "mcp-tools-py": {"ok": True, "status_text": "Connected"},
+            "mcp-workspace": {"ok": True, "status_text": "Connected"},
+        },
+    }
+
+    lines = format_runtime_banner(data)
+
+    assert lines == [
+        "mcp-coder 1",
+        "mcp-tools-py 0.9  ✓ Connected",
+        "mcp-workspace 1.2.3  ✓ Connected",
+    ]
