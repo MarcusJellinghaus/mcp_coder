@@ -77,9 +77,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 12: Docs: toolkits, toolkit interface, migration note, transitional-section links — [step_12.md](./steps/step_12.md)
-- [ ] Implementation (docs changes)
-- [ ] Quality checks (format, pylint, mypy, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs changes)
+- [x] Quality checks (format, pylint, mypy, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 13: Docs: install pages and remaining mentions — [step_13.md](./steps/step_13.md)
 - [ ] Implementation (docs changes)

@@ -32,7 +32,7 @@ page covers only how mcp-coder uses the contract.
 
 ### Depth resolution
 
-`_resolve_depth`, `run_request`:
+`resolve_depth`, `run_request`:
 
 | Requested depth | Runs |
 |---|---|
@@ -134,16 +134,30 @@ page covers only how mcp-coder uses the contract.
 ### Verify
 
 `workflow_steps/commit.py::check_formatter_config`,
-`cli/commands/verify_sections.py::_toolkit_rows`:
+`cli/commands/verify_toolkit_rows.py::toolkit_rows`:
 
-- Two callers: the format pre-flight at workflow entry and `mcp-coder verify`.
-  Both call `verify(project_dir, "format")`, and only with `format_code` on and
-  a non-empty `commit` binding.
-- A `VerifyItem` named `formatter` is hidden from `mcp-coder verify`'s rows and
-  exit status, but counts in the pre-flight.
+- Format pre-flight at workflow entry: calls `verify(project_dir, "format")`
+  only, and only with `format_code` on and a non-empty `commit` binding. Its
+  `error` items stop the workflow.
+- `mcp-coder verify` (`toolkit_rows`): calls `verify(project_dir, action)` once
+  per action a non-empty binding requests and the toolkit declares (`commit`
+  counts only with `format_code` on), then adds a row per requested depth the
+  toolkit doesn't declare. Grouping and severities:
+  [Bindings](../configuration/toolkits.md#bindings).
 - `hint` is not shown. The pre-flight ignores warnings.
-- What `verify` does not cover:
-  [Until the next breaking release](../configuration/toolkits.md#until-the-next-breaking-release).
+
+### Required MCP servers
+
+`utils/mcp_verification.py::required_mcp_servers`,
+`utils/toolkit_runner.py::mcp_servers_of`:
+
+- `mcp-workspace` first, then the servers named by the `mcp__<server>__`
+  prefixes of the toolkit's `llm_permissions` (union over all actions),
+  sorted. `rebase_settings` derives `enabledMcpjsonServers` with the same
+  helper.
+- Used by `mcp-coder verify`'s `claude mcp list` check and icoder's banner,
+  event log and `/info`. icoder's binary check covers `mcp-workspace` only.
+- Rules for users: [Required MCP servers](../configuration/toolkits.md#required-mcp-servers).
 
 ## Writing a toolkit
 
@@ -163,12 +177,12 @@ Checklist:
 3. **`describe()`** with a closed `params_schema`. See
    [Parameters schema](https://github.com/MarcusJellinghaus/mcp-coder-utils#parameters-schema).
 4. **`run` never raises.** An undeclared action or depth returns `error`; so
-   does a config problem (what `verify` covers today:
-   [Until the next breaking release](../configuration/toolkits.md#until-the-next-breaking-release)).
-   See [Status rules](https://github.com/MarcusJellinghaus/mcp-coder-utils#status-rules).
-5. **`verify(project_dir, action)`**, scoped to the action; an `error` item for
-   an undeclared action. Don't name an item `formatter`. See
+   does a config problem. See
    [Status rules](https://github.com/MarcusJellinghaus/mcp-coder-utils#status-rules).
+5. **`verify(project_dir, action)`**, scoped to the action; an `error` item for
+   an undeclared action. Return identical items (same name, status, message)
+   for problems shared by every action: `mcp-coder verify` shows them once.
+   See [Status rules](https://github.com/MarcusJellinghaus/mcp-coder-utils#status-rules).
 6. **Finding keys**: stable, line-insensitive, no action prefix (rebase adds
    it). Without stable keys, return one fallback finding; rebase regression
    detection then degrades to "failed before / after". See
@@ -193,7 +207,6 @@ Gotchas:
   declares it.
 - An MCP-based toolkit's server must be in the target's `.mcp.json`, and its
   tools allowed in the Claude settings the session uses (by default the
-  target's `.claude/settings.local.json`).
-- `MCP_SERVER_NAMES` (`utils/mcp_verification.py`) knows only mcp-tools-py and
-  mcp-workspace; see
-  [Until the next breaking release](../configuration/toolkits.md#until-the-next-breaking-release).
+  target's `.claude/settings.local.json`). It becomes a required server only
+  through its `mcp__<server>__` names in `llm_permissions`; see
+  [Required MCP servers](#required-mcp-servers).

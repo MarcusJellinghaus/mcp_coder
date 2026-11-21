@@ -27,20 +27,22 @@ toolkit = "command"
 ```
 
 `toolkit = "command"` alone is not enough: the [command toolkit](#command-toolkit)
-also needs its `[tool.mcp-coder.toolkit.command]` step tables, at least `format`
-unless [formatting is off](#formatting-off), or `mcp-coder verify` fails and
-actions return `error`. Start from the [npm example](#npm).
+also needs its `[tool.mcp-coder.toolkit.command]` step tables for the actions
+and depths its [bindings](#bindings) request (with the default bindings more
+than `format`, e.g. `test@quick` / `test@unattended`), or `mcp-coder verify`
+fails and actions return `error`. Start from the [npm example](#npm).
 
 - Full configs: [Examples](#examples).
-- No table configured: see
-  [Until the next breaking release](#until-the-next-breaking-release).
+- No table, or a table without `toolkit`, is a config error (how it surfaces:
+  [below](#toolmcp-codertoolkit)); its message carries the two snippets above
+  and a link to this section.
 - Check the setup with `mcp-coder verify`.
 
 ## [tool.mcp-coder.toolkit]
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `toolkit` | `"mcp-tools-py"` | Entry-point name in the `mcp_coder.toolkits` group: `mcp-tools-py` or `command` |
+| `toolkit` | required | Entry-point name in the `mcp_coder.toolkits` group: `mcp-tools-py` or `command` |
 | `bindings` | see [Bindings](#bindings) | The requests each workflow step makes |
 | `params` | — | Per-action tables (`params.<action>`, with optional `<depth>` sub-tables that override them) passed to the toolkit and validated against its schema. With both shipped toolkits any key under `params` is an error, and so is an action the toolkit doesn't declare; empty tables pass |
 | `[tool.mcp-coder.toolkit.<toolkit>]` | — | The configured toolkit's own section |
@@ -50,8 +52,9 @@ Rules:
 - Location: `pyproject.toml`, else a root `mcp-coder.toml`. Both defining the
   table is an error.
 - Any other key is an error, including a section for a toolkit that isn't the
-  configured one: a leftover `[tool.mcp-coder.toolkit.command]` after switching,
-  or a `command` subtable in a table without `toolkit`.
+  configured one, e.g. a leftover `[tool.mcp-coder.toolkit.command]` after
+  switching.
+- A table without `toolkit` is the [no-toolkit error](#configure-a-toolkit).
 - `format`, `check` and `test` are reserved keys; using one is a config error.
 
 A config error surfaces as follows:
@@ -81,17 +84,45 @@ Rules:
 - An entry's list replaces its default entirely; `[]` disables the entry.
   Unknown entries are an error. Requests are lowercase `action@depth`.
 - `commit` runs only when `[tool.mcp-coder] format_code` is on (the default).
-  `format_code` and `[tool.mcp-coder.implement] check_type_hints` are read from
-  `pyproject.toml` only; a repo with only `mcp-coder.toml` turns formatting off
-  with `commit = []`.
+  `format_code` is read from `pyproject.toml` only; a repo with only
+  `mcp-coder.toml` turns formatting off with `commit = []`.
 - Depth fallback: an undeclared `quick` / `standard` / `full` runs the nearest
   lower declared one of these three (logged); anything else undeclared is
   `error`.
-- Which actions `mcp-coder verify` checks:
-  [Until the next breaking release](#until-the-next-breaking-release).
+- `mcp-coder verify` calls the toolkit's `verify()` for every action a
+  non-empty binding requests (`format` only while `format_code` is on), and
+  adds one row per requested depth the toolkit doesn't declare: a warning
+  naming the lower depth that runs, else an error (also for an undeclared
+  action). Each row names the requesting bindings.
+- When `verify()` returns for two or more actions, the items they all return
+  are shown once, directly under the Toolkit row; any other `check` / `test`
+  `error` item is shown as a warning. With only one returning action, every
+  item keeps its severity. A `verify()` that raises is an error for `format`,
+  a warning for `check` / `test`.
+- `[tool.mcp-coder.implement] check_type_hints` is retired; `mcp-coder verify`
+  warns about a leftover key, and fails on `false` while an implement binding
+  still requests `check@*`. To skip the checks, set the bindings, e.g.
+  `implement_task = []`, `implement_final = ["test@quick"]`.
+
+## Required MCP servers
+
+- Required: `mcp-workspace`, plus every server named by an `mcp__<server>__`
+  prefix in the configured toolkit's `llm_permissions` (all actions). With
+  `mcp-tools-py` that adds `mcp-tools-py`; the `command` toolkit adds none. A
+  toolkit that fails to load leaves only `mcp-workspace`.
+- `mcp-coder verify` (provider `claude`) lists each required server with its
+  `claude mcp list` status; a required server missing from that output is
+  `not listed` and fails `verify`. icoder shows the same list in its banner
+  and `/info`.
+- A non-Python repo drops `mcp-tools-py` from its `.mcp.json`: every server in
+  `.mcp.json` is still fatal at session start if it can't run.
 
 ## mcp-tools-py
 
+- Installed by the `python` extra: `pip install "mcp-coder[python]"`. Without
+  it, `toolkit = "mcp-tools-py"` is a config error with the hint
+  `pip install --upgrade "mcp-coder[python]"` (if the entry point is still
+  missing, reinstall the tool env).
 - Its own settings stay in `[tool.mcp-tools-py]`: `formatter`, `<tool>-timeout`
   (e.g. `pytest-timeout`), `check-timeout`. A
   `[tool.mcp-coder.toolkit.mcp-tools-py]` section is accepted but
@@ -214,11 +245,15 @@ the last 200 lines of stdout followed by stderr.
 
 ### Errors
 
-- `mcp-coder verify` and the format pre-flight at workflow entry report global
-  problems (unknown keys, bad defaults, bad `llm_permissions`) and problems in
-  `format` steps, including an `argv[0]` that can't be found.
-- `check` and `test` steps are validated at run time: a malformed step makes its
-  depth return `error`, naming the problem.
+- The format pre-flight at workflow entry reports global problems (unknown
+  keys, bad defaults, bad `llm_permissions`) and problems in `format` steps,
+  including an `argv[0]` that can't be found.
+- `mcp-coder verify` reports the same, and also runs `verify()` for the
+  requested `check` and `test` actions (their errors show as warnings when two
+  or more actions return, see [Bindings](#bindings)) and reports requested
+  depths that aren't declared.
+- At run time a malformed `check` or `test` step still makes its depth return
+  `error`, naming the problem.
 - A global problem fails closed: no grants, and every request returns `error` —
   even when formatting is off and nothing else runs `verify`.
 - An argument is shell-safe only if `shlex.quote` leaves it unchanged and it has
@@ -306,16 +341,3 @@ workflow entry, empty the `commit` binding and leave out the `format` table:
 [tool.mcp-coder.toolkit.bindings]
 commit = []
 ```
-
-## Until the next breaking release
-
-| Today | Planned (#1199) |
-|---|---|
-| No toolkit configured (or a `[tool.mcp-coder.toolkit]` table without `toolkit`) → falls back to `mcp-tools-py` | Error with the snippet to paste and a link to this page |
-| mcp-tools-py (and with it black, isort, ruff and the other checkers) installs with mcp-coder | `mcp-coder[python]` extra; clear error when missing |
-| `mcp-tools-py` and `mcp-workspace` are always required MCP servers (`MCP_SERVER_NAMES`) | Required servers come from the configured toolkit; non-Python needs only `mcp-workspace` |
-| `mcp-coder verify` and the pre-flight check the toolkit for `format` only; broken `check` / `test` setups show at run time | Calls the toolkit's `verify()` and checks every requested depth exists |
-| `check_type_hints = false` drops `check@*` from the implement bindings | Retired; bindings are the only switch |
-| Stage and session names say "mypy" | Renamed neutrally |
-
-Other pages link here instead of repeating these facts.

@@ -2,7 +2,15 @@
 
 Configuration reference: [toolkits](../configuration/toolkits.md).
 
-> #1199 extends this note.
+## A toolkit is required; mcp-tools-py is optional (#1199)
+
+- **No toolkit is an error.** Without `[tool.mcp-coder.toolkit]`, or with a table that has no `toolkit` key, mcp-coder no longer falls back to `mcp-tools-py`: the format pre-flight stops workflows and `mcp-coder verify` fails, both with the snippets to paste. Python repos add `toolkit = "mcp-tools-py"` to `pyproject.toml`; see [Configure a toolkit](../configuration/toolkits.md#configure-a-toolkit).
+- **mcp-tools-py is the `python` extra.** It (and with it black, isort, ruff and the other checkers) no longer installs with mcp-coder. Python repos install `pip install "mcp-coder[python]"`; `dev` includes it. A missing extra is a config error with the install hint; the ENVIRONMENT row shows `[WARN] not installed (optional)`, and the launchers warn and continue.
+- **Required MCP servers come from the toolkit.** `mcp-workspace` plus the servers named in the toolkit's `llm_permissions`: `mcp-tools-py` for the Python toolkit, none for `command`. `mcp-coder verify` fails when a required server is `not listed` by `claude mcp list`. See [Required MCP servers](../configuration/toolkits.md#required-mcp-servers).
+- **Non-Python repos drop `mcp-tools-py` from `.mcp.json`.** Every `.mcp.json` server is still fatal at session start.
+- **`verify` checks every binding.** It runs the toolkit's `verify()` for each requested action, not just `format`, and reports requested depths the toolkit doesn't declare. A command toolkit missing e.g. `test.quick` or `test.unattended` now fails `verify` instead of at run time.
+- **`check_type_hints` is retired; bindings are the only switch.** `[tool.mcp-coder.implement] check_type_hints = false` no longer drops `check@*`. Repos without mypy set `implement_task = []` and `implement_final = ["test@quick"]` under `[tool.mcp-coder.toolkit.bindings]`. `mcp-coder verify` fails on a leftover `false` while the implement bindings still request checks, and warns about any other leftover value.
+- **Neutral names.** The implement stage "Final mypy check" is now "Final checks"; fix-turn sessions `step_N_mypy_M` are now `step_N_check_M`.
 
 ## Implement checks are a gate (#1389)
 
@@ -13,7 +21,7 @@ Configuration reference: [toolkits](../configuration/toolkits.md).
 - **Opt out of the per-task check:** `implement_task = []` under `[tool.mcp-coder.toolkit.bindings]`.
 - **Relax the gate per repo:** `implement_final = ["check@quick", "test@quick"]`, or `[]` to turn it off.
 - **pylint required.** `check@standard` needs pylint in the project env. A missing tool is `error` and aborts `implement_final` without a fix turn.
-- **Repos without mypy** abort at the per-task `check@quick` with `error`. Set `[tool.mcp-coder.implement] check_type_hints = false`, which drops `check@*` from both implement bindings. `implement_task = []` alone isn't enough, because `check@standard` also runs mypy.
+- **Repos without mypy** abort at the per-task `check@quick` with `error`. Set `implement_task = []` and `implement_final = ["test@quick"]`; `implement_task = []` alone isn't enough, because `check@standard` also runs mypy.
 - **Test budget.** Check the `test@quick` budget against the suite: mcp-tools-py's default is 300 s, and a timeout is `error`. Raise it with `pytest-timeout` in `[tool.mcp-tools-py]` (overrides every depth; this repo uses 1800).
 - **Paths without the project venv.** Windows `implement.bat` activates the tool env until AutoRunner#59. Where project dependencies aren't installed, collection failures become findings and the run fails at the cap, or at once as `general` if `conftest.py` can't import.
 - **Missing fix fragments.** A toolkit without a `fix.check` or `fix.test` fragment (missing or empty) no longer just disables that fix loop: its findings fail `implement_final` at once.
