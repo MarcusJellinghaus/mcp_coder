@@ -18,7 +18,7 @@ No code. One sentence (a single line) is added to each prompt, and one phrase in
 1. In **both** prompts, insert the following line, followed by one blank line, directly above the line `Git diff to analyze:`:
 
    ```text
-   The diff collapses moved code: lines like `# [moved from <file>: N lines not shown]`, `# [moved to <file>: N lines not shown]` and `# [moved: N lines not shown]` appear with a `+` or `-` diff prefix after a few preview lines of a moved block and stand for the rest of that block moved unchanged. If the marker names another file, describe the block as moved; if it names the file being diffed itself, the block was re-indented or reordered in place (e.g. wrapped in `try:`), not relocated. Never describe a marked block as an addition or removal.
+   The diff collapses moved code: lines like `# [moved from <file>: N lines not shown]`, `# [moved to <file>: N lines not shown]` and `# [moved: N lines not shown]` appear with a `+` or `-` diff prefix after a few preview lines of a moved block and stand for the rest of that block moved unchanged. If the marker names another file, describe the block as moved; if it names the file being diffed itself, describe the block as re-indented or reordered in place (e.g. wrapped in `try:`), not relocated. Never describe a marked block as an addition or removal.
    ```
 
 2. In `PR Description Refresh`, change `still describe the full git diff below.` to `still describe the branch diff below.`
