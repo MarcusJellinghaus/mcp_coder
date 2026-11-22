@@ -21,6 +21,70 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shared `LLMAuthError` type
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, lint-imports, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Pure failure-message builder (`build_cli_failure`)
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Streaming core — error event from the `result` message, no double print, fixture
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (fixture + tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `ask_claude_code_cli` raises `LLMAuthError`; clamp the return code
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Display — `prompt.py` and verify use `summarize_exception`
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: `llm_failure_reason` → `auth`; create-plan `.get`; review "Auth" category
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Implement — auth at the task call, fix turn and final check
+See [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: Implement — auth at finalisation and the CI step
+See [step_8.md](./steps/step_8.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [ ] Commit message prepared
+
+### Step 9: Shared CI step re-raises auth; fix-ci catches it; review CI gate
+See [step_9.md](./steps/step_9.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, format, file size — `ci.py` ≤ 750 lines) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary prepared
