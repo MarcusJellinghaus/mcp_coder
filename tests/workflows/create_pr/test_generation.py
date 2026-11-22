@@ -13,7 +13,7 @@ class TestGeneratePrSummary:
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_success(
@@ -42,15 +42,13 @@ class TestGeneratePrSummary:
 
         assert title == "feat: Add authentication"
         assert "Detailed description" in body
-        mock_get_diff.assert_called_once_with(
-            Path("/test/project"), base_branch="main", exclude_paths=["pr_info/"]
-        )
+        mock_get_diff.assert_called_once_with(Path("/test/project"), "main")
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_structured_response(
@@ -92,7 +90,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     def test_generate_pr_summary_no_diff(
         self,
         mock_get_diff: MagicMock,
@@ -111,7 +109,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     def test_generate_pr_summary_whitespace_diff(
         self,
         mock_get_diff: MagicMock,
@@ -130,7 +128,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_llm_failure(
@@ -161,7 +159,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_llm_exception(
@@ -185,7 +183,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_empty_llm_response(
@@ -216,7 +214,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_whitespace_llm_response(
@@ -247,7 +245,7 @@ Implements comprehensive user management functionality.
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_pr_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     def test_generate_pr_summary_prompt_failure(
         self,
@@ -264,22 +262,4 @@ Implements comprehensive user management functionality.
 
         # Should propagate exception from get_prompt
         with pytest.raises(FileNotFoundError, match="Prompt file not found"):
-            generate_pr_summary(Path("/test/project"), "claude", "cli")
-
-    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
-    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
-    def test_generate_pr_summary_git_diff_exception(
-        self,
-        mock_get_diff: MagicMock,
-        mock_get_current_branch: MagicMock,
-        mock_detect_base_branch: MagicMock,
-    ) -> None:
-        """Test PR summary generation when git diff raises exception."""
-        mock_get_current_branch.return_value = "feature-branch"
-        mock_detect_base_branch.return_value = "main"
-        mock_get_diff.side_effect = Exception("Git error")
-
-        # Should let the exception propagate (no special handling for git errors)
-        with pytest.raises(Exception, match="Git error"):
             generate_pr_summary(Path("/test/project"), "claude", "cli")

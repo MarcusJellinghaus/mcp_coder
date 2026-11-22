@@ -21,16 +21,16 @@ Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MA
 **Process:**
 
 - Rebases onto the base branch if the branch is behind (a failed rebase is logged, not fatal)
-- Generates PR summary from git diff using LLM (the diff excludes `pr_info/`)
-- Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)
+- Generates PR summary using LLM from the compact branch diff: moved-but-unchanged blocks keep a short preview and collapse to a marker line; the diff excludes `pr_info/`. If the compact diff fails, the plain branch diff is used.
+- Deletes the `pr_info/` folder
 - Commits cleanup changes
 - Pushes branch to remote
 - Creates pull request on GitHub with generated summary
 - Post-creation checks: polls `mergeable_state`; on `dirty`, rebases and pushes once, then polls again
 - Waits for the CI run of the pushed HEAD — no fixing
-- If the rebase pushed new commits, refreshes the PR title/body (best-effort, never changes the label); `fix-ci` does the same after pushing fixes
+- If the rebase pushed new commits, refreshes the PR title/body from the same compact diff (best-effort, never changes the label); `fix-ci` does the same after pushing fixes
 - Sets the final label from the outcome (table below)
-- Uses prompt 🔗 [PR Summary Generation](../../../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
+- Uses prompts 🔗 [PR Summary Generation](../../../src/mcp_coder/prompts/prompts.md#pr-summary-generation) and 🔗 [PR Description Refresh](../../../src/mcp_coder/prompts/prompts.md#pr-description-refresh)
 
 | Outcome | Final label |
 |---|---|

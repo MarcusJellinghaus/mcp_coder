@@ -17,7 +17,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     extract_issue_number_from_branch,
-    get_branch_diff,
     get_current_branch_name,
     git_push,
     is_working_directory_clean,
@@ -32,6 +31,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.repo_config import get_repo_flag
+from mcp_coder.workflow_steps.pr_description import get_pr_diff
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.base_branch import (
     check_base_branch_on_origin,
@@ -232,9 +232,7 @@ def generate_pr_summary(
 
     # Get branch diff
     logger.info("Getting branch diff...")
-    diff_content = get_branch_diff(
-        project_dir, base_branch=base_branch, exclude_paths=["pr_info/"]
-    )
+    diff_content = get_pr_diff(project_dir, base_branch)
 
     if not diff_content or not diff_content.strip():
         logger.warning("No diff content found, using fallback PR summary")

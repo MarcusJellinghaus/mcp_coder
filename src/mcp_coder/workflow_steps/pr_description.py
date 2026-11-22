@@ -7,7 +7,7 @@ from pathlib import Path
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
-from mcp_coder.mcp_workspace_git import get_branch_diff
+from mcp_coder.mcp_workspace_git import get_branch_diff, get_compact_diff
 from mcp_coder.mcp_workspace_github import PullRequestManager
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -125,6 +125,29 @@ def parse_pr_summary(llm_response: str) -> tuple[str, str]:
     return title, body
 
 
+def get_pr_diff(project_dir: Path, base_branch: str) -> str:
+    """Return the branch diff used for PR title/body prompts.
+
+    Compact diff (moved blocks collapsed), excluding pr_info/. Falls back to the
+    full branch diff when the compact renderer fails.
+
+    Args:
+        project_dir: Path to project directory
+        base_branch: Branch to diff against
+
+    Returns:
+        The compact diff, the full diff after a fallback, or "" when there are
+        no changes.
+    """
+    try:
+        return get_compact_diff(project_dir, base_branch, exclude_paths=["pr_info/"])
+    except Exception as e:  # pylint: disable=broad-exception-caught  # renderer bug
+        logger.warning("Compact diff failed, using full branch diff: %s", e)
+        return get_branch_diff(
+            project_dir, base_branch=base_branch, exclude_paths=["pr_info/"]
+        )
+
+
 def refresh_pr_description(
     project_dir: Path,
     branch: str,
@@ -132,7 +155,7 @@ def refresh_pr_description(
     mcp_config: str | None = None,
     settings_file: str | None = None,
 ) -> bool:
-    """Refresh the open PR's title/body from the full branch diff. Best-effort, never raises.
+    """Refresh the open PR's title/body from the compact branch diff. Best-effort, never raises.
 
     Closing references in the current PR body are re-applied to the new body.
     Never changes a label.
@@ -164,9 +187,7 @@ def refresh_pr_description(
             )
             return False
 
-        diff_content = get_branch_diff(
-            project_dir, base_branch=base_branch, exclude_paths=["pr_info/"]
-        )
+        diff_content = get_pr_diff(project_dir, base_branch)
         if not diff_content or not diff_content.strip():
             logger.info("No diff content - skipping description refresh")
             return False
