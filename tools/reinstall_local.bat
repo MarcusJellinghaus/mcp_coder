@@ -15,7 +15,7 @@ if not defined MC for /f "delims=" %%i in ('where mcp-coder 2^>nul') do if not d
 if not defined MC (
     echo [FAIL] No mcp-coder found outside %REPO%\.venv.
     echo        reinstall_local rewrites the repo venv, so it cannot be driven from it.
-    echo        Install the tool env first ^(pip install mcp-coder^) or set
+    echo        Install the tool env first ^(pip install "mcp-coder[python]"^) or set
     echo        MCP_CODER_VENV_PATH to its Scripts/bin directory.
     exit /b 1
 )

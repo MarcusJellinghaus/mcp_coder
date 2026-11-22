@@ -128,11 +128,19 @@ def has_legacy_format_code_key(project_dir: Path) -> bool:
     return "format_code" in section
 
 
-@dataclass(frozen=True)
-class ImplementConfig:
-    """Configuration for the implement workflow."""
+def get_leftover_check_type_hints(project_dir: Path) -> Any | None:
+    """Return the retired [tool.mcp-coder.implement] check_type_hints value.
 
-    check_type_hints: bool
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+
+    Returns:
+        The raw TOML value, or None when the key, section or file is absent
+        (or the file is malformed). TOML has no null, so None means absent.
+    """
+    data = _load_pyproject(project_dir)
+    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
+    return section.get("check_type_hints")
 
 
 def _require_spec_list(path: Path, key: str, value: Any) -> list[str]:
@@ -181,24 +189,6 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
         packages_no_deps=_require_spec_list(
             path, "packages-no-deps", gh.get("packages-no-deps", [])
         ),
-    )
-
-
-def get_implement_config(project_dir: Path) -> ImplementConfig:
-    """Read [tool.mcp-coder.implement] from pyproject.toml.
-
-    Args:
-        project_dir: Path to directory containing pyproject.toml.
-
-    Returns:
-        ImplementConfig with the check_type_hints boolean, True when the key,
-        section or file is absent (or the file is malformed). Formatting is
-        governed by [tool.mcp-coder] format_code (see get_format_code).
-    """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
-    return ImplementConfig(
-        check_type_hints=section.get("check_type_hints", True),
     )
 
 

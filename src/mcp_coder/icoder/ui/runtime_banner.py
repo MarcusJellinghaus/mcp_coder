@@ -78,7 +78,10 @@ def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
     ``session_start`` event payload (replay). Both contain
     ``mcp_coder_version``, ``tool_env``/``tool_env_path``,
     ``project_venv``/``project_venv_path``, ``project_dir``,
-    ``mcp_servers``, and ``mcp_connection_status``. Missing keys are
+    ``required_mcp_servers``, ``mcp_servers``, and
+    ``mcp_connection_status``. One line per required server, with its
+    version when ``mcp_servers`` has one; without a required list (old
+    logs) the servers in ``mcp_servers`` are listed. Missing keys are
     handled gracefully.
 
     Returns:
@@ -91,9 +94,16 @@ def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
         lines.append(f"mcp-coder-utils {utils_ver}")
 
     statuses = data.get("mcp_connection_status")
-    for name, version in _normalise_mcp_servers(data.get("mcp_servers")):
+    versions = dict(_normalise_mcp_servers(data.get("mcp_servers")))
+    names = data.get("required_mcp_servers")
+    if not isinstance(names, (list, tuple)) or not names:
+        # Logs written before required_mcp_servers existed
+        names = list(versions)
+    for raw_name in names:
+        name = str(raw_name)
+        head = f"{name} {versions[name]}" if versions.get(name) else name
         suffix = _connection_status_suffix(name, statuses)
-        lines.append(f"{name} {version}  {suffix}".rstrip())
+        lines.append(f"{head}  {suffix}".rstrip())
 
     count = data.get("mcp_tools_exposed")
     if count is not None:
@@ -164,6 +174,7 @@ def format_runtime_info(info: RuntimeInfo) -> list[str]:
             "tool_env_path": info.tool_env_path,
             "project_venv_path": info.project_venv_path,
             "project_dir": info.project_dir,
+            "required_mcp_servers": list(info.required_mcp_servers),
             "mcp_servers": info.mcp_servers,
             "mcp_connection_status": info.mcp_connection_status,
             "mcp_tools_exposed": info.mcp_tools_exposed,

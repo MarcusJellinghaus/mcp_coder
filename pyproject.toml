@@ -19,7 +19,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "mcp-tools-py",
     "mcp-workspace",
     "mcp-coder-utils>=0.1.6",
     "python-jenkins>=1.8.0",
@@ -106,9 +105,12 @@ tui = [
     "textual-dev>=1.0.0",
 ]
 
+# Python toolkit (PythonToolkit via the mcp_coder.toolkits entry point) and its checkers
+python = ["mcp-tools-py"]
+
 # Full development setup - combines all groups for local development
 dev = [
-    "mcp-coder[types,test,langchain,mlflow,tui]",
+    "mcp-coder[types,test,langchain,mlflow,tui,python]",
     "import-linter>=2.15",
     "pydeps>=3.0.0",
     "tach>=0.6.0",
@@ -165,7 +167,8 @@ markers = [
     # Regenerate snapshot baselines: pytest tests/icoder/test_snapshots.py --snapshot-update
     "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",
     "real_tracker_count: opt out of the autouse _count_incomplete_tasks patch in implement tests",
-    "real_check_loop: opt out of the autouse task_processing.check_and_fix_mypy patch in implement tests",
+    "real_check_loop: opt out of the autouse task_processing.check_and_fix patch in implement tests",
+    "real_toolkit_config: opt out of the autouse toolkit-name and toolkit-registry patches (_resolvable_formatter)",
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
@@ -399,6 +402,9 @@ pywin32 = ["win32gui", "win32process"]
 DEP003 = [
     "openai", "anthropic", "google", "ollama", "pydantic",
 ]
+# DEP002: reached only through the mcp_coder.toolkits entry point; deptry
+# doesn't expand the mcp-coder[...] self-reference in dev.
+DEP002 = ["mcp-tools-py"]
 
 [tool.mcp-coder.install]
 # Extras `mcp-coder install` passes to `uv` when provisioning this repo.
@@ -420,9 +426,6 @@ packages = [
 # Installed WITHOUT deps (depend on siblings — avoid downgrading)
 packages-no-deps = [
 ]
-
-[tool.mcp-coder.implement]
-check_type_hints = true
 
 [tool.mcp-coder.toolkit]
 toolkit = "mcp-tools-py"

@@ -256,7 +256,7 @@ def _mock_print_project_section() -> Generator[MagicMock, None, None]:
 
 @pytest.fixture
 def toolkit_with_ruff() -> Generator[None, None, None]:
-    """Stub the toolkit so a non-formatter item (ruff) renders at indent 6."""
+    """Stub the toolkit so a non-formatter item (ruff) renders under ``format``."""
     from mcp_tools_py.toolkit import PythonToolkit
 
     with (
@@ -265,11 +265,12 @@ def toolkit_with_ruff() -> Generator[None, None, None]:
             lambda _name: PythonToolkit,
         ),
         patch(
-            "mcp_coder.cli.commands.verify_sections.verify_toolkit",
-            lambda _l, _p, _a: [
-                VerifyItem("formatter", "ok"),
-                VerifyItem("ruff", "ok"),
-            ],
+            "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit",
+            lambda _l, _p, a: (
+                [VerifyItem("formatter", "ok"), VerifyItem("ruff", "ok")]
+                if a == "format"
+                else []
+            ),
         ),
     ):
         yield

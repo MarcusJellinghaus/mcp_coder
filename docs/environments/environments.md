@@ -10,7 +10,7 @@ For **running** mcp-coder and related tools. This is the stable, installed versi
 
 Example: `C:\Jenkins\environments\mcp-coder-dev\.venv` (Python 3.13)
 
-**Contains:** mcp-coder, mcp-tools-py, mcp-workspace, pytest, pylint, mypy, and their dependencies.
+**Contains:** mcp-coder, mcp-workspace, and their dependencies. mcp-tools-py (with pytest, pylint, mypy and the other checkers) comes with the `python` extra (`pip install "mcp-coder[python]"`), not with mcp-coder itself; only Python projects need it.
 
 ### 2. Project Environment
 
@@ -59,7 +59,7 @@ There are two paths that set up environment variables: batch launchers (for inte
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from a pre-set value or `sys.prefix` (the running mcp-coder interpreter) | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg; project Python reaches the servers via `${VIRTUAL_ENV}` in `.mcp.json` | **Yes** — tool env tracks the runtime, not the active venv |
 
-> All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
+> All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification. A missing `mcp-tools-py` prints a warning ("only Python projects need it") with an install hint, and the launcher continues without its version line.
 
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
 
@@ -160,7 +160,7 @@ The `python -m` form always runs the local source code, regardless of PATH order
 | Operation | Environment | Why |
 |-----------|------------|-----|
 | `mcp-coder` CLI | Tool env (via PATH) | It's a tool, not part of the project |
-| MCP server processes (`mcp-tools-py`, `mcp-workspace`) | Tool env | MCP servers are tools |
+| MCP server processes (`mcp-workspace`; `mcp-tools-py` with the `python` extra) | Tool env | MCP servers are tools |
 | `pytest` / `pylint` / `mypy` | Project env | Tests import project code and its dependencies |
 
 The MCP server runs in the tool env but launches pytest/pylint/mypy using the **project's Python** via `--python-executable`.

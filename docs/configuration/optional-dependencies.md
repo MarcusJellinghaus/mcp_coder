@@ -12,6 +12,7 @@ project publishes.
 
 | Extra | What it enables | When to install |
 |---|---|---|
+| `python` | `mcp-tools-py` — the Python toolkit, its MCP server and checkers (black, isort, ruff, pylint, mypy, pytest, …) | Python repos: needed for `toolkit = "mcp-tools-py"`; included in `dev` |
 | `types` | mypy type-stub packages | Local dev (PROJECT venv), for mypy type resolution |
 | `test`  | pytest plugins (`pytest-asyncio`, `pytest-xdist`, textual-snapshot) | Local test runs |
 | `mlflow` | MLflow conversation logging + analytics | Enabling MLflow integration |

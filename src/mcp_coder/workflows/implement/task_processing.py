@@ -1,7 +1,7 @@
 """Task processing functions for implement workflow.
 
 This module contains functions for processing individual implementation tasks,
-including LLM integration, mypy fixes, formatting, and git operations.
+including LLM integration, check fixes, formatting, and git operations.
 """
 
 import logging
@@ -31,7 +31,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 from .blocked import read_and_clear_blocked
-from .check_loop import CheckOutcome, check_and_fix_mypy
+from .check_loop import CheckOutcome, check_and_fix
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
@@ -113,7 +113,6 @@ def process_single_task(
     mcp_config: str | None = None,
     settings_file: str | None = None,
     attempt: int = 1,
-    check_type_hints: bool = False,
     previous_reason: str | None = None,
 ) -> TaskOutcome:
     """Process a single implementation task.
@@ -124,8 +123,6 @@ def process_single_task(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         attempt: 1-based attempt number; appends retry reminder when > 1
-        check_type_hints: If False, the implement_task binding's check@*
-            requests are dropped; its other requests still run
         previous_reason: Reason the previous attempt returned; selects which
             retry reminder is appended when attempt > 1
 
@@ -293,7 +290,7 @@ Please implement this task step by step."""
 
     # Step 7: Run the implement_task checks and their fix loop
     try:
-        checks = check_and_fix_mypy(
+        checks = check_and_fix(
             project_dir,
             step_num,
             provider,
@@ -301,7 +298,6 @@ Please implement this task step by step."""
             mcp_config,
             settings_file,
             entry="implement_task",
-            check_type_hints=check_type_hints,
         )
     finally:
         # Safety net: the fix turns clear their own marker, but none may
@@ -356,7 +352,6 @@ def process_task_with_retry(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    check_type_hints: bool = False,
 ) -> TaskOutcome:
     """Process a single task with bounded retry on zero-change results.
 
@@ -369,8 +364,6 @@ def process_task_with_retry(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        check_type_hints: If False, the implement_task binding's check@*
-            requests are dropped; its other requests still run
 
     Returns:
         TaskOutcome whose reason may be:
@@ -390,7 +383,6 @@ def process_task_with_retry(
             mcp_config=mcp_config,
             settings_file=settings_file,
             attempt=attempt,
-            check_type_hints=check_type_hints,
             previous_reason=previous_reason,
         )
         if outcome.reason not in ("no_changes", "no_progress"):

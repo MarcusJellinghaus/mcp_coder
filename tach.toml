@@ -66,7 +66,6 @@ depends_on = [
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration management
     { path = "mcp_coder.constants" },     # Shared constants
-    { path = "mcp_coder.mcp_tools_py" }, # resolve_steps re-export (sole mcp_tools_py importer)
     { path = "mcp_coder.mcp_workspace" }, # File listing and gitignore shim
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
     { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
@@ -269,15 +268,6 @@ depends_on = [
 # Note: Utils submodule boundaries (git/github/jenkins independence) are
 # enforced by import-linter via forbidden contracts, not tach.
 # Tach's depends_on model doesn't work well with __init__.py re-exports.
-
-[[modules]]
-path = "mcp_coder.mcp_tools_py"
-layer = "shim_workspace"
-# Sole importer of the mcp_tools_py package; re-exports resolve_steps.
-depends_on = [
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
-]
 
 [[modules]]
 path = "mcp_coder.mcp_workspace_github"
@@ -494,7 +484,6 @@ depends_on = [
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
     { path = "mcp_coder.constants" },
-    { path = "mcp_coder.mcp_tools_py" },
     { path = "mcp_coder.mcp_workspace" },
     { path = "mcp_coder.mcp_workspace_git" },
     { path = "mcp_coder.mcp_workspace_github" },

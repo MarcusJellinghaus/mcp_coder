@@ -18,21 +18,10 @@ from typing import Any
 
 import yaml
 
-from ...mcp_tools_py import resolve_steps
 from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
 from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.env_placeholders import resolve_placeholders
-from ...utils.pyproject_config import (
-    get_format_code,
-    get_implement_config,
-    has_legacy_format_code_key,
-)
-from ...utils.toolkit_runner import (
-    DEFAULT_TOOLKIT,
-    load_toolkit,
-    load_toolkit_config,
-    verify_toolkit,
-)
+from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
 from .verify_formatting import (
     STATUS_SYMBOLS,
     Row,
@@ -41,6 +30,7 @@ from .verify_formatting import (
 )
 from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
+from .verify_toolkit_rows import check_type_hints_row, toolkit_rows
 
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
@@ -48,6 +38,8 @@ _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-tools-py",
     "mcp-workspace",
 )
+# Packages behind an extra: missing is a warning, not an error
+_OPTIONAL_PACKAGES: frozenset[str] = frozenset({"mcp-tools-py"})
 
 # Retired MCP_CODER_* environment variables mapped to their replacement.
 # Unknown-key detection scans config *sections*, so a still-exported retired
@@ -357,7 +349,10 @@ def _print_environment_section(out: SectionBuilder) -> None:
             value = version(pkg)
             out.add(Row(pkg, "", value))
         except PackageNotFoundError:
-            out.add(Row(pkg, STATUS_SYMBOLS["failure"], "not installed"))
+            if pkg in _OPTIONAL_PACKAGES:
+                out.add(Row(pkg, STATUS_SYMBOLS["warning"], "not installed (optional)"))
+            else:
+                out.add(Row(pkg, STATUS_SYMBOLS["failure"], "not installed"))
     out.close()
 
 
@@ -421,102 +416,6 @@ def _format_code_row(
     return True
 
 
-def _formatter_row(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
-) -> bool:
-    """Add the Formatter row with the steps mcp-tools-py resolves to *out*.
-
-    Args:
-        project_dir: Path to the project directory.
-        symbols: Dict with 'success', 'failure', 'warning' keys.
-        out: Builder the row is added to.
-        indent: Number of leading spaces.
-
-    Returns:
-        False if no formatter can be resolved (row added as [ERR]).
-    """
-    try:
-        steps = resolve_steps(project_dir)
-    except ValueError as exc:
-        out.add(Row("Formatter", symbols["failure"], str(exc), indent))
-        return False
-    out.add(Row("Formatter", symbols["success"], " → ".join(steps), indent))
-    return True
-
-
-# VerifyItem.status mapped to the symbols-dict key it prints with
-_VERIFY_STATUS_SYMBOL: dict[str, str] = {
-    "ok": "success",
-    "warning": "warning",
-    "error": "failure",
-}
-
-
-def _uses_mcp_tools_py(project_dir: Path) -> bool:
-    """Return True if the project's toolkit is mcp-tools-py.
-
-    An invalid config counts as False: the Toolkit row already reports it.
-    """
-    try:
-        return load_toolkit_config(project_dir).toolkit == DEFAULT_TOOLKIT
-    except ValueError:
-        return False
-
-
-def _formatting_enabled(project_dir: Path) -> bool:
-    """Return ``format_code``; an invalid value counts as enabled.
-
-    The format_code row already reports the invalid value.
-    """
-    try:
-        return get_format_code(project_dir).enabled
-    except ValueError:
-        return True
-
-
-def _toolkit_rows(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
-) -> bool:
-    """Add the Toolkit row and one row per toolkit verify item for ``format``.
-
-    The ``format`` items are only checked when formatting is on and the
-    ``commit`` binding is non-empty. The toolkit's ``formatter`` item is
-    skipped: the Formatter row covers it.
-
-    Args:
-        project_dir: Path to the project directory.
-        symbols: Dict with 'success', 'failure', 'warning' keys.
-        out: Builder the rows are added to.
-        indent: Number of leading spaces of the Toolkit row.
-
-    Returns:
-        False if the toolkit fails to load or verify, or any added item is
-        an error.
-    """
-    try:
-        loaded = load_toolkit(project_dir)
-        items = (
-            verify_toolkit(loaded, project_dir, "format")
-            if _formatting_enabled(project_dir) and loaded.config.bindings["commit"]
-            else []
-        )
-    except ValueError as exc:
-        out.add(Row("Toolkit", symbols["failure"], str(exc), indent))
-        return False
-    out.add(Row("Toolkit", symbols["success"], loaded.name, indent))
-    shown = [item for item in items if item.name != "formatter"]
-    for item in shown:
-        out.add(
-            Row(
-                item.name,
-                symbols[_VERIFY_STATUS_SYMBOL[item.status]],
-                item.message or item.status,
-                indent + 2,
-            )
-        )
-    return all(item.status != "error" for item in shown)
-
-
 def _print_project_section(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
@@ -538,10 +437,7 @@ def _print_project_section(
         out.add(Row("pyproject.toml", symbols["warning"], "not found"))
         out.add(Row("Language", symbols["success"], "(none detected)"))
         file_access_ok = _file_access_row(project_dir, symbols, out)
-        ok = not _uses_mcp_tools_py(project_dir) or _formatter_row(
-            project_dir, symbols, out, indent=2
-        )
-        ok = _toolkit_rows(project_dir, symbols, out, indent=2) and ok
+        ok = toolkit_rows(project_dir, symbols, out, indent=2)
         ok = setup_rows(project_dir, symbols, out, indent=2) and ok
         out.close()
         return ok and file_access_ok
@@ -551,9 +447,7 @@ def _print_project_section(
     out.add("")
     out.add("  [Python]")
     ok = _format_code_row(project_dir, symbols, out)
-    if _uses_mcp_tools_py(project_dir):
-        ok = _formatter_row(project_dir, symbols, out) and ok
-    ok = _toolkit_rows(project_dir, symbols, out) and ok
+    ok = toolkit_rows(project_dir, symbols, out) and ok
     ok = setup_rows(project_dir, symbols, out) and ok
     if has_legacy_format_code_key(project_dir):
         out.add(
@@ -566,18 +460,7 @@ def _print_project_section(
             )
         )
         ok = False
-    config = get_implement_config(project_dir)
-    if config.check_type_hints:
-        out.add(Row("check_type_hints", symbols["success"], "enabled", 4))
-    else:
-        out.add(
-            Row(
-                "check_type_hints",
-                symbols["warning"],
-                "disabled (set in pyproject.toml)",
-                4,
-            )
-        )
+    ok = check_type_hints_row(project_dir, symbols, out) and ok
     out.close()
     return ok and file_access_ok
 

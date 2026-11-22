@@ -280,6 +280,9 @@ _.branch_moved
 # utils/test_toolkit_permissions.py - Fixture registered under alias name="perm_project"
 _._perm_project
 
+# cli/commands/test_verify_required_servers.py - Fixture registered under alias name="claude_mcp_list"
+_._claude_mcp_list
+
 # workflows/rebase/test_command_toolkit_binding.py - Autouse fixture, never requested by name
 _.command_toolkit_only
 
@@ -555,8 +558,8 @@ _.fixture_client
 _.fixture_patterns
 
 # tests/workflows/implement/test_core_failure_routing.py - autouse fixture
-# stubbing the final mypy pass so the round-cap tests never run real checks.
-_._stub_final_mypy_pass
+# stubbing the final check pass so the round-cap tests never run real checks.
+_._stub_final_check_pass
 
 # tests/cli/commands/coordinator/conftest.py - autouse fixture patching
 # find_untrusted_launch_keys so the status command stays off GitHub.

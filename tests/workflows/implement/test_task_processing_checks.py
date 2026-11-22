@@ -39,7 +39,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             f"{_TP}.get_full_status",
             return_value={"staged": ["a.py"], "modified": [], "untracked": []},
         ),
-        patch(f"{_TP}.check_and_fix_mypy", return_value=CheckOutcome("clean")) as check,
+        patch(f"{_TP}.check_and_fix", return_value=CheckOutcome("clean")) as check,
         patch(f"{_TP}.run_formatters", return_value=True) as formatters,
         patch(f"{_TP}.commit_changes", return_value=True) as commit,
         patch(f"{_TP}.push_changes", return_value=True) as push,
@@ -165,15 +165,11 @@ class TestProcessSingleTaskChecks:
 
         assert not (tmp_path / BLOCKED_FILE).exists()
 
-    @pytest.mark.parametrize("check_type_hints", [True, False])
-    def test_forwards_entry_and_check_type_hints(
-        self, mocks: _Mocks, tmp_path: Path, check_type_hints: bool
-    ) -> None:
-        """The loop always runs; check_type_hints is its filter, not a gate."""
-        process_single_task(tmp_path, "claude", check_type_hints=check_type_hints)
+    def test_forwards_entry(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """The loop always runs on the implement_task binding."""
+        process_single_task(tmp_path, "claude")
 
         mocks.check.assert_called_once()
         args = mocks.check.call_args
         assert args.args[:3] == (tmp_path, 3, "claude")
-        assert args.kwargs["entry"] == "implement_task"
-        assert args.kwargs["check_type_hints"] is check_type_hints
+        assert args.kwargs == {"entry": "implement_task"}

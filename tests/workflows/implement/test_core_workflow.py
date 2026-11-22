@@ -36,7 +36,7 @@ def _stub_final_check() -> Iterator[None]:
     """Stub the final check stage, which runs even when no task was completed."""
     with (
         patch(
-            "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+            "mcp_coder.workflows.implement.core.check_and_fix",
             return_value=CheckOutcome("clean"),
         ),
         patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True),
@@ -78,7 +78,7 @@ class TestIntegration:
     )
     @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+        "mcp_coder.workflows.implement.core.check_and_fix",
         return_value=CheckOutcome("clean"),
     )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")

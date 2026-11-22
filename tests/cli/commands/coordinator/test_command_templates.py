@@ -373,6 +373,26 @@ class TestTypeStubSyncStepRemoved:
             assert "Install type stubs in project environment" not in template
 
 
+class TestTestCommandToolkitNeutral:
+    """The coordinator test templates do not probe mcp-tools-py."""
+
+    @pytest.mark.parametrize(
+        "template",
+        [DEFAULT_TEST_COMMAND, DEFAULT_TEST_COMMAND_WINDOWS],
+        ids=["linux", "windows"],
+    )
+    def test_no_mcp_tools_py_probe(self, template: str) -> None:
+        """Neither rendered test template mentions mcp-tools-py."""
+        assert "mcp-tools-py" not in template.format(log_level="INFO")
+
+    def test_windows_verify_targets_repo(self) -> None:
+        """The Windows test template runs verify against the cloned repo."""
+        rendered = DEFAULT_TEST_COMMAND_WINDOWS.format(log_level="INFO")
+        assert (
+            r"mcp-coder verify --project-dir %WORKSPACE%\repo" in rendered.splitlines()
+        )
+
+
 class TestWorkflowTemplates:
     """Tests for the data-driven WORKFLOW_TEMPLATES dispatch table."""
 

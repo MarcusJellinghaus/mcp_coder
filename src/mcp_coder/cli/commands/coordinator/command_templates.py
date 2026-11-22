@@ -14,7 +14,6 @@ All templates support format string placeholders:
 # This comprehensive script verifies the complete environment setup
 DEFAULT_TEST_COMMAND: str = """# Tool verification
 which mcp-coder && mcp-coder --version
-which mcp-tools-py && mcp-tools-py --help
 which mcp-workspace && mcp-workspace --help
 mcp-coder verify
 export DISABLE_AUTOUPDATER=1
@@ -70,8 +69,6 @@ echo Tools in current environment ===================
 claude --version
 where mcp-coder
 mcp-coder --version
-where mcp-tools-py
-mcp-tools-py --version
 where mcp-workspace
 mcp-workspace --version
 
@@ -79,7 +76,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo llm verification =====================================
-mcp-coder verify
+mcp-coder verify --project-dir %WORKSPACE%\repo
 claude --mcp-config .mcp.json --strict-mcp-config mcp list 
 claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 

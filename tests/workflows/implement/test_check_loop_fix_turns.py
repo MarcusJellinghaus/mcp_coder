@@ -88,7 +88,7 @@ class TestSuccess:
         assert _turn(3) is None
 
         kwargs = mocks.store_session.call_args.kwargs
-        assert kwargs["step_name"] == "step_2_mypy_3"
+        assert kwargs["step_name"] == "step_2_check_3"
         assert "implement_sessions" in kwargs["store_path"]
 
     def test_success_with_marker_returns_blocked(self, mocks: _Mocks) -> None:

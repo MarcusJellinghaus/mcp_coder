@@ -22,7 +22,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection ([`[tool.mcp-coder.toolkit]`](toolkits.md): `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`), project setup steps ([`[tool.mcp-coder.setup]`](setup.md); same lookup, by `utils/setup_config.py`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection ([`[tool.mcp-coder.toolkit]`](toolkits.md): `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`), project setup steps ([`[tool.mcp-coder.setup]`](setup.md); same lookup, by `utils/setup_config.py`) |
 
 With the Python toolkit (`mcp-tools-py`), the formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections). Other toolkits format through their own `format` action ([toolkits](toolkits.md)).
 
@@ -929,9 +929,10 @@ The default test command performs the following checks:
 #### 1. Tool Verification
 
 - Verifies `mcp-coder` is installed and displays version
-- Verifies `mcp-tools-py` is installed
 - Verifies `mcp-workspace` is installed
-- Runs `mcp-coder verify` to check environment
+- Runs `mcp-coder verify` to check environment (Windows: `mcp-coder verify --project-dir %WORKSPACE%\repo`)
+
+The templates don't probe `mcp-tools-py`: whether a repo needs it follows from its toolkit, and `mcp-coder verify` checks that.
 
 #### 2. Environment Setup
 
@@ -963,7 +964,6 @@ The full test script executed by Jenkins:
 ```bash
 # Tool verification
 which mcp-coder && mcp-coder --version
-which mcp-tools-py && mcp-tools-py --help
 which mcp-workspace && mcp-workspace --help
 mcp-coder verify
 export DISABLE_AUTOUPDATER=1
@@ -998,8 +998,9 @@ When using mcp-coder in automated Jenkins workflows, there are two separate envi
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Execution Environment (VENV_BASE_DIR/.venv)                │
-│  Pre-provisioned: mcp-coder, mcp-tools-py,                  │
-│  mcp-workspace, claude CLI, pytest, mypy, pylint            │
+│  Pre-provisioned: mcp-coder, mcp-workspace, claude CLI;     │
+│  Python repos: mcp-tools-py, pytest, mypy, pylint           │
+│  (the `python` extra)                                       │
 └─────────────────────────────────────────────────────────────┘
                            │
                            │ mcp-coder setup --project-dir repo/

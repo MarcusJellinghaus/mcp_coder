@@ -167,7 +167,6 @@ graph TD
     
     subgraph Infrastructure
         utils[mcp_coder.utils]
-        mcp_tools_py[mcp_coder.mcp_tools_py]
     end
     
     subgraph Foundation
@@ -185,7 +184,6 @@ graph TD
     cli --> utils
     cli --> config
     cli --> constants
-    cli --> mcp_tools_py
     
     workflows --> workflow_utils
     workflows --> llm
@@ -211,9 +209,6 @@ graph TD
     utils --> config
     utils --> constants
     
-    mcp_tools_py --> config
-    mcp_tools_py --> constants
-    
     root --> llm
     root --> utils
     root --> prompt_manager
@@ -224,7 +219,6 @@ graph TD
     style llm fill:#45b7d1,stroke:#333,color:#000
     style prompt_manager fill:#45b7d1,stroke:#333,color:#000
     style utils fill:#96ceb4,stroke:#333,color:#000
-    style mcp_tools_py fill:#96ceb4,stroke:#333,color:#000
     style config fill:#dfe6e9,stroke:#333,color:#000
     style constants fill:#dfe6e9,stroke:#333,color:#000
     style root fill:#ffeaa7,stroke:#333,color:#000

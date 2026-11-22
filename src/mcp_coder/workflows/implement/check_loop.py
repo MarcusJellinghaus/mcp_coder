@@ -66,14 +66,11 @@ class _CheckAbort(Exception):
     """A config error or an ``error`` result; aborts the binding run."""
 
 
-def _split_requests(
-    binding: Sequence[str], check_type_hints: bool
-) -> tuple[list[str], list[str]]:
+def _split_requests(binding: Sequence[str]) -> tuple[list[str], list[str]]:
     """Split a binding into its check and test requests.
 
     Args:
         binding: The entry's ``action@depth`` requests.
-        check_type_hints: If False, ``check@*`` requests are dropped.
 
     Returns:
         (check requests, test requests), each in binding order. Other actions
@@ -81,9 +78,6 @@ def _split_requests(
     """
     checks = [r for r in binding if r.startswith("check@")]
     tests = [r for r in binding if r.startswith("test@")]
-    if not check_type_hints and checks:
-        logger.info("check_type_hints disabled - dropping %s", ", ".join(checks))
-        checks = []
     return checks, tests
 
 
@@ -207,7 +201,7 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
             response_data=llm_response,
             prompt=prompt,
             store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
-            step_name=f"step_{step_num}_mypy_{turn}",
+            step_name=f"step_{step_num}_check_{turn}",
             branch_name=branch_name,
         )
     except Exception as store_err:  # pylint: disable=broad-exception-caught
@@ -220,7 +214,7 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
     return None
 
 
-def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def check_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     project_dir: Path,
     step_num: int,
     provider: str,
@@ -228,7 +222,6 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
     mcp_config: str | None = None,
     settings_file: str | None = None,
     entry: str = "implement_final",
-    check_type_hints: bool = True,
 ) -> CheckOutcome:
     """Run the checks bound to an entry and let the LLM fix their findings.
 
@@ -240,7 +233,6 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         entry: Toolkit binding entry whose requests are run.
-        check_type_hints: If False, ``check@*`` requests are dropped.
 
     Returns:
         ``clean`` when the last pass had no findings (or nothing was run);
@@ -249,14 +241,12 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
         or an ``error`` result; ``blocked`` / ``timeout`` / ``mcp_unavailable``
         from a fix turn. Typed LLM failures are returned, never raised.
     """
-    logger.info("Running mypy type checking...")
+    logger.info("Running checks...")
     turn = 0
     while True:
         try:
             loaded = load_toolkit(project_dir)
-            checks, tests = _split_requests(
-                loaded.config.bindings[entry], check_type_hints
-            )
+            checks, tests = _split_requests(loaded.config.bindings[entry])
             if not checks and not tests:
                 logger.info("%s skipped: no check or test requests to run", entry)
                 return CheckOutcome("clean")
@@ -268,7 +258,7 @@ def check_and_fix_mypy(  # pylint: disable=too-many-arguments,too-many-positiona
             return CheckOutcome("error", str(e))
 
         if text is None:
-            logger.info("Mypy check passed after %d fix turns", turn)
+            logger.info("Checks passed after %d fix turns", turn)
             return CheckOutcome("clean")
 
         fragment = get_fragment(loaded, key)

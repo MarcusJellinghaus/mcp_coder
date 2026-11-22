@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.pyproject_config import ImplementConfig
 from mcp_coder.workflow_steps.constants import BLOCKED_FILE
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.implement.check_loop import MAX_FIX_TURNS, CheckOutcome
@@ -16,7 +15,7 @@ from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 _CORE = "mcp_coder.workflows.implement.core"
-_STAGE = "Final mypy check"
+_STAGE = "Final checks"
 _SUFFIX = " — rescue commit: pushed abc1234"
 
 
@@ -25,7 +24,6 @@ class _Mocks:
     """Patched collaborators of run_implement_workflow."""
 
     check: MagicMock
-    config: MagicMock
     fail: MagicMock
     formatters: MagicMock
     finalisation: MagicMock
@@ -41,10 +39,6 @@ def _mocks_fixture() -> Iterator[_Mocks]:
         patch(f"{_CORE}.check_prerequisites", return_value=True),
         patch(f"{_CORE}._attempt_rebase_and_push", return_value=RebaseOutcome("ok")),
         patch(f"{_CORE}.check_formatter_config", return_value=None),
-        patch(
-            f"{_CORE}.get_implement_config",
-            return_value=ImplementConfig(check_type_hints=True),
-        ) as config,
         patch(f"{_CORE}.prepare_task_tracker"),
         patch(f"{_CORE}.log_progress_summary"),
         patch(f"{_CORE}.get_step_progress", return_value={}),
@@ -56,9 +50,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             ],
         ) as process,
         patch(f"{_CORE}.prepare_llm_environment", return_value={}),
-        patch(
-            f"{_CORE}.check_and_fix_mypy", return_value=CheckOutcome("clean")
-        ) as check,
+        patch(f"{_CORE}.check_and_fix", return_value=CheckOutcome("clean")) as check,
         patch(f"{_CORE}.rescue_commit", return_value="pushed abc1234"),
         patch(f"{_CORE}.run_formatters", return_value=True) as formatters,
         patch(
@@ -70,7 +62,7 @@ def _mocks_fixture() -> Iterator[_Mocks]:
         patch(f"{_CORE}.check_and_fix_ci", return_value=True),
         patch(f"{_CORE}._fail", return_value=1) as fail,
     ):
-        yield _Mocks(check, config, fail, formatters, finalisation, process)
+        yield _Mocks(check, fail, formatters, finalisation, process)
 
 
 def _failure(mocks: _Mocks) -> tuple[str, str, str]:
@@ -165,20 +157,8 @@ class TestFinalCheckGate:
         reason, stage, message = _failure(mocks)
         assert reason == status
         assert stage == _STAGE
-        assert message.startswith("LLM failure during final mypy check")
+        assert message.startswith("LLM failure during final checks")
         assert "server hung" in message
-
-    @pytest.mark.parametrize("check_type_hints", [True, False])
-    def test_forwards_check_type_hints(
-        self, mocks: _Mocks, tmp_path: Path, check_type_hints: bool
-    ) -> None:
-        """check_type_hints from ImplementConfig reaches the loop as its filter."""
-        mocks.config.return_value = ImplementConfig(check_type_hints=check_type_hints)
-
-        run_implement_workflow(tmp_path, "claude")
-
-        mocks.check.assert_called_once()
-        assert mocks.check.call_args.kwargs["check_type_hints"] is check_type_hints
 
 
 class TestFinalCheckWithoutCompletedTasks:

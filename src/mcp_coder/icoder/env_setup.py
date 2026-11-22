@@ -24,6 +24,7 @@ from mcp_coder.utils.mcp_verification import (
     ClaudeMCPStatus,
     MCPServerInfo,
     parse_claude_mcp_list,
+    required_mcp_servers,
     verify_mcp_servers,
 )
 
@@ -46,6 +47,8 @@ class RuntimeInfo:
     mcp_connection_status: list[ClaudeMCPStatus] | None = None
     mcp_tools_exposed: int | None = None
     mcp_tools_status: str | None = None
+    required_mcp_servers: tuple[str, ...] = ()
+    mcp_config: str | None = None
 
 
 def _get_package_version(name: str) -> str:
@@ -180,9 +183,13 @@ def setup_icoder_environment(
     mcp_servers = verify_mcp_servers(tool_env)
 
     # Connection status from claude mcp list (graceful fallback)
+    required = tuple(required_mcp_servers(project_dir))
     claude_exe = find_claude_executable(return_none_if_not_found=True)
     mcp_connection_status = parse_claude_mcp_list(
-        env_vars=effective, claude_executable=claude_exe
+        effective,
+        required,
+        mcp_config_path=mcp_config or ".mcp.json",
+        claude_executable=claude_exe,
     )
 
     mcp_coder_version = _get_package_version("mcp-coder")
@@ -212,4 +219,6 @@ def setup_icoder_environment(
         mcp_connection_status=mcp_connection_status,
         mcp_tools_exposed=mcp_tools_exposed,
         mcp_tools_status=mcp_tools_status,
+        required_mcp_servers=required,
+        mcp_config=mcp_config,
     )

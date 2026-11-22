@@ -85,7 +85,10 @@ def _format_info(
 
     claude_exe = find_claude_executable(return_none_if_not_found=True)
     claude_mcp = parse_claude_mcp_list(
-        runtime_info.env_vars, claude_executable=claude_exe
+        runtime_info.env_vars,
+        runtime_info.required_mcp_servers,
+        mcp_config_path=runtime_info.mcp_config or ".mcp.json",
+        claude_executable=claude_exe,
     )
     if claude_mcp is not None:
         lines.append("")

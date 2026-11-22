@@ -1,4 +1,4 @@
-"""Tests for llm_permissions and bash_grants_of in toolkit_runner."""
+"""Tests for llm_permissions, bash_grants_of and mcp_servers_of in toolkit_runner."""
 
 import logging
 from pathlib import Path
@@ -8,7 +8,11 @@ import pytest
 
 from mcp_coder.utils import toolkit_runner
 from mcp_coder.utils.toolkit import ActionRequest, ActionResult, Toolkit, ToolkitInfo
-from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
+from mcp_coder.utils.toolkit_runner import (
+    bash_grants_of,
+    llm_permissions,
+    mcp_servers_of,
+)
 
 _PERMISSIONS: dict[str, dict[str, list[str]]] = {
     "format": {"apply": ["Bash(npm run fmt)"]},
@@ -89,6 +93,26 @@ def test_bash_grants_of_keeps_only_bash() -> None:
         "Bash(npm test)",
         "Bash(ls)",
     ]
+
+
+@pytest.mark.parametrize(
+    ("permissions", "expected"),
+    [
+        ([], ["mcp-workspace"]),
+        (["Bash(npm test)"], ["mcp-workspace"]),
+        (
+            [
+                "mcp__mcp-tools-py__run_pytest_check",
+                "mcp__a__x",
+                "mcp__mcp-workspace__git",
+            ],
+            ["mcp-workspace", "a", "mcp-tools-py"],
+        ),
+    ],
+)
+def test_mcp_servers_of(permissions: list[str], expected: list[str]) -> None:
+    """mcp-workspace first, then the other mcp__<server>__ prefixes sorted."""
+    assert mcp_servers_of(permissions) == expected
 
 
 def test_python_toolkit_has_no_bash_grants(

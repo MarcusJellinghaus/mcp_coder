@@ -348,7 +348,7 @@ class TestEnvironmentSection:
         _print_environment_section(SectionBuilder())
         assert "(not set)" in capsys.readouterr().out
 
-    def test_missing_package_shows_err_not_installed(
+    def test_missing_package_optional_warn_required_err(
         self,
         capsys: pytest.CaptureFixture[str],
         monkeypatch: pytest.MonkeyPatch,
@@ -356,7 +356,7 @@ class TestEnvironmentSection:
         from importlib.metadata import PackageNotFoundError
 
         def fake_version(pkg: str) -> str:
-            if pkg == "mcp-tools-py":
+            if pkg in ("mcp-tools-py", "mcp-workspace"):
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
@@ -365,7 +365,11 @@ class TestEnvironmentSection:
         )
         _print_environment_section(SectionBuilder())
         out = capsys.readouterr().out
-        assert _format_row("mcp-tools-py", "[ERR]", "not installed", indent=2) in out
+        optional = _format_row(
+            "mcp-tools-py", "[WARN]", "not installed (optional)", indent=2
+        )
+        assert optional in out
+        assert _format_row("mcp-workspace", "[ERR]", "not installed", indent=2) in out
 
     def test_virtualenv_none_when_not_in_venv(
         self,
@@ -409,7 +413,7 @@ class TestEnvironmentSection:
         from importlib.metadata import PackageNotFoundError
 
         def fake_version(pkg: str) -> str:
-            if pkg == "mcp-tools-py":
+            if pkg == "mcp-workspace":
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
@@ -419,7 +423,7 @@ class TestEnvironmentSection:
         _print_environment_section(SectionBuilder())
         lines = capsys.readouterr().out.splitlines()
         python_line = next(line for line in lines if "Python version" in line)
-        err_line = next(line for line in lines if "mcp-tools-py" in line)
+        err_line = next(line for line in lines if "mcp-workspace" in line)
         expected_col = _expected_value_column()
         for line in (python_line, err_line):
             _assert_value_at_column(line, expected_col)
@@ -648,13 +652,10 @@ class TestProjectSection:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """pyproject.toml with both options true shows [OK] enabled."""
+        """format_code = true shows [OK] enabled; no check_type_hints row."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            "[tool.mcp-coder]\n"
-            "format_code = true\n"
-            "[tool.mcp-coder.implement]\n"
-            "check_type_hints = true\n",
+            "[tool.mcp-coder]\nformat_code = true\n",
             encoding="utf-8",
         )
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
@@ -664,14 +665,14 @@ class TestProjectSection:
         assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
         assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
         assert _format_row("format_code", "[OK]", "enabled", indent=4) in out
-        assert _format_row("check_type_hints", "[OK]", "enabled", indent=4) in out
+        assert "check_type_hints" not in out
 
     def test_project_section_python_defaults(
         self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No mcp-coder keys: format_code and type hints are enabled by default."""
+        """No mcp-coder keys: format_code is enabled by default."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
@@ -680,32 +681,26 @@ class TestProjectSection:
         assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
         assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
         assert _format_row("format_code", "[OK]", "enabled (default)", indent=4) in out
-        assert _format_row("check_type_hints", "[OK]", "enabled", indent=4) in out
+        assert "check_type_hints" not in out
         assert "not configured" not in out
 
-    def test_project_section_type_hints_disabled(
+    def test_project_section_leftover_type_hints_key(
         self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """check_type_hints = false is reported as a warning."""
+        """A leftover check_type_hints = true is reported as retired."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            "[tool.mcp-coder.implement]\ncheck_type_hints = false\n",
+            "[tool.mcp-coder.implement]\ncheck_type_hints = true\n",
             encoding="utf-8",
         )
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
-        assert (
-            _format_row(
-                "check_type_hints",
-                "[WARN]",
-                "disabled (set in pyproject.toml)",
-                indent=4,
-            )
-            in out
-        )
+        line = next(line for line in out.splitlines() if "check_type_hints" in line)
+        assert "[WARN]" in line
+        assert "retired; remove it" in line
 
     def test_project_section_non_python(
         self,
@@ -728,7 +723,9 @@ class TestProjectSection:
     ) -> None:
         """format_code and check_type_hints values land at the same column."""
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+        pyproject.write_text(
+            "[tool.mcp-coder.implement]\ncheck_type_hints = true\n", encoding="utf-8"
+        )
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols, SectionBuilder())
         lines = capsys.readouterr().out.splitlines()

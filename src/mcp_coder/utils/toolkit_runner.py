@@ -32,8 +32,15 @@ from .toolkit import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TOOLKIT = "mcp-tools-py"
 ENTRY_POINT_GROUP = "mcp_coder.toolkits"
+WORKSPACE_SERVER = "mcp-workspace"
+
+# Shipped as the python extra; a missing registration gets an install hint
+_PYTHON_TOOLKIT = "mcp-tools-py"
+_PYTHON_EXTRA_HINT = (
+    'install or upgrade the python extra: pip install --upgrade "mcp-coder[python]"; '
+    "if the entry point is still missing, reinstall the tool env"
+)
 
 # Depths that fall back to the nearest lower declared one, lowest first
 _STANDARD_DEPTHS = ("quick", "standard", "full")
@@ -65,6 +72,19 @@ _RESERVED_KEYS = frozenset({"toolkit", "bindings", "params"})
 # Per-action keys are reserved for a later version of the config format
 _PER_ACTION_KEYS = frozenset({"format", "check", "test"})
 
+_CONFIGURE_URL = (
+    "https://github.com/MarcusJellinghaus/mcp_coder/blob/main/"
+    "docs/configuration/toolkits.md#configure-a-toolkit"
+)
+# One line: shown in a verify row, a failure comment and a log
+_NO_TOOLKIT_HELP = (
+    'For Python, add to pyproject.toml: [tool.mcp-coder.toolkit] toolkit = "mcp-tools-py". '
+    'For any other stack, add to a root mcp-coder.toml: [tool.mcp-coder.toolkit] toolkit = "command" '
+    "— the command toolkit also needs its [tool.mcp-coder.toolkit.command] step tables for the "
+    "actions and depths the bindings request (with the default bindings more than format, "
+    f"e.g. test@quick and test@unattended). See {_CONFIGURE_URL}"
+)
+
 _BASH_PREFIX = "Bash("
 # Warn once per process when Bash grants are dropped for a non-Claude provider
 _bash_drop_warned = False
@@ -78,7 +98,7 @@ class ToolkitConfig:
     bindings: dict[str, tuple[str, ...]]  # every entry, defaults merged
     params: dict[str, dict[str, Any]]  # raw [..toolkit.params] tables
     section: dict[str, Any]  # [tool.mcp-coder.toolkit.<toolkit>] or {}
-    source: str | None  # file name the table came from, None = default
+    source: str  # file name the table came from
 
 
 def _validate_bindings(source: str, raw: Any) -> dict[str, tuple[str, ...]]:
@@ -167,15 +187,18 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
         project_dir: Project root containing pyproject.toml / mcp-coder.toml.
 
     Returns:
-        The resolved ToolkitConfig; defaults when no file defines the table.
+        The resolved ToolkitConfig, with default bindings merged.
 
     Raises:
-        ValueError: If a config file is malformed, both files define the
-            table, or the table is invalid. The message names the file.
+        ValueError: If no file defines the table or the table has no toolkit
+            key, a config file is malformed, both files define the table, or
+            the table is invalid. The message names the file.
     """
     found = find_mcp_coder_table(project_dir, "toolkit")
     if found is None:
-        return ToolkitConfig(DEFAULT_TOOLKIT, dict(DEFAULT_BINDINGS), {}, {}, None)
+        raise ValueError(
+            f"No {_TABLE} table in pyproject.toml or mcp-coder.toml. {_NO_TOOLKIT_HELP}"
+        )
 
     source, table = found
     if not isinstance(table, dict):
@@ -183,8 +206,10 @@ def load_toolkit_config(project_dir: Path) -> ToolkitConfig:
             f"Invalid {_TABLE} in {source}: expected a table, "
             f"got {type(table).__name__}: {table!r}"
         )
+    if "toolkit" not in table:
+        raise ValueError(f"{_TABLE} in {source} has no toolkit key. {_NO_TOOLKIT_HELP}")
 
-    name: Any = table.get("toolkit", DEFAULT_TOOLKIT)
+    name: Any = table["toolkit"]
     if not isinstance(name, str):
         raise ValueError(
             f"Invalid {_TABLE} toolkit in {source}: expected a string, "
@@ -263,10 +288,13 @@ def _toolkit_class(name: str) -> type[Toolkit]:
                 raise ValueError(f"Toolkit '{name}' failed to load: {exc}") from exc
             return cls
     names = ", ".join(sorted(ep.name for ep in registered)) or "none"
-    raise ValueError(
+    message = (
         f"Toolkit '{name}' is not registered in the {ENTRY_POINT_GROUP} "
         f"entry-point group; registered: {names}"
     )
+    if name == _PYTHON_TOOLKIT:
+        message += f" — {_PYTHON_EXTRA_HINT}"
+    raise ValueError(message)
 
 
 def _request_params(loaded: LoadedToolkit, action: str, depth: str) -> dict[str, Any]:
@@ -334,7 +362,7 @@ def load_toolkit(project_dir: Path) -> LoadedToolkit:
     return loaded
 
 
-def _resolve_depth(declared: list[str], depth: str) -> str | None:
+def resolve_depth(declared: list[str], depth: str) -> str | None:
     """Pick the depth to run for a requested one.
 
     Args:
@@ -370,7 +398,7 @@ def run_request(loaded: LoadedToolkit, project_dir: Path, request: str) -> Actio
     """
     action, depth = request.split("@")
     declared = loaded.info.actions.get(action)
-    resolved = _resolve_depth(declared, depth) if declared else None
+    resolved = resolve_depth(declared, depth) if declared else None
     if resolved is None:
         return ActionResult(
             "error", f"{request}: not declared by toolkit '{loaded.name}'"
@@ -478,7 +506,7 @@ def llm_permissions(
     else:
         for request in loaded.config.bindings[entry]:
             action, depth = request.split("@", 1)
-            resolved = _resolve_depth(loaded.info.actions.get(action, []), depth)
+            resolved = resolve_depth(loaded.info.actions.get(action, []), depth)
             if resolved is not None:
                 pairs.append((action, resolved))
 
@@ -511,3 +539,17 @@ def bash_grants_of(permissions: Sequence[str]) -> list[str]:
         The ``Bash(...)`` entries, in order.
     """
     return [p for p in permissions if p.startswith(_BASH_PREFIX)]
+
+
+def mcp_servers_of(permissions: Sequence[str]) -> list[str]:
+    """MCP servers named by the ``mcp__<server>__`` prefixes of permissions.
+
+    Args:
+        permissions: Permission strings, e.g. from llm_permissions.
+
+    Returns:
+        ``"mcp-workspace"`` first, then the other servers sorted. ``Bash(``
+        entries and anything not starting with ``mcp__`` are ignored.
+    """
+    others = {p.split("__")[1] for p in permissions if p.startswith("mcp__")}
+    return [WORKSPACE_SERVER] + sorted(others - {WORKSPACE_SERVER})

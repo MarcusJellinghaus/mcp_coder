@@ -1,17 +1,15 @@
 """Binding-level test: an npm-style project runs entirely on ``CommandToolkit``.
 
 The project has only ``mcp-coder.toml``; every step runs a small Python script
-through the ``fakenpm`` launcher, and nothing from ``mcp_coder.mcp_tools_py``
-may be called.
+through the ``fakenpm`` launcher.
 """
 
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from mcp_coder import mcp_tools_py
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit_runner import load_toolkit, run_binding
 from mcp_coder.workflow_steps.commit import run_formatters
@@ -50,18 +48,13 @@ def project(tmp_path: Path, fake_npm: Path) -> Path:
 
 
 @pytest.fixture(autouse=True)
-def command_toolkit_only() -> Generator[MagicMock, None, None]:
-    """Resolve every toolkit to ``CommandToolkit``; forbid the Python wrappers."""
-    forbidden = MagicMock()
-    with (
-        patch(
-            "mcp_coder.utils.toolkit_runner._toolkit_class",
-            lambda _name: CommandToolkit,
-        ),
-        patch.multiple(mcp_tools_py, **dict.fromkeys(mcp_tools_py.__all__, forbidden)),
+def command_toolkit_only() -> Generator[None, None, None]:
+    """Resolve every toolkit to ``CommandToolkit``."""
+    with patch(
+        "mcp_coder.utils.toolkit_runner._toolkit_class",
+        lambda _name: CommandToolkit,
     ):
-        yield forbidden
-    forbidden.assert_not_called()
+        yield
 
 
 def test_run_formatters(project: Path) -> None:

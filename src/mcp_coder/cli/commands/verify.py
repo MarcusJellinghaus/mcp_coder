@@ -34,7 +34,11 @@ from ...prompts.prompt_loader import (
     is_prompt_configured_but_missing,
     load_prompts,
 )
-from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
+from ...utils.mcp_verification import (
+    ClaudeMCPStatus,
+    parse_claude_mcp_list,
+    required_mcp_servers,
+)
 from ...utils.text_io import write_lf_text
 from ...utils.user_config import verify_config
 from ..utils import (
@@ -416,7 +420,12 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
     if mcp_config_resolved and mcp_config_ok is not False:
         # Run Claude MCP list
         claude_exe = find_claude_executable(return_none_if_not_found=True)
-        claude_mcp = parse_claude_mcp_list(env_vars, claude_executable=claude_exe)
+        claude_mcp = parse_claude_mcp_list(
+            env_vars,
+            required_mcp_servers(project_dir),
+            mcp_config_path=mcp_config_resolved,
+            claude_executable=claude_exe,
+        )
 
         # Run LangChain MCP health check
         try:

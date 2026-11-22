@@ -8,8 +8,9 @@ provisioning. The wrappers below choose the right flags for each scenario.
 
 - Python 3.11+
 - Git
-- `pip install mcp-coder` — the installer is a subcommand, so mcp-coder has to be
-  installed somewhere before it can provision anything
+- `pip install "mcp-coder[python]"` (or `pip install mcp-coder` for a non-Python
+  repo) — the installer is a subcommand, so mcp-coder has to be installed
+  somewhere before it can provision anything
 - `uv` on PATH — if missing, `mcp-coder install` auto-runs `pip install uv` for you
 
 ## Pick your install
@@ -17,10 +18,18 @@ provisioning. The wrappers below choose the right flags for each scenario.
 ### Typical user — stable release
 
 ```bash
+# Python repos — includes the Python toolkit (mcp-tools-py):
+pip install "mcp-coder[python]"
+# Other stacks (the `command` toolkit):
 pip install mcp-coder
 ```
 
 Installs the latest published release from PyPI. Fastest, no clone.
+
+mcp-tools-py — the Python toolkit and its MCP server — comes only with the
+`python` extra. A Python repo needs it for `toolkit = "mcp-tools-py"`; a repo on
+another stack configures the `command` toolkit and doesn't need the extra
+([Toolkits](../configuration/toolkits.md#configure-a-toolkit)).
 
 ### Developer — editable local checkout
 
@@ -41,10 +50,10 @@ dependencies.
 The wrapper needs an `mcp-coder` **outside** the repo venv to drive the install —
 either on PATH or pointed at by `MCP_CODER_VENV_PATH` — because the install
 rewrites `<repo>/.venv` and cannot run from the binary it is replacing. So a fresh
-clone needs `pip install mcp-coder` (the tool env) first; `uv sync --extra dev`
+clone needs `pip install "mcp-coder[python]"` (the tool env) first; `uv sync --extra dev`
 does not satisfy this. That copy must also be new enough to carry the `install`
 subcommand — an older one fails with `invalid choice: 'install'`, and the fix is
-`pip install -U mcp-coder` in the tool env, not re-running the wrapper.
+`pip install -U "mcp-coder[python]"` in the tool env, not re-running the wrapper.
 
 ### Custom / bleeding-edge — `mcp-coder install`
 
@@ -106,6 +115,12 @@ The default extras come from `[tool.mcp-coder.install] extras` in the
 `--source git --local-path <checkout>` forms above take their extras from the
 checkout, not from the target. Absent that key, the fallback is `dev`.
 `--extras` overrides it; `--extras ""` installs none.
+
+A Python repo keeps mcp-tools-py through `dev`, which includes `python`. For a
+non-Python repo, `--extras ""` omits mcp-tools-py only with `--source pypi`, with
+`--skip-overrides`, or when the repo's `[tool.mcp-coder.install-from-github]
+packages` list doesn't name it: `--source git` and `--source local` install those
+packages whatever the extras.
 
 ## Troubleshooting
 

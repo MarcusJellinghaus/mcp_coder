@@ -64,10 +64,10 @@ The label-driven process itself is language-agnostic. Each repo declares its set
 Requirements: Python 3.11+, Git, a GitHub-hosted repository and [Claude Code CLI](https://code.claude.com/docs) (recommended; [Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli) is experimental).
 
 ```bash
-pip install mcp-coder
+pip install "mcp-coder[python]"
 ```
 
-Other install paths (editable dev install, pinned GitHub ref, separate environment): [Installation Guide](docs/getting-started/installation.md).
+The `python` extra brings the Python toolkit (`mcp-tools-py`); repos on another stack install `pip install mcp-coder` and use the `command` toolkit. Other install paths (editable dev install, pinned GitHub ref, separate environment): [Installation Guide](docs/getting-started/installation.md).
 
 ### Set up a repository (once)
 

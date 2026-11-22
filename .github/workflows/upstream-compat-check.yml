@@ -33,20 +33,21 @@ jobs:
           python-version: 3.11
 
       # Order matters: install upstream packages from git BEFORE
-      # `.[typecheck,test,langchain]` so uv's resolver doesn't replace them with
-      # PyPI versions. The base pyproject.toml has no version pins on these three
-      # packages, so any already-installed version satisfies the constraint.
+      # `.[typecheck,test,langchain,python]` so uv's resolver doesn't replace them
+      # with PyPI versions. The base pyproject.toml has no version pins on these
+      # three packages, so any already-installed version satisfies the constraint.
       # `test` provides pytest-xdist (pytest addopts has `-n auto`); `langchain`
-      # lets the import check load the langchain provider modules.
+      # lets the import check load the langchain provider modules; `python`
+      # declares mcp-tools-py, which the toolkit entry point needs.
       - name: Install upstream packages from main
         run: |
           uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
           uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
           uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
 
-      - name: Install mcp_coder with typecheck, test and langchain extras
+      - name: Install mcp_coder with typecheck, test, langchain and python extras
         id: install
-        run: uv pip install --system ".[typecheck,test,langchain]"
+        run: uv pip install --system ".[typecheck,test,langchain,python]"
 
       - name: Run mypy --strict
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
