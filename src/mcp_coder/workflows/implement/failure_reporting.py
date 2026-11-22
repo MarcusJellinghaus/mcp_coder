@@ -39,6 +39,9 @@ FAILURE_LABELS: dict[str, str] = {
     # The check fix loop hit its cap. Shares the general label so the label
     # set and the coordinator stay unchanged.
     "checks_exhausted": "implementing_failed",
+    # The LLM rejected the credentials. Shares the general label too; the
+    # Category and the error text tell the operator to log in again.
+    "auth": "implementing_failed",
 }
 
 # Maps a reason -> the human-readable Category text used in the failure
@@ -55,6 +58,7 @@ CATEGORY_DISPLAY: dict[str, str] = {
     "ci_fix_exhausted": "Ci Fix Exhausted",
     "branch_moved": "Branch Moved",
     "checks_exhausted": "Checks Exhausted",
+    "auth": "Auth",
 }
 
 

@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: Implement — auth at the task call, fix turn and final check
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Implement — auth at finalisation and the CI step
 See [step_8.md](./steps/step_8.md)

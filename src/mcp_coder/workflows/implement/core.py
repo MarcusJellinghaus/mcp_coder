@@ -76,6 +76,9 @@ def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
     if checks.status == "blocked":
         logger.error("Implementation blocked: %s", checks.detail)
         return "blocked", checks.detail
+    if checks.status == "auth":
+        # The detail already carries the error text and any blocked marker
+        return "auth", checks.detail
     return checks.status, append_detail(
         "LLM failure during final checks", checks.detail
     )
@@ -218,6 +221,13 @@ def run_implement_workflow(
                             "MCP servers unavailable during task processing",
                             outcome.detail,
                         ),
+                    )
+                if outcome.reason == "auth":
+                    # The LLM rejected the credentials; the detail is the error text
+                    return task_fail(
+                        "auth",
+                        stage="Task implementation",
+                        message=outcome.detail,
                     )
                 if outcome.reason == "no_changes_after_retries":
                     # Task produced no changes after all retry attempts

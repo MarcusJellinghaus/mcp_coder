@@ -6,6 +6,7 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
+from mcp_coder.llm.interface import LLMAuthError
 from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.task_processing import (
     RETRY_REMINDER,
@@ -14,6 +15,7 @@ from mcp_coder.workflows.implement.task_processing import (
     process_single_task,
     process_task_with_retry,
 )
+from tests.logged_out_capture import AUTH_HINT, AUTH_MESSAGE
 
 
 def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
@@ -251,6 +253,27 @@ class TestProcessSingleTask:
 
         assert outcome.success is False
         assert outcome.reason == "mcp_unavailable"
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
+    def test_process_single_task_auth(
+        self,
+        mock_get_incomplete: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """An LLMAuthError is returned as 'auth' with the error text as detail."""
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = LLMAuthError(AUTH_MESSAGE)
+
+        outcome = process_single_task(Path("/test/project"), "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "auth"
+        assert outcome.checks_failed is False
+        assert AUTH_HINT in outcome.detail
 
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.store_session")

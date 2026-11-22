@@ -11,7 +11,7 @@ from pathlib import Path
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError, prompt_llm
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
@@ -24,7 +24,10 @@ from mcp_coder.workflow_steps.commit import (
     push_changes,
     run_formatters,
 )
-from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
+from mcp_coder.workflow_utils.failure_handling import (
+    exception_summary,
+    llm_failure_reason,
+)
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerError,
     get_incomplete_tasks,
@@ -38,6 +41,7 @@ from .constants import (
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
 )
+from .failure_reporting import append_detail
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -130,16 +134,18 @@ def process_single_task(
         TaskOutcome where:
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'no_progress'
-          | 'blocked' | 'error' | 'timeout' | 'mcp_unavailable'. The two LLM
-          failures (inactivity timeout, MCP servers unavailable) are
-          categorized here into their reason strings so the orchestrator can
-          map them to a failure label; they, 'blocked' and 'error' can also
-          come from the check stage. Checks still reporting findings at the
-          fix-turn cap do not fail the task. 'no_progress' means files changed
-          (and were committed) but the incomplete-task count did not decrease.
+          | 'blocked' | 'error' | 'timeout' | 'mcp_unavailable' | 'auth'. The
+          typed LLM failures (inactivity timeout, MCP servers unavailable,
+          rejected credentials) are categorized here into their reason strings
+          so the orchestrator can map them to a failure label; they, 'blocked'
+          and 'error' can also come from the check stage. Checks still
+          reporting findings at the fix-turn cap do not fail the task.
+          'no_progress' means files changed (and were committed) but the
+          incomplete-task count did not decrease.
         - detail: free-text explanation; carries the blocked marker text for
-          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, the task
-          name for 'no_progress', the tracker fault for an unreadable
+          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, the error
+          text (plus any blocked marker) for 'auth', the task name for
+          'no_progress', the tracker fault for an unreadable
           tracker ('error') and the check error ('error'), else empty.
     """
     # Cleanup stale files from previous failed runs
@@ -198,6 +204,7 @@ def process_single_task(
     # Step 5: Call LLM with prompt
     logger.info("Calling LLM for implementation...")
     llm_error: str | None = None
+    llm_detail = ""
     try:
         # Create the full prompt by combining template with task context
         full_prompt = f"""{prompt_template}
@@ -244,12 +251,14 @@ Please implement this task step by step."""
             except Exception as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.warning("Failed to store implement session: %s", store_err)
 
-    except (LLMTimeoutError, McpServersUnavailableError) as e:
-        # Categorize the two typed LLM failures into stable workflow reasons
-        # ("timeout" / "mcp_unavailable") so the orchestrator can map them to a
-        # failure label. Fallback keeps mypy happy; both branches of
-        # llm_failure_reason are non-None for these exception types.
+    except (LLMAuthError, LLMTimeoutError, McpServersUnavailableError) as e:
+        # Categorize the typed LLM failures (see `llm_failure_reason`) into
+        # stable workflow reasons so the orchestrator can map them to a
+        # failure label. Fallback keeps mypy happy; llm_failure_reason is
+        # non-None for these exception types.
         llm_error = llm_failure_reason(e) or "error"
+        if llm_error == "auth":
+            llm_detail = exception_summary(e)
         logger.error("LLM call failed (%s) for task: %s", llm_error, next_task)
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error calling LLM: {e}")
@@ -263,6 +272,8 @@ Please implement this task step by step."""
     # Branch once, BEFORE the files-changed check below. The marker is itself an
     # untracked change, so checking it later would read as "files changed ->
     # success" and commit the marker - the inverted path this exists to prevent.
+    if llm_error == "auth":
+        return TaskOutcome(False, "auth", append_detail(llm_detail, blocked or ""))
     if llm_error in ("timeout", "mcp_unavailable"):
         return TaskOutcome(False, llm_error, blocked or "")
     if blocked:
@@ -368,7 +379,8 @@ def process_task_with_retry(
     Returns:
         TaskOutcome whose reason may be:
         - 'completed' | 'no_tasks' | 'blocked' | 'error' | 'timeout' |
-          'mcp_unavailable' (from process_single_task, returned unchanged)
+          'mcp_unavailable' | 'auth' (from process_single_task, returned
+          unchanged)
         - 'no_changes_after_retries' (every attempt produced zero changes)
         - 'no_progress_after_retries' (at least one attempt changed files
           without completing a task)

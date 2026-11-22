@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
-from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError, prompt_llm
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_all_changes
@@ -31,10 +31,14 @@ from mcp_coder.utils.toolkit_runner import (
     run_request,
 )
 from mcp_coder.workflow_steps.commit import push_changes, run_formatters
-from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
+from mcp_coder.workflow_utils.failure_handling import (
+    exception_summary,
+    llm_failure_reason,
+)
 
 from .blocked import read_and_clear_blocked
 from .constants import COMMIT_MESSAGE_FILE, LLM_INACTIVITY_TIMEOUT_SECONDS
+from .failure_reporting import append_detail
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +46,9 @@ MAX_FIX_TURNS = 3
 
 RESCUE_COMMIT_MESSAGE = "wip(implement): checks failed ({reason})"
 
-CheckStatus = Literal["clean", "cap", "error", "blocked", "timeout", "mcp_unavailable"]
+CheckStatus = Literal[
+    "clean", "cap", "error", "blocked", "timeout", "mcp_unavailable", "auth"
+]
 
 _CHECK_OUTPUT_HEADING = "Check output:"
 
@@ -55,7 +61,8 @@ class CheckOutcome:
         status: How the run ended. The non-clean statuses equal the workflow
             reason strings, except ``cap`` and ``error`` which callers map.
         detail: The error or config message, the blocked reason, the cap
-            summary, or the blocked-marker text for timeout / mcp_unavailable.
+            summary, the blocked-marker text for timeout / mcp_unavailable,
+            or the error text (plus any blocked marker) for auth.
     """
 
     status: CheckStatus
@@ -177,11 +184,15 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
             bash_grants=bash_grants,
         )
         response = llm_response["text"]
-    except (LLMTimeoutError, McpServersUnavailableError) as e:
+    except (LLMAuthError, LLMTimeoutError, McpServersUnavailableError) as e:
         blocked = read_and_clear_blocked(project_dir)
         status = cast(CheckStatus, llm_failure_reason(e) or "timeout")
         logger.error("Fix turn %d failed (%s)", turn, status)
-        return CheckOutcome(status, blocked or "")
+        detail = blocked or ""
+        if status == "auth":
+            # The CLI's text is the actionable part; keep any marker after it
+            detail = append_detail(exception_summary(e), detail)
+        return CheckOutcome(status, detail)
     except Exception as e:  # pylint: disable=broad-exception-caught
         blocked = read_and_clear_blocked(project_dir)
         if blocked:
@@ -239,7 +250,8 @@ def check_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arg
         ``cap`` when findings remain after MAX_FIX_TURNS fix turns, no usable
         fix fragment exists or a fix turn failed; ``error`` for a config error
         or an ``error`` result; ``blocked`` / ``timeout`` / ``mcp_unavailable``
-        from a fix turn. Typed LLM failures are returned, never raised.
+        / ``auth`` from a fix turn. Typed LLM failures are returned, never
+        raised.
     """
     logger.info("Running checks...")
     turn = 0

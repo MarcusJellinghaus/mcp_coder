@@ -6,13 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflows.implement.check_loop import (
     CheckOutcome,
     _build_fix_prompt,
     _fix_turn,
 )
+from tests.logged_out_capture import AUTH_HINT, AUTH_MESSAGE
 
 _PROJECT = Path("/test/project")
 _CL = "mcp_coder.workflows.implement.check_loop"
@@ -229,6 +230,27 @@ class TestFailures:
         mocks.blocked.return_value = "marker text"
 
         assert _turn() == CheckOutcome(status, "marker text")  # type: ignore[arg-type]
+
+    def test_auth_carries_error_text(self, mocks: _Mocks) -> None:
+        mocks.prompt_llm.side_effect = LLMAuthError(AUTH_MESSAGE)
+
+        outcome = _turn()
+
+        assert outcome is not None
+        assert outcome.status == "auth"
+        assert AUTH_HINT in outcome.detail
+        assert "agent reported" not in outcome.detail
+
+    def test_auth_appends_marker(self, mocks: _Mocks) -> None:
+        mocks.prompt_llm.side_effect = LLMAuthError(AUTH_MESSAGE)
+        mocks.blocked.return_value = "marker text"
+
+        outcome = _turn()
+
+        assert outcome is not None
+        assert outcome.status == "auth"
+        assert AUTH_HINT in outcome.detail
+        assert outcome.detail.endswith("(agent reported: marker text)")
 
 
 class TestBuildFixPrompt:
