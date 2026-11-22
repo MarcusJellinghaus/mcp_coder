@@ -53,6 +53,7 @@ _FAIL_REASONS: dict[str, tuple[str, str]] = {
     ),
     "timeout": ("Llm Timeout", "An LLM call timed out"),
     "mcp_unavailable": ("Mcp Unavailable", "The MCP servers were unavailable"),
+    "auth": ("Auth", "An LLM call failed to authenticate"),
     "ci": ("CI failed", "CI is still red after the review"),
     "tasks": ("Open tasks", "The task tracker still has unchecked tasks"),
     "ci_unknown": ("CI not proven green", "CI could not be proven green"),

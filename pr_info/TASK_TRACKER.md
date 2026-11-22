@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: `llm_failure_reason` → `auth`; create-plan `.get`; review "Auth" category
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Implement — auth at the task call, fix turn and final check
 See [step_7.md](./steps/step_7.md)
