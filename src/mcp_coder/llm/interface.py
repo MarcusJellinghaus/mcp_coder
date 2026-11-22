@@ -156,6 +156,8 @@ def prompt_llm(
         ValueError: If the provider is not supported, or if input validation fails
         LLMTimeoutError: If any LLM provider times out (normalizes TimeoutExpired
             and asyncio.TimeoutError). Subclasses TimeoutError for backward compatibility.
+        LLMAuthError: If the provider rejects the credentials (Claude CLI logged
+            out or token expired, langchain API-key failures).
 
     Examples:
         >>> # Start new conversation
@@ -180,7 +182,7 @@ def prompt_llm(
         - Comprehensive logging and analysis
         - Cost tracking and usage monitoring
         - Parallel usage safety (each conversation has unique session_id)
-    """
+    """  # noqa: DOC502 - LLMAuthError propagates from the providers, part of the contract
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")

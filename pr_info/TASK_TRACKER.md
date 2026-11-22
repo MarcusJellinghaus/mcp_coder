@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: `ask_claude_code_cli` raises `LLMAuthError`; clamp the return code
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Display — `prompt.py` and verify use `summarize_exception`
 See [step_5.md](./steps/step_5.md)
