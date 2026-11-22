@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
@@ -26,6 +27,8 @@ class _Mocks:
     task: MagicMock
     check: MagicMock
     rescue: MagicMock
+    finalise: MagicMock
+    ci: MagicMock
     fail: MagicMock
     handle: MagicMock
 
@@ -57,14 +60,14 @@ def _mocks_fixture() -> Iterator[_Mocks]:
             f"{_CORE}.get_full_status",
             return_value={"staged": [], "modified": [], "untracked": []},
         ),
-        patch(f"{_CORE}.run_finalisation", return_value=True),
+        patch(f"{_CORE}.run_finalisation", return_value=True) as finalise,
         patch(f"{_CORE}.get_current_branch_name", return_value="feat"),
-        patch(f"{_CORE}.check_and_fix_ci", return_value=True),
+        patch(f"{_CORE}.check_and_fix_ci", return_value=True) as ci,
         patch(f"{_CORE}._fail", wraps=_fail) as fail,
         patch(f"{_REPORTING}.get_diff_stat", return_value=""),
         patch(f"{_REPORTING}.handle_workflow_failure") as handle,
     ):
-        yield _Mocks(task, check, rescue, fail, handle)
+        yield _Mocks(task, check, rescue, finalise, ci, fail, handle)
 
 
 def _failure(mocks: _Mocks) -> tuple[str, str, str]:
@@ -146,3 +149,44 @@ class TestFinalCheckAuth:
 
         _, _, message = _failure(mocks)
         assert message.startswith(detail)
+
+
+class TestFinalisationAndCiAuth:
+    """Auth failures at finalisation and the CI step fail with the error text."""
+
+    def test_finalisation_auth_fails(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """Finalisation auth is a deliberate failure, not the Crashed net."""
+        mocks.finalise.side_effect = LLMAuthError(AUTH_MESSAGE)
+
+        assert run_implement_workflow(tmp_path, "claude") == 1
+
+        reason, stage, message = _failure(mocks)
+        assert reason == "auth"
+        assert stage == "Finalisation"
+        assert AUTH_HINT in message
+        mocks.ci.assert_not_called()
+        mocks.rescue.assert_not_called()
+        assert _label(mocks) == "implementing_failed"
+
+    def test_ci_auth_fails(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """CI analysis or fix-phase auth fails at the CI pipeline analysis stage."""
+        mocks.ci.side_effect = LLMAuthError(AUTH_MESSAGE)
+
+        assert run_implement_workflow(tmp_path, "claude") == 1
+
+        reason, stage, message = _failure(mocks)
+        assert reason == "auth"
+        assert stage == "CI pipeline analysis"
+        assert AUTH_HINT in message
+        assert _label(mocks) == "implementing_failed"
+
+    def test_ci_timeout_message_unchanged(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """A CI-analysis timeout keeps its generic message."""
+        mocks.ci.side_effect = LLMTimeoutError("timed out")
+
+        assert run_implement_workflow(tmp_path, "claude") == 1
+
+        reason, stage, message = _failure(mocks)
+        assert reason == "timeout"
+        assert stage == "CI pipeline analysis"
+        assert message == "LLM failure during CI failure analysis"
