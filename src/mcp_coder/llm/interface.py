@@ -13,7 +13,7 @@ from .mlflow_conversation_logger import mlflow_conversation
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
-from .types import SUPPORTED_PROVIDERS, LLMResponseDict, StreamEvent
+from .types import SUPPORTED_PROVIDERS, LLMAuthError, LLMResponseDict, StreamEvent
 
 if TYPE_CHECKING:
     # String-annotated below: the langchain provider package must stay lazily
@@ -34,6 +34,7 @@ class LLMTimeoutError(TimeoutError):
 
 
 __all__ = [
+    "LLMAuthError",
     "LLMTimeoutError",
     "prompt_llm",
     "prompt_llm_stream",

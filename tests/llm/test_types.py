@@ -540,3 +540,41 @@ def test_supported_providers_contains_expected_values() -> None:
 def test_supported_providers_is_frozenset() -> None:
     """Test SUPPORTED_PROVIDERS is a frozenset (immutable)."""
     assert isinstance(SUPPORTED_PROVIDERS, frozenset)
+
+
+# --- LLMAuthError tests ---
+
+
+def test_llm_auth_error_is_one_shared_class() -> None:
+    """types, interface and the langchain _exceptions module share one class."""
+    from mcp_coder.llm.interface import LLMAuthError as InterfaceAuthError
+    from mcp_coder.llm.providers.langchain._exceptions import (
+        LLMAuthError as LangchainAuthError,
+    )
+    from mcp_coder.llm.types import LLMAuthError
+
+    assert InterfaceAuthError is LLMAuthError
+    assert LangchainAuthError is LLMAuthError
+
+
+def test_llm_auth_error_is_plain_exception() -> None:
+    """LLMAuthError is an Exception but not an OSError/timeout/subprocess error.
+
+    verify routes OSError/TimeoutError through classify_connection_error, and
+    prompt_llm converts TimeoutError; an auth failure must take neither path.
+    """
+    from mcp_coder.llm.types import LLMAuthError
+    from mcp_coder.utils.subprocess_runner import CalledProcessError
+
+    assert issubclass(LLMAuthError, Exception)
+    assert not issubclass(LLMAuthError, OSError)
+    assert not issubclass(LLMAuthError, TimeoutError)
+    assert not issubclass(LLMAuthError, CalledProcessError)
+
+
+def test_llm_auth_error_in_all() -> None:
+    """LLMAuthError is exported from both types.__all__ and interface.__all__."""
+    from mcp_coder.llm import interface, types
+
+    assert "LLMAuthError" in types.__all__
+    assert "LLMAuthError" in interface.__all__

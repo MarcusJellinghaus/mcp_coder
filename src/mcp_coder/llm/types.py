@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import TypedDict
 
 __all__ = [
+    "LLMAuthError",
     "LLMResponseDict",
     "LLM_RESPONSE_VERSION",
     "ResponseAssembler",
@@ -33,6 +34,10 @@ this one constant rather than from two literals that can drift apart.
 Public on purpose: ``AppCore`` imports it cross-module, so an underscore name
 would advertise a privacy the code does not honour.
 """
+
+
+class LLMAuthError(Exception):
+    """Authentication failure from an LLM provider (Claude CLI login, API key, ...)."""
 
 
 class UsageInfo(TypedDict, total=False):

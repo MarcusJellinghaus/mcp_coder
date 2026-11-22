@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shared `LLMAuthError` type
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Pure failure-message builder (`build_cli_failure`)
 See [step_2.md](./steps/step_2.md)

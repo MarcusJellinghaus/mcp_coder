@@ -363,6 +363,7 @@ forbidden_modules =
     langgraph
 ignore_imports =
     mcp_coder.llm.providers.langchain._usage -> mcp_coder.llm.types
+    mcp_coder.llm.providers.langchain._exceptions -> mcp_coder.llm.types
     mcp_coder.llm.providers.langchain._provider_checks -> mcp_coder.utils.config_hints
     mcp_coder.llm.providers.langchain._provider_checks -> mcp_coder.utils.log_utils
 
