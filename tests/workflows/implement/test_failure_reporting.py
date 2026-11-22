@@ -96,6 +96,11 @@ class TestFailureLabels:
         """The capped check fix loop reuses the general failure label."""
         assert FAILURE_LABELS["checks_exhausted"] == "implementing_failed"
 
+    def test_auth_maps_to_implementing_failed(self) -> None:
+        """An auth failure reuses the general label with its own Category."""
+        assert FAILURE_LABELS["auth"] == "implementing_failed"
+        assert CATEGORY_DISPLAY["auth"] == "Auth"
+
     def test_labels_and_display_share_keys(self) -> None:
         """Every reason has both a label and a Category display."""
         assert FAILURE_LABELS.keys() == CATEGORY_DISPLAY.keys()

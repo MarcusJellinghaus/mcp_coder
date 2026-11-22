@@ -103,8 +103,8 @@ def _after_steps(
     Returns:
         ``(reason, outcome, detail)``. ``reason`` is a failure reason
         (``"rebase"`` / ``"ci"`` / ``"branch_moved"`` / ``"timeout"`` /
-        ``"mcp_unavailable"`` / ``"general"``) or ``None`` when the after-steps
-        are clean or there is nothing to do. ``outcome`` is the
+        ``"mcp_unavailable"`` / ``"auth"`` / ``"general"``) or ``None`` when
+        the after-steps are clean or there is nothing to do. ``outcome`` is the
         :class:`RebaseOutcome` of the rebase gate, or ``None`` when the lane has
         no after-steps. ``detail`` is a
         comment-ready summary of the exception the CI call raised, ``None``

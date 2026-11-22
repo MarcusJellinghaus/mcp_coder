@@ -94,6 +94,7 @@ def test_llm_interface_all_is_correct() -> None:
     expected = [
         "prompt_llm",
         "prompt_llm_stream",
+        "LLMAuthError",
         "LLMTimeoutError",
     ]
 
@@ -105,6 +106,7 @@ def test_llm_types_all_is_correct() -> None:
     from mcp_coder.llm import types
 
     expected = [
+        "LLMAuthError",
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
         "ResponseAssembler",

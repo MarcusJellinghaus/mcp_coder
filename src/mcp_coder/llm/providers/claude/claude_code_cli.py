@@ -15,6 +15,7 @@ from ....utils.subprocess_runner import (
 from ...logging_utils import log_llm_error, log_llm_request, log_llm_response
 from ...types import (
     LLM_RESPONSE_VERSION,
+    LLMAuthError,
     LLMResponseDict,
     ResponseAssembler,
     StreamEvent,
@@ -393,7 +394,11 @@ def ask_claude_code_cli(
     Raises:
         ValueError: If input validation fails
         TimeoutExpired: On inactivity timeout (reason ``inactivity_timeout``)
-        CalledProcessError: If the CLI exits non-zero (includes stream_file path)
+        LLMAuthError: If the CLI reports an authentication failure (logged
+            out, expired OAuth token, invalid API key)
+        CalledProcessError: If the CLI exits non-zero, or exits 0 with
+            ``is_error`` on the result message (returncode clamped to >= 1;
+            stderr includes the stream_file path)
         McpServersUnavailableError: If a configured MCP server did not connect
 
     Examples:
@@ -483,10 +488,19 @@ def ask_claude_code_cli(
         log_llm_error(error=timeout_error, duration_ms=duration_ms)
         raise timeout_error
 
-    # Any other error event is a non-zero CLI exit.
+    # Auth failure: the event message is shown as-is; the stream file goes to
+    # the debug log instead of the user-facing text.
+    if last_error is not None and last_error.get("reason") == "auth":
+        auth_error = LLMAuthError(str(last_error.get("message") or ""))
+        log_llm_error(error=auth_error, duration_ms=duration_ms)
+        logger.debug("Claude CLI authentication failed. Stream file: %s", stream_file)
+        raise auth_error
+
+    # Any other error event is a CLI failure (non-zero exit, or exit 0 with
+    # is_error). Clamp the return code so a failure never reports 0.
     if last_error is not None:
         rc = last_error.get("return_code")
-        return_code = rc if isinstance(rc, int) else 1
+        return_code = max(rc, 1) if isinstance(rc, int) else 1
         # Preserve the streaming error event's message (carries stderr[:500] and
         # detail) so log_llm_error and callers keep the diagnostic context.
         error_message = last_error.get("message")

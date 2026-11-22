@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp_coder.llm.error_summary import summarize_exception
-from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
@@ -80,13 +80,16 @@ def llm_failure_reason(exc: BaseException) -> str | None:
 
     Returns:
         ``"timeout"`` for :class:`LLMTimeoutError`, ``"mcp_unavailable"`` for
-        :class:`McpServersUnavailableError`, or ``None`` for any other
-        exception (i.e. not a categorizable LLM failure).
+        :class:`McpServersUnavailableError`, ``"auth"`` for
+        :class:`LLMAuthError` (Claude login or langchain API key), or ``None``
+        for any other exception (i.e. not a categorizable LLM failure).
     """
     if isinstance(exc, LLMTimeoutError):
         return "timeout"
     if isinstance(exc, McpServersUnavailableError):
         return "mcp_unavailable"
+    if isinstance(exc, LLMAuthError):
+        return "auth"
     return None
 
 
@@ -380,7 +383,7 @@ def run_guarded(
     unexpected :class:`Exception` (netted, returns ``1``) or a
     :class:`SystemExit` (netted, then **re-raised** to preserve SIGTERM /
     ``sys.exit`` parity). Every netted escape maps to ``general_category`` —
-    precise ``timeout``/``mcp_unavailable`` labels come only from the
+    precise reasons (see :func:`llm_failure_reason`) come only from the
     deliberate in-body classify-and-fail paths.
 
     Args:

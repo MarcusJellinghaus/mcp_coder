@@ -7,13 +7,11 @@ All subsequent provider modules import from here.
 import os
 from typing import NoReturn
 
+from mcp_coder.llm.types import LLMAuthError as LLMAuthError
+
 
 class LLMConnectionError(ConnectionError):
     """Network, SSL, or transport failure connecting to an LLM provider."""
-
-
-class LLMAuthError(Exception):
-    """Authentication failure (HTTP 401/403) from an LLM provider."""
 
 
 class LLMMCPLaunchError(Exception):

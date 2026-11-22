@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import TypedDict
 
 __all__ = [
+    "LLMAuthError",
     "LLMResponseDict",
     "LLM_RESPONSE_VERSION",
     "ResponseAssembler",
@@ -33,6 +34,10 @@ this one constant rather than from two literals that can drift apart.
 Public on purpose: ``AppCore`` imports it cross-module, so an underscore name
 would advertise a privacy the code does not honour.
 """
+
+
+class LLMAuthError(Exception):
+    """Authentication failure from an LLM provider (Claude CLI login, API key, ...)."""
 
 
 class UsageInfo(TypedDict, total=False):
@@ -107,8 +112,10 @@ StreamEvent = dict[str, object]
   **Transient** (see ``TRANSIENT_EVENT_TYPES``): never persisted, never
   replayed. Exactly one is outstanding at a time
 - {"type": "error", "message": "...", "reason": "..."} — error during stream; the
-  optional ``reason`` discriminator (e.g. ``"inactivity_timeout"``, ``"nonzero_exit"``)
-  lets consumers translate the failure without string-matching the message
+  optional ``reason`` discriminator (e.g. ``"inactivity_timeout"``, ``"nonzero_exit"``,
+  ``"auth"`` for a logged-out / expired-credential CLI, ``"result_error"`` for an
+  ``is_error`` result on exit 0) lets consumers translate the failure without
+  string-matching the message
 - {"type": "done", "usage": {...}, "result": "..."} — stream complete with optional
   usage stats and the final result text
 - {"type": "raw_line", "line": "..."} — raw NDJSON line passthrough (json-raw mode)

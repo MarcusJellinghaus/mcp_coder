@@ -40,6 +40,7 @@ class StreamMessage(TypedDict, total=False):
     message: dict[str, Any]
     result: str
     is_error: bool
+    is_api_error_message: bool
     total_cost_usd: float
     duration_ms: int
     usage: dict[str, Any]

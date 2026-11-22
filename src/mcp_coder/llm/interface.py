@@ -13,7 +13,7 @@ from .mlflow_conversation_logger import mlflow_conversation
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
-from .types import SUPPORTED_PROVIDERS, LLMResponseDict, StreamEvent
+from .types import SUPPORTED_PROVIDERS, LLMAuthError, LLMResponseDict, StreamEvent
 
 if TYPE_CHECKING:
     # String-annotated below: the langchain provider package must stay lazily
@@ -34,6 +34,7 @@ class LLMTimeoutError(TimeoutError):
 
 
 __all__ = [
+    "LLMAuthError",
     "LLMTimeoutError",
     "prompt_llm",
     "prompt_llm_stream",
@@ -155,6 +156,8 @@ def prompt_llm(
         ValueError: If the provider is not supported, or if input validation fails
         LLMTimeoutError: If any LLM provider times out (normalizes TimeoutExpired
             and asyncio.TimeoutError). Subclasses TimeoutError for backward compatibility.
+        LLMAuthError: If the provider rejects the credentials (Claude CLI logged
+            out or token expired, langchain API-key failures).
 
     Examples:
         >>> # Start new conversation
@@ -179,7 +182,7 @@ def prompt_llm(
         - Comprehensive logging and analysis
         - Cost tracking and usage monitoring
         - Parallel usage safety (each conversation has unique session_id)
-    """
+    """  # noqa: DOC502 - LLMAuthError propagates from the providers, part of the contract
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")

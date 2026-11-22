@@ -13,6 +13,7 @@ from collections.abc import Iterator, Sequence
 from ....utils.subprocess_runner import CommandOptions, CommandResult
 from ....utils.subprocess_streaming import stream_subprocess
 from ...types import StreamEvent
+from .claude_cli_failure import build_cli_failure
 from .claude_code_cli import (
     _find_claude_executable,
     build_cli_command,
@@ -50,11 +51,16 @@ def _map_stream_message_to_event(msg: StreamMessage) -> Iterator[StreamEvent]:
     if msg_type == "assistant":
         message_data = msg.get("message", {})
         content_blocks = message_data.get("content", [])
+        # API-error assistant blocks repeat the final result text, which the
+        # post-loop error event already reports; streaming it would print twice.
+        is_api_error = bool(msg.get("is_api_error_message"))
         for block in content_blocks:
             if not isinstance(block, dict):
                 continue
             block_type = block.get("type")
             if block_type == "text":
+                if is_api_error:
+                    continue
                 yield {"type": "text_delta", "text": block.get("text", "")}
             elif block_type == "tool_use":
                 yield {
@@ -109,7 +115,13 @@ def ask_claude_code_cli_stream(
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error,
-        raw_line, system (the init message payload)
+        raw_line, system (the init message payload). At most one error event is
+        yielded, after the stream ends: ``inactivity_timeout`` when the process
+        timed out, otherwise (on a non-zero exit or ``is_error`` on the final
+        ``result`` message) one built by ``build_cli_failure`` with ``reason``
+        ``auth`` | ``result_error`` (exit 0) | ``nonzero_exit``, plus
+        ``return_code`` and ``message``. Assistant text blocks flagged
+        ``is_api_error_message`` yield no text_delta.
 
     Raises:
         ValueError: If the question is empty/whitespace, timeout is not
@@ -169,6 +181,7 @@ def ask_claude_code_cli_stream(
         )
         log_fh = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
     saw_system_init = False
+    result_msg: StreamMessage | None = None
     with log_fh as log:
         for line in stream:
             log.write(line + "\n")
@@ -177,6 +190,8 @@ def ask_claude_code_cli_stream(
             msg = parse_stream_json_line(line)
             if not msg:
                 continue
+            if msg.get("type") == "result":
+                result_msg = msg
             if msg.get("type") == "system":
                 # Surface the init/system message to the assembler so the
                 # blocking path can repopulate raw_response["system"] (parity
@@ -266,13 +281,19 @@ def ask_claude_code_cli_stream(
                 "Process terminated. You can retry, or use --timeout to increase the limit."
             ),
         }
-    elif cmd_result.return_code != 0:
-        error_msg = f"CLI failed with code {cmd_result.return_code}"
-        if cmd_result.stderr:
-            error_msg += f": {cmd_result.stderr[:500]}"
-        yield {
-            "type": "error",
-            "reason": "nonzero_exit",
-            "return_code": cmd_result.return_code,
-            "message": error_msg,
-        }
+    else:
+        is_error = bool(result_msg and result_msg.get("is_error"))
+        if cmd_result.return_code != 0 or is_error:
+            error_msg, reason = build_cli_failure(
+                result_msg.get("result") if result_msg else None,
+                is_error,
+                result_msg.get("subtype") if result_msg else None,
+                cmd_result.stderr or "",
+                cmd_result.return_code,
+            )
+            yield {
+                "type": "error",
+                "reason": reason,
+                "return_code": cmd_result.return_code,
+                "message": error_msg,
+            }

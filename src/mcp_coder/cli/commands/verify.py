@@ -15,6 +15,7 @@ from typing import Any, cast
 from mcp_coder.cli.commands import verify_exit_code
 
 from ...llm.env import prepare_llm_environment
+from ...llm.error_summary import summarize_exception
 from ...llm.interface import prompt_llm
 from ...llm.mlflow_verify import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
@@ -587,7 +588,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
                 except ImportError:
                     category = "Connection error"
             else:
-                category = f"{type(exc).__name__}: {exc}"
+                category = summarize_exception(exc)
             out.add(Row("Test prompt", symbols["failure"], f"FAILED ({category})"))
             logger.debug("Test prompt failure details: %s", exc, exc_info=True)
             out.add("  Run with --debug for detailed diagnostics.")

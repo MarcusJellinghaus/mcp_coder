@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 import pytest
 from git import Repo
 
+from mcp_coder.llm.interface import LLMAuthError
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.workflow_steps.rebase import (
     BRANCH_MOVED_NEXT_STEP,
@@ -33,6 +34,7 @@ from mcp_coder.workflows.review.config import (
     ReviewConfig,
 )
 from mcp_coder.workflows.review.verdict import Verdict
+from tests.logged_out_capture import AUTH_HINT, AUTH_MESSAGE
 
 # --- _route_to_human -------------------------------------------------------
 
@@ -633,3 +635,17 @@ def test_fail_unknown_reason_falls_back_to_general(
         "**Error:** The review stopped on an unrecoverable error; check the job log"
         in lines
     )
+
+
+def test_fail_auth_reason_renders_auth_category(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """``auth`` -> Category ``Auth``; the Error carries the login hint once."""
+    body = _capture_fail_comment(
+        monkeypatch, tmp_path, "auth", exc=LLMAuthError(AUTH_MESSAGE)
+    )
+
+    lines = body.splitlines()
+    assert "**Category:** Auth" in lines
+    error_line = next(line for line in lines if line.startswith("**Error:**"))
+    assert error_line.count(AUTH_HINT) == 1

@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 # create-plan failure taxonomy: reason string -> label ID in labels.json.
 # Includes the non-LLM ``prereq`` reason alongside the shared LLM reasons
 # (``timeout`` / ``mcp_unavailable``) produced by ``llm_failure_reason``.
+# Other reasons (e.g. ``auth``) fall back to ``planning_failed``.
 FAILURE_LABELS: dict[str, str] = {
     "general": "planning_failed",
     "timeout": "planning_llm_timeout",
@@ -144,6 +145,8 @@ def _prompt_failure(prompt_number: int, exc: Exception) -> WorkflowFailure:
     :class:`LLMTimeoutError` -> ``planning_llm_timeout``, an
     :class:`McpServersUnavailableError` -> ``planning_mcp`` (with a
     server-naming message), and any other exception -> ``planning_failed``.
+    Other reasons (e.g. ``auth``) keep their reason in the stage and fall back
+    to ``planning_failed``.
 
     Args:
         prompt_number: 1-based prompt index for the stage label.
@@ -159,7 +162,7 @@ def _prompt_failure(prompt_number: int, exc: Exception) -> WorkflowFailure:
         else str(exc)
     )
     return WorkflowFailure(
-        category=FAILURE_LABELS[reason],
+        category=FAILURE_LABELS.get(reason, FAILURE_LABELS["general"]),
         stage=f"Prompt {prompt_number} ({reason})",
         message=message,
     )

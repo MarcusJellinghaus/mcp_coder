@@ -10,7 +10,7 @@ from functools import partial
 from pathlib import Path
 
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
 from mcp_coder.utils.log_utils import OUTPUT
@@ -28,6 +28,7 @@ from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
 from mcp_coder.workflow_utils.failure_handling import (
     CommentField,
     GuardOutcome,
+    exception_summary,
     llm_failure_reason,
     run_guarded,
 )
@@ -76,6 +77,9 @@ def _final_check_failure(checks: CheckOutcome) -> tuple[str, str]:
     if checks.status == "blocked":
         logger.error("Implementation blocked: %s", checks.detail)
         return "blocked", checks.detail
+    if checks.status == "auth":
+        # The detail already carries the error text and any blocked marker
+        return "auth", checks.detail
     return checks.status, append_detail(
         "LLM failure during final checks", checks.detail
     )
@@ -219,6 +223,13 @@ def run_implement_workflow(
                             outcome.detail,
                         ),
                     )
+                if outcome.reason == "auth":
+                    # The LLM rejected the credentials; the detail is the error text
+                    return task_fail(
+                        "auth",
+                        stage="Task implementation",
+                        message=outcome.detail,
+                    )
                 if outcome.reason == "no_changes_after_retries":
                     # Task produced no changes after all retry attempts
                     return fail(
@@ -330,12 +341,15 @@ def run_implement_workflow(
             logger.info("No changes from final checks - skipping commit")
 
         # Step 5.5: Run finalisation to complete any remaining tasks
-        finalisation_success = run_finalisation(
-            project_dir,
-            provider,
-            mcp_config,
-            settings_file,
-        )
+        try:
+            finalisation_success = run_finalisation(
+                project_dir,
+                provider,
+                mcp_config,
+                settings_file,
+            )
+        except LLMAuthError as exc:
+            return fail("auth", stage="Finalisation", message=exception_summary(exc))
         if not finalisation_success:
             logger.warning("Finalisation encountered issues - continuing anyway")
 
@@ -343,10 +357,8 @@ def run_implement_workflow(
         logger.info("Checking CI pipeline status...")
         current_branch = get_current_branch_name(project_dir)
         if current_branch:
-            # CI-analysis no longer swallows the two typed LLM failures; a
-            # fix-phase timeout/MCP-unavailable is still absorbed into the
-            # 4-attempt loop (Decision 10). Only an analysis-phase abort reaches
-            # here — categorize it into timeout / mcp_unavailable.
+            # The shared CI step re-raises the typed LLM failures from the
+            # analysis phase, and auth from the fix phase too; categorize them here.
             try:
                 ci_success = check_and_fix_ci(
                     project_dir=project_dir,
@@ -355,14 +367,15 @@ def run_implement_workflow(
                     mcp_config=mcp_config,
                     settings_file=settings_file,
                 )
-            except (LLMTimeoutError, McpServersUnavailableError) as exc:
-                # Fallback keeps mypy happy; the reason is non-None for both types.
+            except (LLMAuthError, LLMTimeoutError, McpServersUnavailableError) as exc:
+                # Fallback keeps mypy happy; the reason is non-None for these types.
                 reason = llm_failure_reason(exc) or "general"
-                return fail(
-                    reason,
-                    stage="CI pipeline analysis",
-                    message="LLM failure during CI failure analysis",
+                message = (
+                    exception_summary(exc)
+                    if reason == "auth"
+                    else "LLM failure during CI failure analysis"
                 )
+                return fail(reason, stage="CI pipeline analysis", message=message)
             except PushRejectedError as exc:
                 return fail(
                     "branch_moved",
