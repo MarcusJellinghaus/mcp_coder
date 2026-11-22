@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Pure failure-message builder (`build_cli_failure`)
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Streaming core — error event from the `result` message, no double print, fixture
 See [step_3.md](./steps/step_3.md)
