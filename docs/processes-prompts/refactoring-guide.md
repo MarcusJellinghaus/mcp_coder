@@ -179,13 +179,9 @@ Technique for getting oversized files under the 750-line limit, plus the issue-l
 
 ### Find the files (mind the allowlist)
 
-`mcp__mcp-workspace__check_file_size` and the default `mcp-coder check file-size` **hide files listed in `.large-files-allowlist`** — so the biggest offenders (already allowlisted) are invisible in the normal output. To see the true full picture, bypass the allowlist by pointing it at a nonexistent path:
+`check_file_size` hides allowlisted files by default. The inventory takes two calls: `mcp__mcp-workspace__check_file_size()` for files over the limit, plus `check_file_size(show_allowlisted=True)` for the allowlist entries (line counts, largest first, removable entries marked).
 
-```bash
-mcp-coder check file-size --max-lines 750 --allowlist-file .no-such-allowlist
-```
-
-Build your inventory from this full list, not the filtered one — otherwise the largest files get systematically overlooked (they were allowlisted precisely because they're huge).
+Build your inventory from both lists, not the filtered one alone — otherwise the largest files get systematically overlooked (they were allowlisted precisely because they're huge).
 
 ### Split a large file
 

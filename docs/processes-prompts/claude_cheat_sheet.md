@@ -92,7 +92,7 @@ All commands except `/issue_analyse`, `/plan_review`, `/plan_update`, `/implemen
 A failure label means an automated step stopped and needs you.
 
 1. Run `/check_branch_status` to see what happened. For `status-17f-tasks`, run `/implementation_finalise` instead.
-2. Fix the cause, then restart the stage with the command shown under its heading: `mcp-coder gh-tool set-status <label>`.
+2. Fix the cause and commit and push every fix, then restart the stage with the command shown under its heading: `mcp-coder gh-tool set-status <label>`.
 
 Recovery details per label: [failure-handling.md](processes/failure-handling.md).
 
