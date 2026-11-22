@@ -1,11 +1,19 @@
 """Real logged-out Claude CLI capture (issue #33) and its expected messages.
 
-Shared by the streaming, blocking and display auth-error tests.
+Shared by the streaming, blocking and display auth-error tests. Lives at the
+``tests`` root so test packages can share it without cross-importing.
 """
 
 from pathlib import Path
 
-FIXTURE = Path(__file__).parent / "fixtures" / "logged_out_stream.ndjson"
+FIXTURE = (
+    Path(__file__).parent
+    / "llm"
+    / "providers"
+    / "claude"
+    / "fixtures"
+    / "logged_out_stream.ndjson"
+)
 LOGGED_OUT_RC = 1
 LOGGED_OUT_STDERR = (
     "Ignoring 78 permissions.allow entries from .claude/settings.local.json: "

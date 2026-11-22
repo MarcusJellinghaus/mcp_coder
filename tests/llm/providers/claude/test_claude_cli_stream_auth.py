@@ -13,8 +13,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
 )
 from mcp_coder.llm.types import StreamEvent
 from mcp_coder.utils.subprocess_runner import CommandResult
-
-from .logged_out_capture import (
+from tests.logged_out_capture import (
     AUTH_HINT,
     AUTH_MESSAGE,
     CLI_TEXT,

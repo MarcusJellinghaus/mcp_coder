@@ -15,8 +15,7 @@ from mcp_coder.llm import interface
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
 from mcp_coder.llm.types import LLMAuthError
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
-
-from .logged_out_capture import (
+from tests.logged_out_capture import (
     AUTH_MESSAGE,
     LOGGED_OUT_RC,
     LOGGED_OUT_STDERR,

@@ -64,7 +64,7 @@ category=FAILURE_LABELS.get(reason, FAILURE_LABELS["general"]),
     ``"LLMAuthError: Run `claude`, then `/login`."``
   - For #148's long text (hint + `API Error: 401 {...authentication_error...OAuth token has expired...} · Please run /login`)
     the result is ≤ 300 characters and still starts with the hint.
-  - Import `AUTH_MESSAGE`/`AUTH_HINT` from `tests.llm.providers.claude.logged_out_capture`.
+  - Import `AUTH_MESSAGE`/`AUTH_HINT` from `tests.logged_out_capture`.
 - create-plan: `_prompt_failure(1, LLMAuthError(AUTH_MESSAGE))` → `category == "planning_failed"`,
   `stage == "Prompt 1 (auth)"`, and the message contains the hint; no `KeyError`.
 - review: `_capture_fail_comment(..., "auth", exc=LLMAuthError(AUTH_MESSAGE))` → the body

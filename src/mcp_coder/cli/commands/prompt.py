@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from ...llm.env import prepare_llm_environment
+from ...llm.error_summary import summarize_exception
 from ...llm.formatting.formatters import print_stream_event
 from ...llm.interface import prompt_llm, prompt_llm_stream
 from ...llm.mlflow_conversation_logger import mlflow_conversation
@@ -228,5 +229,5 @@ def execute_prompt(
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Handle API errors
-        logger.error("Prompt command failed: %s", str(e))
+        logger.error("Prompt command failed: %s", summarize_exception(e))
         return 1
