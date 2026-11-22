@@ -8,7 +8,7 @@ CLI verb.
 import logging
 from pathlib import Path
 
-from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_latest_commit_sha
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
@@ -26,6 +26,7 @@ from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
+    exception_summary,
     handle_workflow_failure,
     llm_failure_reason,
     run_guarded,
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 _LLM_FAILURE_CATEGORY_DISPLAY = {
     "timeout": "Llm Timeout",
     "mcp_unavailable": "Mcp Unavailable",
+    "auth": "Auth",
 }
 
 
@@ -128,7 +130,7 @@ def run_fix_ci_workflow(
             ci_ok = check_and_fix_ci(
                 project_dir, branch, provider, mcp_config, settings_file
             )
-        except (LLMTimeoutError, McpServersUnavailableError) as exc:
+        except (LLMAuthError, LLMTimeoutError, McpServersUnavailableError) as exc:
             _refresh_if_pushed()
             reason = llm_failure_reason(exc) or "general"
             category = _LLM_FAILURE_CATEGORY_DISPLAY.get(reason, "General")
@@ -136,7 +138,7 @@ def run_fix_ci_workflow(
                 project_dir,
                 category,
                 "CI pipeline analysis",
-                str(exc),
+                exception_summary(exc) if reason == "auth" else str(exc),
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )

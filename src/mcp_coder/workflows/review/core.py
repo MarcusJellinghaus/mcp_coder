@@ -98,8 +98,8 @@ def run_review_workflow(
     Returns:
         ``0`` on success or a needs-human handoff (escalate / rebase / rounds
         cap — all route to the escalate recovery label); ``1`` on any error
-        (unparseable verdict, timeout, MCP down, an open CI finding at the cap,
-        commit-failed, push-failed).
+        (unparseable verdict, timeout, MCP down, auth, an open CI finding at
+        the cap, commit-failed, push-failed).
     """
     issue_number, base_branch = _resolve_context(config, project_dir)
     start_time = time.time()
@@ -586,8 +586,8 @@ def run_review_workflow(
                 # supervisor triages it within the rounds cap).
                 pending_ci_note = _CI_NOTE
             elif reason:
-                # Terminal after-steps failure (`branch_moved` / `timeout` /
-                # `general` / `mcp_unavailable`) after a committed fix: write +
+                # Terminal after-steps failure (`branch_moved` / `timeout` / `auth`
+                # / `general` / `mcp_unavailable`) after a committed fix: write +
                 # flush the round so it lands in the committed log before failing.
                 write_round_log(
                     project_dir,

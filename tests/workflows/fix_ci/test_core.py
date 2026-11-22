@@ -8,11 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_steps import commit
 from mcp_coder.workflows.fix_ci import run_fix_ci_workflow
 from tests.ci_fix_drive import patch_ci_fix_externals
+from tests.logged_out_capture import AUTH_HINT, AUTH_MESSAGE
 
 MODULE = "mcp_coder.workflows.fix_ci.core"
 PROJECT_DIR = Path("/fake/project")
@@ -247,6 +248,39 @@ def test_mcp_unavailable_posts_comment_and_sets_label() -> None:
     comment = mock_handle.call_args[0][1]
     assert failure.category == "pr_ci_failed"
     assert "**Category:** Mcp Unavailable" in comment.splitlines()
+
+
+def test_auth_error_posts_comment_and_sets_label() -> None:
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+        patch(
+            f"{MODULE}.check_and_fix_ci",
+            side_effect=LLMAuthError(AUTH_MESSAGE),
+        ),
+        patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
+        patch(
+            "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+        ) as mock_net,
+        patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+    ):
+        result = run_fix_ci_workflow(
+            PROJECT_DIR,
+            "claude",
+            update_issue_labels=True,
+            post_issue_comments=True,
+        )
+
+    assert result == 1
+    mock_net.assert_not_called()
+    failure = mock_handle.call_args[0][0]
+    comment = mock_handle.call_args[0][1]
+    assert failure.category == "pr_ci_failed"
+    lines = comment.splitlines()
+    assert lines[0] == "## ❌ CI Fix Failed"
+    assert "**Category:** Auth" in lines
+    assert "**Stage:** CI pipeline analysis" in lines
+    assert f"**Error:** LLMAuthError: {AUTH_MESSAGE}" in lines
+    assert comment.count(AUTH_HINT) == 1
 
 
 def test_push_rejected_posts_comment_and_sets_label() -> None:

@@ -80,9 +80,9 @@ See [step_8.md](./steps/step_8.md)
 ### Step 9: Shared CI step re-raises auth; fix-ci catches it; review CI gate
 See [step_9.md](./steps/step_9.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size — `ci.py` ≤ 750 lines) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size — `ci.py` ≤ 750 lines) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
