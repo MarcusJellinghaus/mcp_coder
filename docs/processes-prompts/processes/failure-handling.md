@@ -50,6 +50,6 @@ Human. vscodeclaude opens a session on every failure label.
 General recovery, for every label above:
 
 1. Read the failure comment on the issue (Category / Stage / Error).
-2. Fix the cause.
-3. `mcp-coder gh-tool set-status <retry label>` (the retry label is listed in the owner doc).
-4. The bot picks the issue up again.
+2. Fix the cause; commit and push every fix.
+3. Last, `mcp-coder gh-tool set-status <retry label>` (the retry label is listed in the owner doc).
+4. The bot picks the issue up on its next poll, possibly within seconds.
