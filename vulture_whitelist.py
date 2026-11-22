@@ -110,6 +110,7 @@ _.cache_creation_input_tokens
 # usages that previously suppressed these lived in the now-removed SDK/API path.
 _.subtype
 _.total_cost_usd
+_.is_api_error_message
 
 # =============================================================================
 # FALSE POSITIVES - Argparse Pattern

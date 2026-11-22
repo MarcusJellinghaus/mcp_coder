@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Streaming core — error event from the `result` message, no double print, fixture
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (fixture + tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (fixture + tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, format, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `ask_claude_code_cli` raises `LLMAuthError`; clamp the return code
 See [step_4.md](./steps/step_4.md)
