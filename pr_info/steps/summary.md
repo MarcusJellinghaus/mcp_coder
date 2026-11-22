@@ -63,8 +63,11 @@ Step 3 commits block (b) of that comment as the fixture
      is unchanged.
    - KISS pattern: `LLMAuthError` joins the **existing** `(LLMTimeoutError, McpServersUnavailableError)`
      `except` tuples. Each site only picks its message text with `exception_summary(e) if reason == "auth" else <old text>`.
-     The one new `except` block is `_run_ci_fix`'s `except LLMAuthError: raise`, a narrow
-     exception to "Decision 10".
+     Two `except` blocks are new:
+     - `_run_ci_fix`'s `except LLMAuthError: raise`, a narrow exception to "Decision 10".
+     - an auth-only `except LLMAuthError` around `run_finalisation` in `implement/core`
+       (step 8). Finalisation catches only `LLMAuthError`; it does not join the
+       timeout/MCP `except` tuple, which is out of scope.
    - Implement routing:
      - task call → `fail`
      - per-task fix turn → `abort_checks` (rescue commit)
