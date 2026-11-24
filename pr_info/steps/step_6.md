@@ -170,6 +170,17 @@ Jenkins mock and an empty `blocked` set for the two new parameters.
    trust gate is not evaluated; later issues of that job are skipped without another sleep.
 6. Pending delay, next issue on another free job → sleep, re-check of the **previous** job's path
    (assert the `path=` argument), then the other job's issue is dispatched.
+6a. Blocked job while a delay is pending (pins step 1 "skip if blocked" before step 2 "sleep
+   and re-check"). Job B must be free at the initial check: `_collect_work` drops the repos
+   of a job that's busy then, so only a re-check can block a job whose issues are in `work`.
+   Four issues in dispatch order: #1 on job B, #2 on job A, #3 on job B, #4 on job A; both
+   jobs free initially. #1 is started (pending = B). #2: sleep, re-check of B finds a waiting
+   build → B blocked; #2 is dispatched (pending = A). #3 (job B, blocked) is skipped with no
+   `sleep` and no `get_recent_builds` call, and `pending` stays A. #4 gets one `sleep` and one
+   re-check of job A's path, then is dispatched. Totals (record call order): dispatched
+   `[1, 2, 4]`, two `sleep` calls, four `get_recent_builds` calls (two initial checks, then
+   re-checks of B and A), and no `sleep` or `get_recent_builds` call between #2's dispatch and
+   #4's sleep.
 7. `NOT_STARTED` → no sleep and no re-check before the next issue; the cache label update still runs.
 8. Untrusted issue between two starts (same job: #1 started, #2 untrusted, #3 trusted) → exactly
    two `get_recent_builds` calls (the initial capacity check in `_collect_work` and one
