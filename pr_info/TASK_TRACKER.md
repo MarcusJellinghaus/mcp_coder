@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Lenient lookup, `format_code` from either file, `format_code` row for every repo — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests first (`TestFindMcpCoderTableLenient`, `TestGetFormatCode`, `TestFormatCodeRow`, `TestProjectSection`), then `find_mcp_coder_table_lenient`, `FormatCodeSetting.source`, `get_format_code`, `_format_code_row` with `indent`, row in no-`pyproject.toml` branch
-- [ ] Quality checks: pylint, mypy, pytest, lint-imports, tach, vulture, format — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`TestFindMcpCoderTableLenient`, `TestGetFormatCode`, `TestFormatCodeRow`, `TestProjectSection`), then `find_mcp_coder_table_lenient`, `FormatCodeSetting.source`, `get_format_code`, `_format_code_row` with `indent`, row in no-`pyproject.toml` branch
+- [x] Quality checks: pylint, mypy, pytest, lint-imports, tach, vulture, format — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `[tool.mcp-coder.prompts]` from either file — [step_3.md](./steps/step_3.md)
 

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..config.toml_utils import load_toml
+from ..config.toml_utils import find_mcp_coder_table_lenient, load_toml
 
 logger = logging.getLogger(__name__)
 
@@ -83,35 +83,35 @@ class FormatCodeSetting:
     """[tool.mcp-coder] format_code."""
 
     enabled: bool  # True when absent
-    explicit: bool  # True when the key is present
+    source: str | None  # file the key came from; None = default
 
 
 def get_format_code(project_dir: Path) -> FormatCodeSetting:
-    """Read [tool.mcp-coder] format_code from pyproject.toml.
+    """Read [tool.mcp-coder] format_code from pyproject.toml, else mcp-coder.toml.
 
     Args:
-        project_dir: Path to directory containing pyproject.toml.
+        project_dir: Project root containing pyproject.toml / mcp-coder.toml.
 
     Returns:
-        FormatCodeSetting; enabled defaults to True when the key, section or
-        file is absent (or the file is malformed).
+        FormatCodeSetting; enabled defaults to True (source None) when no
+        file defines the key. A malformed file, or the key in both files,
+        also gives the default and a logged warning.
 
     Raises:
         ValueError: If the value is not a bool. The message names the key
             and the file.
     """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {})
-    if "format_code" not in section:
-        return FormatCodeSetting(enabled=True, explicit=False)
-    value: Any = section["format_code"]
+    found = find_mcp_coder_table_lenient(project_dir, "format_code")
+    if found is None:
+        return FormatCodeSetting(enabled=True, source=None)
+    source, value = found
     if not isinstance(value, bool):
-        path = project_dir / "pyproject.toml"
+        path = project_dir / source
         raise ValueError(
             f"Invalid [tool.mcp-coder] format_code in {path}\n"
             f"Expected true or false, got {type(value).__name__}: {value!r}"
         )
-    return FormatCodeSetting(enabled=value, explicit=True)
+    return FormatCodeSetting(enabled=value, source=source)
 
 
 def has_legacy_format_code_key(project_dir: Path) -> bool:

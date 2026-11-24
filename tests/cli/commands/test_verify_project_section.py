@@ -155,7 +155,7 @@ class TestFormatCodeRow:
         )
         assert ok is True
         assert _row(lines, "format_code") == _format_row(
-            "format_code", "[OK]", "enabled", indent=4
+            "format_code", "[OK]", "enabled (pyproject.toml)", indent=4
         )
 
     def test_non_bool_is_error(
@@ -173,8 +173,44 @@ class TestFormatCodeRow:
         ok, lines = _run(tmp_path, "[tool.mcp-coder]\nformat_code = false\n", capsys)
         assert ok is True
         assert _row(lines, "format_code") == _format_row(
-            "format_code", "[OK]", "disabled", indent=4
+            "format_code", "[OK]", "disabled (pyproject.toml)", indent=4
         )
+
+    def test_mcp_coder_toml_only_names_source(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder]\nformat_code = false\n"
+            '[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n',
+            encoding="utf-8",
+        )
+        ok, lines = _run(tmp_path, None, capsys)
+        assert ok is True
+        assert _row(lines, "format_code") == _format_row(
+            "format_code", "[OK]", "disabled (mcp-coder.toml)", indent=2
+        )
+
+    def test_no_files_is_enabled_default(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _, lines = _run(tmp_path, None, capsys)
+        assert _row(lines, "format_code") == _format_row(
+            "format_code", "[OK]", "enabled (default)", indent=2
+        )
+
+    def test_non_bool_in_mcp_coder_toml_is_error(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nformat_code = "no"\n'
+            '[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n',
+            encoding="utf-8",
+        )
+        ok, lines = _run(tmp_path, None, capsys)
+        assert ok is False
+        row = _row(lines, "format_code")
+        assert row.startswith("  format_code ")
+        assert "[ERR]" in row
 
 
 class TestLegacyKeyRow:

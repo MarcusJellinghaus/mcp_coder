@@ -664,7 +664,10 @@ class TestProjectSection:
         assert "=== PROJECT" in out
         assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
         assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
-        assert _format_row("format_code", "[OK]", "enabled", indent=4) in out
+        assert (
+            _format_row("format_code", "[OK]", "enabled (pyproject.toml)", indent=4)
+            in out
+        )
         assert "check_type_hints" not in out
 
     def test_project_section_python_defaults(
