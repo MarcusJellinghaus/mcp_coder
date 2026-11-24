@@ -3,10 +3,12 @@
 This module contains:
 - Configuration management functions
 - Issue filtering functions (including cached version via issue_cache)
+- Executor capacity check (find_waiting_build)
 - Workflow dispatch function
 """
 
 import logging
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 
 from ....config.label_config import load_labels_config
@@ -19,6 +21,7 @@ from ....mcp_workspace_github import (
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.diagnostics import job_url_path
+from ....utils.jenkins_operations.models import BuildInfo
 from ....utils.user_config import get_config_file_path, get_config_values
 from ....workflow_utils.rate_limit import as_rate_limit
 from .command_templates import PRIORITY_ORDER, WORKFLOW_TEMPLATES
@@ -341,6 +344,61 @@ def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:
         Formatted label string.
     """
     return f"{repo_name} - {identifier} - {action}"
+
+
+UNNAMED_WARNING_AFTER = timedelta(minutes=60)
+
+
+def find_waiting_build(
+    jenkins_client: JenkinsClient, job_path: str
+) -> BuildInfo | None:
+    """Return a running build of the executor job that is still waiting for an agent.
+
+    The signal is the display name: the Executor pipeline sets currentBuild.displayName
+    from LABEL right after it gets its agent executor (top-level ``agent`` in the
+    Executor job's pipeline script), so a running build still named ``#<number>`` is
+    waiting. If the pipeline ever renames before agent allocation, this check silently
+    stops blocking. See docs/repository-setup/jenkins.md.
+
+    Args:
+        jenkins_client: Jenkins client used to list the job's running builds.
+        job_path: Full path of the executor job, e.g. "Windows-Agents/Executor".
+
+    Returns:
+        The oldest waiting build, or None when the job has capacity.
+
+    Raises:
+        JenkinsError: If the build list cannot be read.
+    """  # noqa: DOC502 - raised by get_recent_builds, part of this contract
+    # Default limit (100) on purpose: the limit applies before the status
+    # filter, so a small one could miss a long-running unnamed build.
+    builds = jenkins_client.get_recent_builds(path=job_path, statuses=["running"])
+    waiting = [b for b in builds if b.display_name in ("", f"#{b.number}")]
+
+    now = datetime.now(UTC)
+    for build in waiting:
+        age = now - build.timestamp
+        if age > UNNAMED_WARNING_AFTER:
+            logger.warning(
+                "Executor job '%s': build #%d still unnamed after %d min: "
+                "waiting for an agent, or a manual build without LABEL (%s)",
+                job_path,
+                build.number,
+                int(age.total_seconds() // 60),
+                build.url,
+            )
+
+    if not waiting:
+        return None
+
+    oldest = waiting[-1]  # builds are listed newest first
+    logger.info(
+        "Executor job '%s' busy: build #%d is waiting for an agent (%s)",
+        job_path,
+        oldest.number,
+        oldest.url,
+    )
+    return oldest
 
 
 class DispatchResult(Enum):
