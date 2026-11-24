@@ -64,6 +64,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
     },
     "coordinator": {
         "cache_refresh_minutes": FieldDef(int),
+        "dispatch_delay_seconds": FieldDef(int),
     },
     "coordinator.repos.*": {
         "repo_url": FieldDef(str, required=True),
@@ -675,3 +676,36 @@ def get_cache_refresh_minutes() -> int:
             "using default 1440"
         )
         return 1440
+
+
+DEFAULT_DISPATCH_DELAY_SECONDS = 15
+
+
+def get_dispatch_delay_seconds() -> int:
+    """Seconds the coordinator waits after starting a build, before the next dispatch.
+
+    Must be longer than the Jenkins quiet period (5 s by default), otherwise the
+    capacity re-check misses the build just started.
+
+    Returns:
+        The configured value, or 15 when unset or not positive.
+
+    Raises:
+        ValueError: If the TOML value is not an integer (schema type check).
+    """
+    config = get_config_values([("coordinator", "dispatch_delay_seconds", None)])
+    value = config[("coordinator", "dispatch_delay_seconds")]
+
+    if value is None:
+        return DEFAULT_DISPATCH_DELAY_SECONDS
+
+    # isinstance narrows the type; the schema check already rejected non-int values.
+    if not isinstance(value, int) or value <= 0:
+        logger.warning(
+            "Invalid dispatch_delay_seconds value '%s' (must be a positive integer), "
+            "using default %d",
+            value,
+            DEFAULT_DISPATCH_DELAY_SECONDS,
+        )
+        return DEFAULT_DISPATCH_DELAY_SECONDS
+    return value
