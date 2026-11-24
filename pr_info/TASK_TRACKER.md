@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `init` deploys `python.md` only for the `mcp-tools-py` toolkit — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code): rename `PYTHON_TOOLKIT`, add `_is_python_toolkit` / `skip_python` / reminder in `init.py`, `TestInitToolkit`, docs
+- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Toolkit-neutral prose in every deployed `.claude/` file — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code): `test_init_deployed_neutral.py`, retarget `test_prompt.py`, neutralise skill/agent/knowledge-base bodies, extend `python.md`, sync `prompts.md` rebase row
+- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against `pr_info/steps/summary.md`
+- [ ] PR summary prepared
