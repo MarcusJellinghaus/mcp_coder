@@ -94,8 +94,15 @@ test passes. Every Python detail removed must land in `python.md` (last section)
 
 ### Skills (body only)
 - `commit_push` step 1: "Format all code with the project's formatter, as CLAUDE.md maps it."
-- `implement_direct` step 5 → "Run the project's checks and tests as CLAUDE.md maps them,
-  with the arguments it requires — fix all issues and failures." Step 6 → as `commit_push`.
+- `implement_direct`
+  - Before the checks, add: "Read the language notes in `.claude/knowledge_base/` that match
+    the project's language, if any."
+  - Step 5 → "Run the project's checks and tests as CLAUDE.md and the knowledge base's
+    language notes map them, with the arguments they require — fix all issues and
+    failures." In mcp-coder this keeps the ruff check, which moves to `python.md`.
+  - Do not name `python.md` in the skill body: the neutral test flags "python", and the
+    skill must work in repos without that file.
+  - Step 6 → as `commit_push`.
 - `implementation_finalise` §3 → one bullet: "Run the project's checks and tests as CLAUDE.md
   maps them (fix all errors and failures)".
 - `implementation_review`: "do not use pylint warnings" → "do not report linter warnings".
