@@ -39,17 +39,50 @@ class _Repo(NamedTuple):
     job_path: str  # first configured path that resolved to job_url; used for gate checks
 ```
 
-No new public functions. Gate state is two locals in `execute_coordinator_run`:
-`blocked: set[str]` (job URLs) and `pending: _Repo | None` (repo whose job got the last build
-and still needs its post-delay re-check).
+```python
+def _collect_work(
+    repo_names: list[str],
+    force_refresh: bool,
+    jenkins_client: JenkinsClient,
+    blocked: set[str],
+) -> list[tuple[IssueData, _Repo]]:
+    """(Step 4 helper, extended.) Resolves each repo's executor job, checks its capacity
+    once per job URL, adds busy jobs to ``blocked`` and skips their repos before any
+    GitHub call.
+
+    Raises:
+        JenkinsError: If a job lookup or capacity check fails.
+    """
+
+
+def _recheck_after_delay(
+    jenkins_client: JenkinsClient, pending: _Repo, delay: int, blocked: set[str]
+) -> None:
+    """Sleep ``delay`` seconds, then re-check the job that got the last build.
+
+    Adds ``pending.job_url`` to ``blocked`` when that job still has a waiting build.
+    The delay must exceed the Jenkins quiet period: a build in its quiet period is a
+    queue item, invisible to the gate.
+
+    Raises:
+        JenkinsError: If the build list cannot be read.
+    """
+```
+
+No new public functions; both helpers are private module-level functions in `commands.py`, so
+`execute_coordinator_run` stays a thin orchestrator (read delay → `_collect_work` → sort →
+dispatch loop). Gate state is two locals in `execute_coordinator_run`: `blocked: set[str]`
+(job URLs, passed to both helpers) and `pending: _Repo | None` (repo whose job got the last
+build and still needs its post-delay re-check).
 
 ## HOW
 
 - `delay = get_dispatch_delay_seconds()` right after the config-creation check, inside the outer
   `try` but outside any per-repo/per-issue `except` → a wrong TOML type is a `ValueError` →
   existing `except ValueError` → ERROR line, exit 1.
-- Collection loop (per repo, config order), **before** creating `IssueManager` /
-  `IssueBranchManager` or fetching issues:
+- In `_collect_work` (per repo, config order), **before** creating `IssueManager` /
+  `IssueBranchManager` or fetching issues (`job_urls`, `job_paths`, `checked` are locals of
+  the helper; `blocked` is the caller's set):
   - `job_urls: dict[str, str]` (path → URL): call `jenkins_client.get_job_url(path)` only for a
     path not seen yet; `job_paths: dict[str, str]` (URL → first path) via `setdefault`.
   - `checked: set[str]`: on the first sight of a URL, `if find_waiting_build(jenkins_client,
@@ -59,17 +92,18 @@ and still needs its post-delay re-check).
     changes nothing here).
 - Dispatch loop (order per issue — keep it exactly):
   1. `repo.job_url in blocked` → `continue`; no workflow label → existing ERROR + `continue`;
-  2. `pending is not None` → `sleep(delay)`; `if find_waiting_build(jenkins_client,
-     pending.job_path): blocked.add(pending.job_url)`; `pending = None`; then
-     `repo.job_url in blocked` → `continue`;
+  2. `pending is not None` → `_recheck_after_delay(jenkins_client, pending, delay, blocked)`
+     (inside: `sleep(delay)`; `if find_waiting_build(jenkins_client, pending.job_path):
+     blocked.add(pending.job_url)`); `pending = None`; then `repo.job_url in blocked` →
+     `continue`;
   3. trust gate (unchanged);
   4. per-issue `try`: `result = dispatch_workflow(...)`;
      `STARTED_LABEL_RATE_LIMITED` → `return 1`; `STARTED` → `pending = repo`;
      cache label update for `STARTED` and `NOT_STARTED` (unchanged).
   - Step 2 runs **outside** the per-issue `try`, so a gate error never becomes
     `Failed processing issue #N`.
-- Add a comment above step 2 explaining: the delay must exceed the Jenkins quiet period (a build
-  in its quiet period is a queue item, invisible to the gate); no sleep after the last dispatch.
+- The quiet-period reason lives in the `_recheck_after_delay` docstring; add a one-line comment
+  at the call site: no sleep after the last dispatch (the delay is taken before the next attempt).
 - Outer handler, before `except ValueError`:
 
 ```python
@@ -82,9 +116,10 @@ except JenkinsError as e:
 ## ALGORITHM
 
 ```
+blocked = set(); work = _collect_work(repo_names, args.force_refresh, client, blocked); work.sort(...)
 for issue, repo in work:
     if repo.job_url in blocked or no workflow label: continue
-    if pending: sleep(delay); if find_waiting_build(client, pending.job_path): blocked.add(pending.job_url)
+    if pending: _recheck_after_delay(client, pending, delay, blocked)
                 pending = None; if repo.job_url in blocked: continue
     trust gate → skipped[repo.name].append(...); continue if untrusted
     result = dispatch_workflow(...); RATE_LIMITED → return 1; STARTED → pending = repo
@@ -115,6 +150,8 @@ def _dispatch_delay() -> Iterator[MagicMock]:
 
 Existing run tests: set `jenkins.get_job_url.return_value = "https://jenkins.example.com/job/MCP_Coder/job/executor-test/"`
 and `jenkins.get_recent_builds.return_value = []` on the patched `JenkinsClient` instance.
+The direct `_collect_work` tests from Step 4 (`test_commands_dispatch_order.py`) pass such a
+Jenkins mock and an empty `blocked` set for the two new parameters.
 
 `test_commands_capacity_gate.py` (two repos, `get_job_url.side_effect` keyed by path,
 `get_recent_builds.side_effect` returning a list per call, `dispatch_workflow` returning
@@ -134,8 +171,12 @@ and `jenkins.get_recent_builds.return_value = []` on the patched `JenkinsClient`
 6. Pending delay, next issue on another free job → sleep, re-check of the **previous** job's path
    (assert the `path=` argument), then the other job's issue is dispatched.
 7. `NOT_STARTED` → no sleep and no re-check before the next issue; the cache label update still runs.
-8. Untrusted issue between two starts → no extra Jenkins call; the sleep happens once, before the
-   next dispatch attempt.
+8. Untrusted issue between two starts (same job: #1 started, #2 untrusted, #3 trusted) → exactly
+   two `get_recent_builds` calls (the initial capacity check in `_collect_work` and one
+   re-check) and exactly one `sleep` call; the sleep and the re-check both happen before #2's
+   trust gate (record call order). The re-check is **not** skipped for an untrusted issue: it
+   runs before the trust gate, which only then finds #2 untrusted. #3 is dispatched with no
+   further sleep or re-check (#2 started nothing).
 9. `get_dispatch_delay_seconds` returning 30 → `sleep(30)`; raising `ValueError` → exit 1,
    ERROR record, nothing fetched.
 10. `get_job_url` raising `JenkinsError("Failed to look up job 'X': 404 ...")` → exit 1, exactly
@@ -144,3 +185,20 @@ and `jenkins.get_recent_builds.return_value = []` on the patched `JenkinsClient`
 11. Re-check raising `JenkinsError` → exit 1, ERROR line containing the job path, not
     "Failed processing issue"; untrusted summary still logged.
 12. `--repo` mode (`repo="mcp_coder", all=False`) runs the same gate (initial check + skip when busy).
+
+Helpers, called directly (same file):
+
+`_recheck_after_delay`:
+13. Calls `sleep(delay)` before `get_recent_builds(path=pending.job_path, statuses=["running"])`
+    (record call order).
+14. Waiting build found → `pending.job_url` added to `blocked`; no waiting build → `blocked`
+    unchanged.
+15. `get_recent_builds` raising `JenkinsError` → propagates; `blocked` unchanged.
+
+`_collect_work` (extended):
+16. Busy job → its URL is in `blocked` afterwards and no item for its repo is returned; a free
+    job's repo returns its items.
+17. Two repos with paths resolving to the same URL → one `get_job_url` call per distinct path,
+    one `get_recent_builds` call, both `_Repo`s carry the same `job_url` and the first path as
+    `job_path`.
+18. `get_job_url` raising `JenkinsError` → propagates before `IssueManager` is constructed.

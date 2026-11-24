@@ -58,16 +58,36 @@ class _Repo(NamedTuple):
 def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
     """Stage first, then config repo order; extend the tuple for further criteria."""
     return (stage_index(item[0]), item[1].index)
+
+
+def _collect_work(
+    repo_names: list[str], force_refresh: bool
+) -> list[tuple[IssueData, _Repo]]:
+    """Load each repo's config and fetch its eligible issues, in config order.
+
+    Returns:
+        One (issue, repo) item per eligible issue, unsorted: repos in config
+        order, issues in fetch order within a repo.
+
+    Raises:
+        ValueError: If a repo config is invalid.
+        GitHubRateLimitError: If a fetch hits a rate limit.
+    """
 ```
 
 ## HOW
 
 - `execute_coordinator_run` keeps steps 1–3 (config creation, repo list, Jenkins client) and the
-  outer `except` blocks unchanged. Step 4 is split into a collection loop and a dispatch loop.
-- Collection loop: the existing per-repo code (load/validate config, header log, managers,
+  outer `except` blocks unchanged. Step 4 is split into a collection helper and a dispatch loop;
+  `execute_coordinator_run` stays a thin orchestrator: `work = _collect_work(...)`,
+  `work.sort(...)`, dispatch loop.
+- Collection: always extracted into the module-level helper `_collect_work` (not conditional —
+  pylint's `R` category is disabled in `pyproject.toml`, so no complexity warning would ever
+  prompt the split). The existing per-repo code (load/validate config, header log, managers,
   `repo_full_name`, cached fetch with direct-fetch fallback, "Found N eligible issues",
-  "No eligible issues for X") moves unchanged; instead of dispatching it appends
-  `(issue, repo)` for each eligible issue to `work`.
+  "No eligible issues for X") moves into it unchanged; instead of dispatching it appends
+  `(issue, repo)` for each eligible issue to the returned list. Exceptions propagate to the
+  outer handlers of `execute_coordinator_run` unchanged.
 - Dispatch loop: the existing per-issue body unchanged (workflow label check → trust gate →
   dispatch → cache update → per-issue `except` with fail-fast), using `repo.*` instead of the
   per-repo locals.
@@ -76,16 +96,19 @@ def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
   existing line `"Skipped %d issue(s) in %s with untrusted body: %s"` once per repo.
 - Drop `"Finished processing eligible issues in {repo_name}"` (no longer per-repo); log
   `"Finished dispatching eligible issues"` once after the loop.
-- Move helpers out of `execute_coordinator_run` only if pylint reports too-many-branches /
-  too-many-statements (e.g. `_collect_repo(index, repo_name, force_refresh) -> tuple[_Repo, list[IssueData]]`).
 
 ## ALGORITHM
 
 ```
-work = []
-for index, repo_name in enumerate(repo_names):
-    repo, issues = <existing per-repo config + fetch>   # repo = _Repo(index, ...)
-    work.extend((issue, repo) for issue in issues)
+_collect_work(repo_names, force_refresh):
+    work = []
+    for index, repo_name in enumerate(repo_names):
+        repo, issues = <existing per-repo config + fetch>   # repo = _Repo(index, ...)
+        work.extend((issue, repo) for issue in issues)
+    return work
+
+execute_coordinator_run:
+work = _collect_work(repo_names, args.force_refresh)
 work.sort(key=_dispatch_sort_key)                        # stable: keeps fetch order on ties
 try: for issue, repo in work: <existing per-issue body>
 finally: log one untrusted summary per repo in skipped
@@ -119,3 +142,10 @@ two repos via patched `load_config` and `load_repo_config.side_effect` keyed by 
    untrusted issue → two summary lines, each after the last "dispatch" call.
 6. Fail-fast still ends the run at the first dispatch error (exit 1), and the summary of an
    earlier-skipped issue is still logged.
+
+`_collect_work` (same file, called directly with the same patches):
+7. Two repos → items in config order, issues in fetch order; each `_Repo` carries its config
+   index (`0`, `1`), name and `full_name`; the list is not sorted by stage.
+8. A repo with no eligible issues contributes no items; the other repo's items are returned.
+9. Cache failure → falls back to `get_eligible_issues` for that repo (items still returned).
+10. Invalid repo config (`validate_repo_config` raising `ValueError`) → propagates.

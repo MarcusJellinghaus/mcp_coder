@@ -42,6 +42,10 @@ for issue, repo in work:
     trust gate → dispatch_workflow → STARTED: pending = repo
 ```
 
+- **Helpers keep `execute_coordinator_run` thin**: the collection loop is the private helper
+  `_collect_work` (Step 4; Step 6 adds the job lookup and initial capacity check to it), and the
+  post-delay sleep + re-check is the private helper `_recheck_after_delay` (Step 6). Both are
+  tested directly.
 - **Gate state = two local variables**: `blocked: set[str]` (job URLs) and `pending: _Repo | None`.
   A job's result is only invalidated by a start, and the next dispatch attempt always re-checks
   that job after the sleep, so "not in `blocked`" *is* the cached result. No gate class, no cache.
