@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `init` deploys `python.md` only for the `mcp-tools-py` toolkit — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code): rename `PYTHON_TOOLKIT`, add `_is_python_toolkit` / `skip_python` / reminder in `init.py`, `TestInitToolkit`, docs
-- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): rename `PYTHON_TOOLKIT`, add `_is_python_toolkit` / `skip_python` / reminder in `init.py`, `TestInitToolkit`, docs
+- [x] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Toolkit-neutral prose in every deployed `.claude/` file — [step_2.md](./steps/step_2.md)
 

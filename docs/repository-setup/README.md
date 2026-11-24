@@ -35,6 +35,21 @@ Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command t
 - [ ] Declare the setup steps in `[tool.mcp-coder.setup]`, or rely on the Python default, and check them with `mcp-coder setup` ([Project setup](../configuration/setup.md))
 - [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
+## Adapting Deployed Files (Non-Python Repos)
+
+`mcp-coder init` deploys generic skills, agents and knowledge base; it adds
+`.claude/knowledge_base/python.md` only with the `mcp-tools-py` toolkit. In any other repo,
+adapt:
+
+- `.claude/CLAUDE.md`: map formatting, checks and tests (and any dead-code or architecture
+  checks) to your tools. The skills and agents refer to them by purpose.
+- Agents' `tools:` and skills' `allowed-tools`: they name `mcp__mcp-tools-py__*` tools;
+  replace or remove them.
+- Knowledge base: add language notes for your stack if reviews should apply them.
+
+This is a reminder, not a complete list. `init` never overwrites: delete a deployed file
+to get its current version.
+
 ## Detail Documentation
 
 | Topic | File | Applies to |
@@ -71,7 +86,7 @@ The following files in this repository serve as references/templates for other p
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
-| `.claude/knowledge_base/python.md` | P | No | Yes | — |
+| `.claude/knowledge_base/python.md` | P | No | Yes | Deployed only with the `mcp-tools-py` toolkit |
 | `.claude/settings.local.json` | G | No | Mostly | Permissions list — tracked in the target repo; the permission entries differ per repo |
 | `.mcp.json` (+ `.mcp.{linux,windows,macos}.json`) | G | Yes | No | Server paths, project name, `--test-folder`, reference projects |
 | `.github/workflows/label-new-issues.yml` | G | Yes | Yes | — |

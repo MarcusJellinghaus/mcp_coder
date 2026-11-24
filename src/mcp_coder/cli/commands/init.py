@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from ...utils.log_utils import OUTPUT
+from ...utils.toolkit_runner import PYTHON_TOOLKIT, load_toolkit_config
 from ...utils.user_config import create_default_config, get_config_file_path
 from ...workflows.vscodeclaude.workspace import update_gitignore
 from .init_file_access import ensure_file_access_rules, ensure_scratch_gitignored
@@ -14,6 +15,20 @@ from .init_file_access import ensure_file_access_rules, ensure_scratch_gitignore
 logger = logging.getLogger(__name__)
 
 DEPLOY_SUBDIRS = ("skills", "knowledge_base", "agents")
+
+# Deployed only with the mcp-tools-py toolkit; relative to the source dir
+PYTHON_ONLY_FILE = Path("knowledge_base") / "python.md"
+_ADAPT_URL = (
+    "https://github.com/MarcusJellinghaus/mcp_coder/blob/main/"
+    "docs/repository-setup/README.md#adapting-deployed-files-non-python-repos"
+)
+_GENERIC_REMINDER = (
+    "The deployed skills, agents and knowledge base are generic: map the checks, tests "
+    "and formatting to your tools in .claude/CLAUDE.md, and adapt the agents' tools: "
+    "and the skills' allowed-tools.",
+    "Files that already existed were kept; delete them to get the new versions.",
+    f"See {_ADAPT_URL}",
+)
 
 
 def _has_all_subdirs(base: Path) -> bool:
@@ -67,7 +82,29 @@ def _find_claude_source_dir() -> Path:
     raise SystemExit(1)
 
 
-def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
+def _is_python_toolkit(project_dir: Path) -> bool:
+    """Check whether the project's configured toolkit is mcp-tools-py.
+
+    A missing or invalid toolkit table is logged as a warning and counts as
+    not Python, so the toolkit never makes init fail.
+
+    Args:
+        project_dir: Project root containing pyproject.toml / mcp-coder.toml.
+
+    Returns:
+        True if [tool.mcp-coder.toolkit] names the mcp-tools-py toolkit.
+    """
+    try:
+        name = load_toolkit_config(project_dir).toolkit
+    except ValueError as exc:
+        logger.warning("%s", exc)
+        return False
+    return name == PYTHON_TOOLKIT
+
+
+def _deploy_skills(
+    source_dir: Path, project_dir: Path, skip_python: bool = False
+) -> tuple[int, int]:
     """Deploy Claude skills, knowledge_base, and agents to a project.
 
     Copies files from source_dir into project_dir/.claude/. Never overwrites
@@ -76,6 +113,8 @@ def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
     Args:
         source_dir: Path containing skills/, knowledge_base/, agents/ subdirs.
         project_dir: Target project root.
+        skip_python: Leave out knowledge_base/python.md; it counts as
+            neither added nor skipped.
 
     Returns:
         Tuple of (files_added, files_skipped).
@@ -90,6 +129,8 @@ def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
             if not src_file.is_file():
                 continue
             rel = src_file.relative_to(source_dir)
+            if skip_python and rel == PYTHON_ONLY_FILE:
+                continue
             dest = target_base / rel
             if dest.exists():
                 logger.warning("Skipped (exists): %s", rel)
@@ -152,8 +193,12 @@ def execute_init(args: argparse.Namespace) -> int:
     if source_dir.resolve() == target_base.resolve():
         logger.info("Skipping deploy: running inside mcp-coder source repo")
     else:
-        added, skipped = _deploy_skills(source_dir, project_dir)
+        python = _is_python_toolkit(project_dir)
+        added, skipped = _deploy_skills(source_dir, project_dir, skip_python=not python)
         logger.log(OUTPUT, "Skills: %d added, %d skipped", added, skipped)
+        if not python:
+            for line in _GENERIC_REMINDER:
+                logger.log(OUTPUT, line)
 
     # 3. Gitignore entries (both modes: project-scoped, like the .claude/ deploy)
     gitignore_ok = _write_gitignore_entries(project_dir)

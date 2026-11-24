@@ -36,7 +36,7 @@ ENTRY_POINT_GROUP = "mcp_coder.toolkits"
 WORKSPACE_SERVER = "mcp-workspace"
 
 # Shipped as the python extra; a missing registration gets an install hint
-_PYTHON_TOOLKIT = "mcp-tools-py"
+PYTHON_TOOLKIT = "mcp-tools-py"
 _PYTHON_EXTRA_HINT = (
     'install or upgrade the python extra: pip install --upgrade "mcp-coder[python]"; '
     "if the entry point is still missing, reinstall the tool env"
@@ -292,7 +292,7 @@ def _toolkit_class(name: str) -> type[Toolkit]:
         f"Toolkit '{name}' is not registered in the {ENTRY_POINT_GROUP} "
         f"entry-point group; registered: {names}"
     )
-    if name == _PYTHON_TOOLKIT:
+    if name == PYTHON_TOOLKIT:
         message += f" — {_PYTHON_EXTRA_HINT}"
     raise ValueError(message)
 
