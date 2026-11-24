@@ -42,9 +42,9 @@ change:
 4. **Clean-tree check is stricter.** `implementation_approve`, `implementation_needs_rework`,
    `plan_approve` and `pr_comment_triage` drop the `uv.lock` exception: any tracked or
    untracked change → stop and report.
-5. **`implementation_review_supervisor` reads every `.claude/knowledge_base/*.md`**, like the
-   automated review prompts in `prompts.md` already do. No skill depends on `python.md`
-   existing.
+5. **`implementation_review_supervisor`, `plan_review_supervisor`, `plan_review` and
+   `issue_analyse_supervisor` read every `.claude/knowledge_base/*.md`**, like the automated
+   review prompts in `prompts.md` already do. No skill depends on `python.md` existing.
 6. **Test guard.** A new test enforces neutral prose in every deployed Markdown file except
    `knowledge_base/python.md`. `tests/workflows/rebase/test_prompt.py` reads the repo-root
    `.claude/skills/rebase/SKILL.md` instead of the gitignored packaged copy.
@@ -66,7 +66,7 @@ Out of scope: refreshing repos that already have the files (`init` still never o
 - `.claude/knowledge_base/planning_principles.md`
 - `.claude/knowledge_base/refactoring_principles.md`
 - `.claude/agents/code-engineer.md`, `.claude/agents/plan-engineer.md` (bodies only)
-- `.claude/skills/{commit_push,implement_direct,implementation_finalise,implementation_review,implementation_review_supervisor,plan_review,plan_review_supervisor,pr_comment_triage,rebase,implementation_approve,implementation_needs_rework,plan_approve}/SKILL.md` (bodies only)
+- `.claude/skills/{commit_push,implement_direct,implementation_finalise,implementation_review,implementation_review_supervisor,issue_analyse_supervisor,plan_review,plan_review_supervisor,pr_comment_triage,rebase,implementation_approve,implementation_needs_rework,plan_approve}/SKILL.md` (bodies only)
 - `.claude/skills/rebase/rebase_design.md`
 - `src/mcp_coder/prompts/prompts.md` — `Code files` strategy row
 - `tests/workflows/rebase/test_prompt.py` — read repo-root `SKILL.md`

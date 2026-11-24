@@ -117,10 +117,24 @@ test passes. Every Python detail removed must land in `python.md` (last section)
     `cd` prefix; approved commands only".
   - Escalation: "Import contract or architecture violations (from the architecture checks):
     escalate…".
-- `plan_review`: "flag new dependencies (the dependency manifest) that should be applied
-  during planning…".
-- `plan_review_supervisor`: "config changes (e.g. the dependency manifest, checker
-  configuration)"; "…with the updated development environment."
+- `plan_review`
+  - "flag new dependencies (the dependency manifest) that should be applied during
+    planning…".
+  - "For planning standards, see `…/planning_principles.md`." → "For planning standards,
+    read every file under `.claude/knowledge_base/` (`*.md`)."
+- `plan_review_supervisor`
+  - Setup knowledge-base list (`software_engineering_principles.md`,
+    `planning_principles.md`, `refactoring_principles.md`) → "Read every file under
+    `.claude/knowledge_base/` (`*.md`)." Delete the now-redundant "**Additional context:** …
+    `refactoring_principles.md`" line.
+  - "config changes (e.g. the dependency manifest, checker configuration)"; "…with the
+    updated development environment."
+- `issue_analyse_supervisor`: Setup knowledge-base list (`software_engineering_principles.md`,
+  `planning_principles.md`) → "Read every file under `.claude/knowledge_base/` (`*.md`)."
+  The "Link shared rules (e.g. `…/refactoring_principles.md`)" line stays.
+- Why: the Python planning and refactoring rules move into `python.md`; reading the whole
+  knowledge base keeps them in mcp-coder's planning and issue-analysis sessions, and the
+  skills still work in repos without `python.md`.
 - `pr_comment_triage`
   - Trust list: "`.github/`; dependencies, extras or check configuration in the dependency
     manifest; `.claude/`, `CLAUDE.md`, `.mcp.json`; architecture-check config; anything
