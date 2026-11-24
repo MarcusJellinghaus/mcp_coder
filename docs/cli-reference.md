@@ -126,6 +126,8 @@ mcp-coder init [--project-dir PATH] [--just-skills]
 
 `--just-skills` deploys only the bundled resources (all three sets, despite the name) and skips config creation. Use it to refresh them after upgrading mcp-coder. Existing files are never overwritten; delete a file first to refresh it.
 
+**Toolkit:** before deploying, init reads `[tool.mcp-coder.toolkit]`. With `mcp-tools-py` everything is deployed. With any other toolkit, `knowledge_base/python.md` is skipped and a reminder to adapt the generic files is printed ([Adapting Deployed Files](repository-setup/README.md#adapting-deployed-files-non-python-repos)). A missing or invalid table is logged as a warning with the config error, then handled as for another toolkit; the toolkit never makes init fail.
+
 The `.gitignore` step runs in both modes and is idempotent. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails.
 
 Also in both modes, init creates or completes the mcp-workspace rules file `.mcp-file-access` and then gitignores `.scratch/`:

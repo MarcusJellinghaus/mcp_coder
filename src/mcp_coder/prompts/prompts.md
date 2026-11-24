@@ -529,7 +529,7 @@ branch's improvements and rework the feature-branch code to fit.
 
 | File Type | Strategy |
 |-----------|----------|
-| Code files (`.py`, `.js`, etc.) | Keep both sides, merge imports |
+| Code files | Keep both sides, merge imports |
 | Test files | Keep all tests from both sides |
 | Config files | Merge additively, prefer HEAD for same keys |
 

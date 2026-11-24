@@ -88,7 +88,7 @@ Supporting files referenced by skills. Deployed automatically by `mcp-coder init
 - `.claude/knowledge_base/planning_principles.md` — Used by plan review skills
 - `.claude/knowledge_base/refactoring_principles.md` — Used by code review skills
 - `.claude/knowledge_base/software_engineering_principles.md` — Used by code review skills
-- `.claude/knowledge_base/python.md` — Python-specific knowledge for code review (see [python.md](python.md))
+- `.claude/knowledge_base/python.md` — Python-specific knowledge for code review (see [python.md](python.md)) — deployed only with the `mcp-tools-py` toolkit
 - `.claude/agents/` — agents launched by the supervisor skills (wiring and permissions: [agent-permissions.md](agent-permissions.md)):
   - `issue-analyst.md` — analyses the issue (`/issue_analyse_supervisor`)
   - `issue-updater.md`, `issue-approver.md` — edit and approve the issue (`/issue_analyse_supervisor`)
