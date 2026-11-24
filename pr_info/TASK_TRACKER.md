@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: `verify` rows for declared toolkit depths
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests first (`test_toolkit_runner.py`, `test_verify_toolkit_rows.py`), then `can_request` in `utils/toolkit_runner.py` and declared-depth rows (`_ran_by`, `_declared_row`) in `cli/commands/verify_toolkit_rows.py`
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`test_toolkit_runner.py`, `test_verify_toolkit_rows.py`), then `can_request` in `utils/toolkit_runner.py` and declared-depth rows (`_ran_by`, `_declared_row`) in `cli/commands/verify_toolkit_rows.py`
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Docs — npm example and per-session grant scope
 See [step_4.md](./steps/step_4.md)

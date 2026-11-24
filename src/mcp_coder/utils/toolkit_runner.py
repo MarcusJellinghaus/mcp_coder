@@ -384,6 +384,23 @@ def resolve_depth(declared: list[str], depth: str) -> str | None:
     return None
 
 
+def can_request(action: str, depth: str) -> bool:
+    """Whether any binding entry may request ``action@depth``.
+
+    Args:
+        action: Action name.
+        depth: Depth name.
+
+    Returns:
+        True if some entry allows the action and doesn't forbid the request.
+    """
+    request = f"{action}@{depth}"
+    return any(
+        action in allowed and request not in _FORBIDDEN_REQUESTS.get(entry, ())
+        for entry, allowed in _ALLOWED_ACTIONS.items()
+    )
+
+
 def run_request(loaded: LoadedToolkit, project_dir: Path, request: str) -> ActionResult:
     """Run one ``action@depth`` request.
 
