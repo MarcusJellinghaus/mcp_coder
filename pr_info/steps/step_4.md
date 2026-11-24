@@ -7,6 +7,7 @@ See `pr_info/steps/summary.md` (design changes 1 and 2). Depends on step 2.
 - `src/mcp_coder/config/label_config.py`
 - `src/mcp_coder/cli/gh_parsers.py` (2 strings)
 - `docs/getting-started/label-setup.md` (the `--config` row that mirrors the help string)
+- `docs/cli-reference.md` (~line 614, the labels-config resolution order that mirrors the help string)
 - `tests/config/test_label_config.py`
 
 ## WHAT
@@ -24,7 +25,11 @@ def _get_labels_config_from_project(project_dir: Path) -> Path | None:
 ```
 found = find_mcp_coder_table_lenient(project_dir, "labels-config")
 if found is None: return None
-resolved = project_dir / found[1]
+source, value = found
+if not isinstance(value, str):
+    logger.warning("Invalid [tool.mcp-coder] labels-config in %s: expected a string, got %s; using the bundled labels", source, type(value).__name__)
+    return None
+resolved = project_dir / value
 return resolved if resolved.exists() else None
 ```
 
@@ -36,6 +41,8 @@ return resolved if resolved.exists() else None
 - `from .toml_utils import find_mcp_coder_table_lenient`. This is a same-package
   import, so the layering is kept.
 - Remove the `import tomllib` and the "duplicates ... on purpose" comment.
+- Add `import logging` and a module `logger = logging.getLogger(__name__)` for
+  the non-string warning.
 - Update the module docstring and the `get_labels_config_path` docstring: step 2
   of the resolution order becomes "`[tool.mcp-coder] labels-config` in
   `pyproject.toml`, else `mcp-coder.toml` (relative to the project root)".
@@ -44,6 +51,9 @@ return resolved if resolved.exists() else None
   - the `--config` help reads `"Path to labels config file (overrides pyproject.toml / mcp-coder.toml and bundled defaults)"`.
 - `docs/getting-started/label-setup.md` line with `--config PATH`: same text as
   the new help.
+- `docs/cli-reference.md` (~line 614, `--config PATH` resolution order): read
+  "`--config`, then `[tool.mcp-coder] labels-config` in `pyproject.toml` or
+  `mcp-coder.toml`, then the bundled defaults", matching the new resolution list.
 
 ## DATA
 
@@ -56,7 +66,11 @@ In `tests/config/test_label_config.py`:
   and the JSON file present → `get_labels_config_path(tmp_path)` returns that path;
 - both files define `labels-config` → bundled `Traversable`, and a `caplog` warning;
 - malformed `mcp-coder.toml` and a valid `pyproject.toml` `labels-config` →
-  bundled `Traversable`, and a warning.
+  bundled `Traversable`, and a warning;
+- `mcp-coder.toml` only, with `[tool.mcp-coder]\nlabels-config = 5\n` →
+  `_get_labels_config_from_project` returns `None` (no `TypeError`),
+  `get_labels_config_path` returns the bundled `Traversable`, and a `caplog`
+  warning containing `mcp-coder.toml`.
 
 The existing pyproject tests, including `test_malformed_pyproject_toml_falls_back`,
 keep passing.
@@ -73,7 +87,8 @@ One commit: `feat(config): read labels-config from mcp-coder.toml`.
 > - add the `mcp-coder.toml` / conflict / malformed tests;
 > - rename `_get_labels_config_from_pyproject` to `_get_labels_config_from_project`
 >   and base it on `find_mcp_coder_table_lenient`;
-> - update the docstrings, the two `gh_parsers.py` help strings and the
->   `label-setup.md` row.
+> - return None with a logged warning when the value is not a string;
+> - update the docstrings, the two `gh_parsers.py` help strings, the
+>   `label-setup.md` row and the `cli-reference.md` resolution order.
 >
 > Run pylint, mypy, pytest, lint-imports and tach. Commit once.

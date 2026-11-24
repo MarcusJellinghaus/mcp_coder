@@ -56,7 +56,9 @@ get_format_code(dir):
 - otherwise → `f"{'enabled' if enabled else 'disabled'} ({source})"`, e.g.
   `"disabled (mcp-coder.toml)"`.
 
-The `ValueError` branch stays the same (`[ERR]` row, returns False).
+The `ValueError` branch still adds an `[ERR]` row and returns False, but
+uses the new `indent` parameter instead of the hard-coded 4. The `[OK]` row
+uses `indent` as well.
 
 `_print_project_section`, no-`pyproject.toml` branch: after `_file_access_row`
 call `ok = _format_code_row(project_dir, symbols, out, indent=2)`, then
@@ -104,7 +106,9 @@ is removed; `explicit` is equivalent to `source is not None`.
 - new: only `mcp-coder.toml`, containing
   `[tool.mcp-coder]\nformat_code = false\n[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n`
   → row `_format_row("format_code", "[OK]", "disabled (mcp-coder.toml)", indent=2)`;
-- new: no files → row `"enabled (default)"` at indent 2.
+- new: no files → row `"enabled (default)"` at indent 2;
+- new: only `mcp-coder.toml` with `format_code = "no"` → `[ERR]` row at indent 2,
+  and `_print_project_section` returns False.
 
 `tests/cli/commands/test_verify.py::TestProjectSection::test_project_section_python_both_enabled`
 expects `"enabled (pyproject.toml)"`.
