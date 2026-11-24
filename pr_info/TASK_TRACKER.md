@@ -21,6 +21,49 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `JenkinsClient.get_job_url` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `[coordinator] dispatch_delay_seconds` config — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `DispatchResult` from `dispatch_workflow` — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Global reverse-pipeline order (collect, then sort) — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `find_waiting_build` capacity signal — [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Capacity gate and delay in `execute_coordinator_run` — [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Documentation — [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (docs updates)
+- [ ] Quality checks (pytest) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary prepared
