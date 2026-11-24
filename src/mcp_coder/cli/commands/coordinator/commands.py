@@ -6,12 +6,14 @@ labels. Use --dry-run to trigger Jenkins integration tests instead.
 
 import argparse
 import logging
+from typing import NamedTuple
 
 from ....mcp_workspace_github import (
     BodyTrust,
     BodyTrustResult,
     GitHubRateLimitError,
     IssueBranchManager,
+    IssueData,
     IssueManager,
     RepoIdentifier,
     update_issue_labels_in_cache,
@@ -40,6 +42,7 @@ from .core import (
     get_eligible_issues,
     get_jenkins_credentials,
     load_repo_config,
+    stage_index,
     validate_repo_config,
 )
 from .workflow_constants import WORKFLOW_MAPPING
@@ -169,6 +172,116 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         raise
 
 
+class _Repo(NamedTuple):
+    """Per-repository values the dispatch loop needs."""
+
+    # Position in config order, the sort tie-break. Not named ``index``:
+    # that would shadow tuple.index.
+    config_index: int
+    name: str
+    full_name: str
+    config: dict[str, str]
+    issue_manager: IssueManager
+    branch_manager: IssueBranchManager
+
+
+def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
+    """Stage first, then config repo order; extend the tuple for further criteria.
+
+    Returns:
+        The sort key of one work item.
+    """
+    return (stage_index(item[0]), item[1].config_index)
+
+
+def _collect_work(
+    repo_names: list[str], force_refresh: bool
+) -> list[tuple[IssueData, _Repo]]:
+    """Load each repo's config and fetch its eligible issues, in config order.
+
+    An invalid repo config (ValueError) and a rate limit during a fetch
+    propagate to the caller's handlers.
+
+    Args:
+        repo_names: Repository names from the config, in config order.
+        force_refresh: Bypass the issue cache.
+
+    Returns:
+        One (issue, repo) item per eligible issue, unsorted: repos in config
+        order, issues in fetch order within a repo.
+    """
+    work: list[tuple[IssueData, _Repo]] = []
+    for index, repo_name in enumerate(repo_names):
+        # Load and validate repo config
+        repo_config = load_repo_config(repo_name)
+        validate_repo_config(repo_name, repo_config)
+
+        # Log repository header with URL
+        repo_url = repo_config["repo_url"]
+        logger.info(f"{'=' * 80}")
+        logger.info(f"Processing repository: {repo_url}")
+        logger.info(f"{'=' * 80}")
+
+        # Type narrowing: validate_repo_config raises if any fields are None
+        # Assert to help mypy understand the values are str after validation
+        assert isinstance(repo_config["repo_url"], str)  # noqa: S101
+        assert isinstance(repo_config["executor_job_path"], str)  # noqa: S101
+        assert isinstance(repo_config["github_credentials_id"], str)  # noqa: S101
+        executor_os_val = repo_config.get("executor_os")
+        validated_config: dict[str, str] = {
+            "repo_url": repo_config["repo_url"],
+            "executor_job_path": repo_config["executor_job_path"],
+            "github_credentials_id": repo_config["github_credentials_id"],
+            "executor_os": (
+                executor_os_val if isinstance(executor_os_val, str) else "linux"
+            ),
+        }
+
+        # Create managers
+        issue_manager = IssueManager(repo_url=validated_config["repo_url"])
+        branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
+
+        # Get eligible issues using cache
+        repo_url = validated_config["repo_url"]
+        try:
+            repo_identifier = RepoIdentifier.from_repo_url(repo_url)
+            repo_full_name = repo_identifier.full_name
+        except ValueError:
+            # Fallback: use repo_name if URL format is unexpected
+            repo_full_name = repo_name
+
+        try:
+            eligible_issues = get_cached_eligible_issues(
+                repo_full_name=repo_full_name,
+                issue_manager=issue_manager,
+                force_refresh=force_refresh,
+                cache_refresh_minutes=get_cache_refresh_minutes(),
+            )
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+            raise_if_rate_limited(e)
+            logger.warning(
+                f"Cache failed for {repo_full_name}: {e}, using direct fetch"
+            )
+            eligible_issues = get_eligible_issues(issue_manager)
+
+        logger.info(f"Found {len(eligible_issues)} eligible issues")
+
+        if not eligible_issues:
+            logger.info(f"No eligible issues for {repo_name}")
+            continue
+
+        repo = _Repo(
+            config_index=index,
+            name=repo_name,
+            full_name=repo_full_name,
+            config=validated_config,
+            issue_manager=issue_manager,
+            branch_manager=branch_manager,
+        )
+        work.extend((issue, repo) for issue in eligible_issues)
+    return work
+
+
 def execute_coordinator_run(args: argparse.Namespace) -> int:
     """Execute coordinator run command.
 
@@ -221,150 +334,93 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         server_url, username, api_token = get_jenkins_credentials()
         jenkins_client = JenkinsClient(server_url, username, api_token)
 
-        # Step 4: Process each repository
-        for repo_name in repo_names:
-            # Step 4a: Load and validate repo config
-            repo_config = load_repo_config(repo_name)
-            validate_repo_config(repo_name, repo_config)
+        # Step 4: Collect the eligible issues of all repos, then sort globally
+        # (stable: keeps fetch order on ties)
+        work = _collect_work(repo_names, args.force_refresh)
+        work.sort(key=_dispatch_sort_key)
 
-            # Log repository header with URL
-            repo_url = repo_config["repo_url"]
-            logger.info(f"{'=' * 80}")
-            logger.info(f"Processing repository: {repo_url}")
-            logger.info(f"{'=' * 80}")
+        # Step 5: Dispatch workflows for each eligible issue (fail-fast)
+        skipped: dict[str, list[tuple[int, BodyTrustResult]]] = {}
+        try:
+            for issue, repo in work:
+                # Find current bot_pickup label to determine workflow
+                current_label = None
+                for label in issue["labels"]:
+                    if label in WORKFLOW_MAPPING:
+                        current_label = label
+                        break
 
-            # Type narrowing: validate_repo_config raises if any fields are None
-            # Assert to help mypy understand the values are str after validation
-            assert isinstance(repo_config["repo_url"], str)  # noqa: S101
-            assert isinstance(repo_config["executor_job_path"], str)  # noqa: S101
-            assert isinstance(repo_config["github_credentials_id"], str)  # noqa: S101
-            executor_os_val = repo_config.get("executor_os")
-            validated_config: dict[str, str] = {
-                "repo_url": repo_config["repo_url"],
-                "executor_job_path": repo_config["executor_job_path"],
-                "github_credentials_id": repo_config["github_credentials_id"],
-                "executor_os": (
-                    executor_os_val if isinstance(executor_os_val, str) else "linux"
-                ),
-            }
-
-            # Step 4b: Create managers
-            issue_manager = IssueManager(repo_url=validated_config["repo_url"])
-            branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
-
-            # Step 4c: Get eligible issues using cache
-            # Create RepoIdentifier from repo_url
-            repo_url = validated_config["repo_url"]
-            try:
-                repo_identifier = RepoIdentifier.from_repo_url(repo_url)
-                repo_full_name = repo_identifier.full_name
-            except ValueError:
-                # Fallback: use repo_name if URL format is unexpected
-                repo_full_name = repo_name
-
-            try:
-                eligible_issues = get_cached_eligible_issues(
-                    repo_full_name=repo_full_name,
-                    issue_manager=issue_manager,
-                    force_refresh=args.force_refresh,
-                    cache_refresh_minutes=get_cache_refresh_minutes(),
-                )
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-                raise_if_rate_limited(e)
-                logger.warning(
-                    f"Cache failed for {repo_full_name}: {e}, using direct fetch"
-                )
-                eligible_issues = get_eligible_issues(issue_manager)
-
-            logger.info(f"Found {len(eligible_issues)} eligible issues")
-
-            # Skip if no eligible issues or duplicate protection triggered
-            if not eligible_issues:
-                logger.info(f"No eligible issues for {repo_name}")
-                continue
-
-            # Step 4d: Dispatch workflows for each eligible issue (fail-fast)
-            skipped: list[tuple[int, BodyTrustResult]] = []
-            try:
-                for issue in eligible_issues:
-                    # Find current bot_pickup label to determine workflow
-                    current_label = None
-                    for label in issue["labels"]:
-                        if label in WORKFLOW_MAPPING:
-                            current_label = label
-                            break
-
-                    if not current_label:
-                        logger.error(
-                            f"Issue #{issue['number']} has no workflow label, skipping"
-                        )
-                        continue
-
-                    # Gate: never feed an untrusted body to a workflow.
-                    # Outside the dispatch try so a rate limit stops the run.
-                    trust = evaluate_body_trust(issue_manager, issue)
-                    if trust.status is not BodyTrust.TRUSTED:
-                        logger.debug(
-                            "Issue #%d skipped: body %s (%s)",
-                            issue["number"],
-                            trust.status.value,
-                            trust.reason,
-                        )
-                        skipped.append((issue["number"], trust))
-                        continue
-
-                    workflow_config = WORKFLOW_MAPPING[current_label]
-                    workflow_name = workflow_config["workflow"]
-
-                    try:
-                        result = dispatch_workflow(
-                            issue=issue,
-                            workflow_name=workflow_name,
-                            repo_config=validated_config,
-                            repo_name=repo_name,
-                            jenkins_client=jenkins_client,
-                            issue_manager=issue_manager,
-                            branch_manager=branch_manager,
-                            log_level=args.log_level,
-                        )
-                        if result is DispatchResult.STARTED_LABEL_RATE_LIMITED:
-                            # Job started, label swap hit a rate limit
-                            return 1
-
-                        # Update cache with new labels immediately after successful dispatch
-                        try:
-                            update_issue_labels_in_cache(
-                                RepoIdentifier.from_full_name(repo_full_name),
-                                issue_number=issue["number"],
-                                old_label=current_label,
-                                new_label=workflow_config["next_label"],
-                            )
-                        except Exception as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-                            raise_if_rate_limited(cache_error)
-                            logger.warning(
-                                f"Cache update failed for issue #{issue['number']}: {cache_error}"
-                            )
-
-                    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-                        raise_if_rate_limited(e)
-                        # Fail-fast: log error and exit immediately
-                        logger.error(f"Failed processing issue #{issue['number']}: {e}")
-                        return 1
-            finally:
-                if skipped:
-                    logger.info(
-                        "Skipped %d issue(s) in %s with untrusted body: %s",
-                        len(skipped),
-                        repo_name,
-                        ", ".join(
-                            f"#{number} ({result.status.value}: {result.reason})"
-                            for number, result in skipped
-                        ),
+                if not current_label:
+                    logger.error(
+                        f"Issue #{issue['number']} has no workflow label, skipping"
                     )
+                    continue
 
-            logger.info(f"Finished processing eligible issues in {repo_name}")
+                # Gate: never feed an untrusted body to a workflow.
+                # Outside the dispatch try so a rate limit stops the run.
+                trust = evaluate_body_trust(repo.issue_manager, issue)
+                if trust.status is not BodyTrust.TRUSTED:
+                    logger.debug(
+                        "Issue #%d skipped: body %s (%s)",
+                        issue["number"],
+                        trust.status.value,
+                        trust.reason,
+                    )
+                    skipped.setdefault(repo.name, []).append((issue["number"], trust))
+                    continue
 
-        # Step 5: Success - all repos processed
+                workflow_config = WORKFLOW_MAPPING[current_label]
+                workflow_name = workflow_config["workflow"]
+
+                try:
+                    result = dispatch_workflow(
+                        issue=issue,
+                        workflow_name=workflow_name,
+                        repo_config=repo.config,
+                        repo_name=repo.name,
+                        jenkins_client=jenkins_client,
+                        issue_manager=repo.issue_manager,
+                        branch_manager=repo.branch_manager,
+                        log_level=args.log_level,
+                    )
+                    if result is DispatchResult.STARTED_LABEL_RATE_LIMITED:
+                        # Job started, label swap hit a rate limit
+                        return 1
+
+                    # Update cache with new labels immediately after successful dispatch
+                    try:
+                        update_issue_labels_in_cache(
+                            RepoIdentifier.from_full_name(repo.full_name),
+                            issue_number=issue["number"],
+                            old_label=current_label,
+                            new_label=workflow_config["next_label"],
+                        )
+                    except Exception as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                        raise_if_rate_limited(cache_error)
+                        logger.warning(
+                            f"Cache update failed for issue #{issue['number']}: {cache_error}"
+                        )
+
+                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                    raise_if_rate_limited(e)
+                    # Fail-fast: log error and exit immediately
+                    logger.error(f"Failed processing issue #{issue['number']}: {e}")
+                    return 1
+        finally:
+            for repo_name, repo_skipped in skipped.items():
+                logger.info(
+                    "Skipped %d issue(s) in %s with untrusted body: %s",
+                    len(repo_skipped),
+                    repo_name,
+                    ", ".join(
+                        f"#{number} ({trust_result.status.value}: {trust_result.reason})"
+                        for number, trust_result in repo_skipped
+                    ),
+                )
+
+        logger.info("Finished dispatching eligible issues")
+
+        # Step 6: Success - all repos processed
         return 0
 
     except GitHubRateLimitError as e:

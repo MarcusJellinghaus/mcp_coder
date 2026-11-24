@@ -372,10 +372,12 @@ WORKFLOW_TEMPLATES: dict[str, tuple[str, str]] = {
     "fix-ci": (FIX_CI_COMMAND_TEMPLATE, FIX_CI_COMMAND_WINDOWS),
 }
 
-# Priority order for processing issues (highest to lowest).
-# Each review step sits just below the stage it unblocks: 08 -> 17 -> 05 -> 14 -> 02.
+# Dispatch order (highest first): reverse pipeline order, closest to done first.
+# Each review step sits just below the stage it unblocks.
 PRIORITY_ORDER: list[str] = [
-    "status-08:ready-pr",  # create-pr (closest to done)
+    "status-81:failing-ci",  # fix-ci
+    "status-71:merge-conflict",  # fix-conflict
+    "status-08:ready-pr",  # create-pr
     "status-17:code-review-bot",  # review-implementation
     "status-05:plan-ready",  # implement
     "status-14:plan-review-bot",  # review-plan

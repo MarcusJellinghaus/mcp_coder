@@ -178,6 +178,18 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     return (server_url, username, api_token)
 
 
+def stage_index(issue: IssueData) -> int:
+    """Position of the issue's stage in PRIORITY_ORDER; lower is dispatched first.
+
+    Returns:
+        Index of the first label found in PRIORITY_ORDER, len(PRIORITY_ORDER) if none.
+    """
+    for label in issue["labels"]:
+        if label in PRIORITY_ORDER:
+            return PRIORITY_ORDER.index(label)
+    return len(PRIORITY_ORDER)
+
+
 def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
     """Filter issues for eligibility (same logic as get_eligible_issues).
 
@@ -185,7 +197,7 @@ def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
         issues: List of issues to filter
 
     Returns:
-        List of eligible issues sorted by priority
+        Eligible issues in input order; the coordinator sorts globally.
     """
     # Load label configuration
     from ....config.label_config import get_labels_config_path
@@ -223,21 +235,6 @@ def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
         # Issue is eligible
         eligible_issues.append(issue)
 
-    # Sort by priority
-    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
-
-    def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority).
-
-        Returns:
-            Priority index, where lower means higher priority.
-        """
-        for label in issue["labels"]:
-            if label in priority_map:
-                return priority_map[label]
-        return len(PRIORITY_ORDER)  # Lowest priority
-
-    eligible_issues.sort(key=get_priority)
     return eligible_issues
 
 
@@ -245,17 +242,15 @@ def get_eligible_issues(
     issue_manager: IssueManager,
     log_level: str = "INFO",  # pylint: disable=unused-argument
 ) -> list[IssueData]:
-    """Get issues ready for automation, sorted by priority.
+    """Get issues ready for automation.
 
     Args:
         issue_manager: IssueManager instance for GitHub API calls
         log_level: Logging level for debug output
 
     Returns:
-        List of IssueData sorted by priority:
-        1. status-08:ready-pr (highest priority)
-        2. status-05:plan-ready
-        3. status-02:awaiting-planning (lowest priority)
+        Eligible issues in the order list_issues returned them; the
+        coordinator sorts globally.
 
     """
     # Load label configuration
@@ -298,23 +293,6 @@ def get_eligible_issues(
 
     logger.debug(f"Filtered to {len(eligible_issues)} eligible issues")
 
-    # Sort by priority
-    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
-
-    def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority).
-
-        Returns:
-            Priority index, where lower means higher priority.
-        """
-        for label in issue["labels"]:
-            if label in priority_map:
-                return priority_map[label]
-        # Should not happen if filtering worked correctly
-        return len(PRIORITY_ORDER)  # Lowest priority
-
-    eligible_issues.sort(key=get_priority)
-
     return eligible_issues
 
 
@@ -338,7 +316,8 @@ def get_cached_eligible_issues(
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
 
     Returns:
-        List of eligible issues (filtered by bot_pickup labels, sorted by priority)
+        Eligible issues (filtered by bot_pickup labels) in cache order; the
+        coordinator sorts globally.
     """
     try:
         all_issues = get_all_cached_issues(
