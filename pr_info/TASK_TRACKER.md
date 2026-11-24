@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Document range keys and the unlisted-`0` rule
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: update `exit_codes` rows and add dependency-cruiser rule in `docs/configuration/toolkits.md`
-- [ ] Quality checks: pytest — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `exit_codes` rows and add dependency-cruiser rule in `docs/configuration/toolkits.md`
+- [x] Quality checks: pytest — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -171,7 +171,7 @@ Apply to every step; a step can override `parser`, `exit_codes` and `timeout`.
 |-----|---------|---------|
 | `llm_permissions` | `"bash"` | `"bash"`: Claude sessions get an exact `Bash(...)` grant per step and can re-run it. `"none"`: no grants; the LLM only sees results in the fix prompt |
 | `parser` | `"exit-code"` | `"exit-code"` or `"junit"` |
-| `exit_codes` | `{ 0 = "ok", 1 = "findings" }` | Maps exit codes to `ok`, `findings`, `skipped` or `error`. An unmapped code is `error` |
+| `exit_codes` | `{ 0 = "ok", 1 = "findings" }` | Maps exit codes to `ok`, `findings`, `skipped` or `error`. Keys are single codes or inclusive ranges `N-M`, e.g. `{ 0 = "ok", 1-125 = "findings" }`. A code no key matches is `ok` if it is `0`, else `error` |
 | `timeout` | `600` | Seconds per step, positive integer. A timeout is `error` |
 | `<action>.<depth>` | — | Ordered list of steps |
 
@@ -182,6 +182,11 @@ Rules:
   `unattended`, `mutation`, …).
 - An undeclared `quick` / `standard` / `full` request runs the nearest lower
   declared one of these three, `error` if none is lower.
+- `exit_codes` keys may not overlap: two keys sharing a code (`1 = …` and
+  `1-125 = …`) are an error.
+- Exit codes are 8-bit on POSIX, so a tool exiting with a count of 256 exits
+  `0`. On Windows it stays 256 and falls outside `1-125`, so it is `error`.
+  Windows crash codes (`0xC…`) are written in decimal, e.g. `3221225477`.
 - A `format.apply` step's exit code 1 maps to `findings` by default, which fails
   formatting: implement fails; rebase, review and CI fix carry on. Set
   `exit_codes` for `apply` to match the formatter.
@@ -193,7 +198,7 @@ Rules:
 | `argv` | yes | Non-empty list of strings; no shell. Also the source of the step's grant |
 | `name` | no | Label in logs, fix texts and the fallback finding key. Default: `argv` joined by spaces |
 | `parser` | no | Overrides the default parser |
-| `exit_codes` | no | Replaces the default table — no merge |
+| `exit_codes` | no | Replaces the default table — no merge; an unlisted `0` is still `ok` |
 | `timeout` | no | Overrides the default timeout |
 | `report` | with `junit` | JUnit XML file written by the step, relative to the project and inside it. Required with `parser = "junit"`, not allowed otherwise |
 
@@ -207,6 +212,18 @@ Rules:
 - On POSIX a candidate must be an executable file.
 - All steps of a depth run in order. The worst status wins
   (`error` > `findings` > `ok` > `skipped`) and findings are concatenated.
+- Tools that exit with their finding count need a range, e.g.
+  dependency-cruiser:
+
+  ```toml
+  { argv = ["npm", "run", "arch"], exit_codes = { 0 = "ok", 1-125 = "findings" } }
+  ```
+
+  - dependency-cruiser exits with its error count (plus stale baseline entries
+    whose severity is `error`) only with the `err`, `err-long`, `null`,
+    `teamcity` and `azure-devops` reporters.
+  - It also exits `1` when it crashes, so `1` can't tell a crash from one
+    finding.
 
 ### Parsers
 
