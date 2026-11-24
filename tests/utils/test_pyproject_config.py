@@ -265,6 +265,97 @@ class TestGetFormatCode:
         assert get_format_code(tmp_path) == FormatCodeSetting(enabled=True, source=None)
 
 
+class TestGetPromptsConfigFiles:
+    """Tests for get_prompts_config reading pyproject.toml or mcp-coder.toml."""
+
+    def test_mcp_coder_toml_only(self, tmp_path: Path) -> None:
+        """[tool.mcp-coder.prompts] in mcp-coder.toml is used."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder.prompts]\n"
+            'project-prompt = "p.md"\n'
+            'claude-system-prompt-mode = "replace"\n',
+            encoding="utf-8",
+        )
+        config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt == "p.md"
+        assert config.claude_system_prompt_mode == "replace"
+
+    def test_both_files_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Both files define the table, even with different keys → defaults."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.prompts]\nsystem-prompt = "s.md"\n', encoding="utf-8"
+        )
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.prompts]\nproject-prompt = "p.md"\n', encoding="utf-8"
+        )
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING
+            and "pyproject.toml" in r.getMessage()
+            and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_malformed_mcp_coder_toml_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Malformed mcp-coder.toml beside a valid pyproject.toml → defaults."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.prompts]\nsystem-prompt = "s.md"\n', encoding="utf-8"
+        )
+        (tmp_path / "mcp-coder.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_invalid_mode_warning_names_mcp_coder_toml(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The invalid-mode warning names the file the mode came from."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.prompts]\nclaude-system-prompt-mode = "bogus"\n',
+            encoding="utf-8",
+        )
+        with caplog.at_level(logging.WARNING):
+            get_prompts_config(tmp_path)
+        assert any(
+            r.levelno == logging.WARNING
+            and "claude-system-prompt-mode" in r.getMessage()
+            and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_non_table_prompts_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """prompts = "x" → defaults and a warning, not an AttributeError."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nprompts = "x"\n', encoding="utf-8"
+        )
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+
 class TestHasLegacyFormatCodeKey:
     """Tests for has_legacy_format_code_key."""
 

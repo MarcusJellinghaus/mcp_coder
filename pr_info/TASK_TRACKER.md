@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: `[tool.mcp-coder.prompts]` from either file — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests first (`TestGetPromptsConfigFiles`), then `get_prompts_config` via `find_mcp_coder_table_lenient`, non-table fallback, source-named mode warning, module docstring
-- [ ] Quality checks: pylint, mypy, pytest, format — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`TestGetPromptsConfigFiles`), then `get_prompts_config` via `find_mcp_coder_table_lenient`, non-table fallback, source-named mode warning, module docstring
+- [x] Quality checks: pylint, mypy, pytest, format — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `labels-config` from either file, CLI help — [step_4.md](./steps/step_4.md)
 

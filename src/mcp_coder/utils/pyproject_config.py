@@ -1,6 +1,8 @@
-"""Project-level configuration reader for pyproject.toml.
+"""Project-level configuration reader for [tool.mcp-coder] settings.
 
-This module reads tool configuration from pyproject.toml (project config).
+``format_code`` and the ``prompts`` table are read from pyproject.toml, else
+a root mcp-coder.toml. The ``install`` and ``install-from-github`` readers and
+the legacy ``implement`` readers are pyproject.toml-only.
 For user-level configuration (API tokens, Jenkins, etc.), see user_config.py
 which reads from config.toml.
 """
@@ -54,22 +56,35 @@ def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any
 
 
 def get_prompts_config(project_dir: Path) -> PromptsConfig:
-    """Read [tool.mcp-coder.prompts] from pyproject.toml.
+    """Read [tool.mcp-coder.prompts] from pyproject.toml, else mcp-coder.toml.
+
+    The whole table comes from one file. A malformed file, the table in
+    both files, or a non-table value gives the defaults plus a logged
+    warning.
 
     Args:
-        project_dir: Path to directory containing pyproject.toml.
+        project_dir: Project root containing pyproject.toml / mcp-coder.toml.
 
     Returns:
         PromptsConfig with prompt paths and mode.
     """
-    data = _load_pyproject(project_dir)
-    prompts = data.get("tool", {}).get("mcp-coder", {}).get("prompts", {})
+    found = find_mcp_coder_table_lenient(project_dir, "prompts")
+    source, prompts = found if found is not None else ("pyproject.toml", {})
+    if not isinstance(prompts, dict):
+        logger.warning(
+            "Invalid [tool.mcp-coder.prompts] in %s: expected a table, got %s; "
+            "using defaults",
+            source,
+            type(prompts).__name__,
+        )
+        prompts = {}
     mode = prompts.get("claude-system-prompt-mode", "append")
     if mode not in _VALID_PROMPT_MODES:
         logger.warning(
-            "Invalid claude-system-prompt-mode '%s' in pyproject.toml; "
+            "Invalid claude-system-prompt-mode '%s' in %s; "
             "expected 'append' or 'replace'",
             mode,
+            source,
         )
     return PromptsConfig(
         system_prompt=prompts.get("system-prompt"),
