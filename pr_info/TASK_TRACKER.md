@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Docs — npm example and per-session grant scope
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: trim npm example and rewrite the "Which sessions." bullet in `docs/configuration/toolkits.md`
-- [ ] Quality checks (pytest in case a test reads the docs) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: trim npm example and rewrite the "Which sessions." bullet in `docs/configuration/toolkits.md`
+- [x] Quality checks (pytest in case a test reads the docs) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
