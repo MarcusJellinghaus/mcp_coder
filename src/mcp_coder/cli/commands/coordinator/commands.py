@@ -6,6 +6,7 @@ labels. Use --dry-run to trigger Jenkins integration tests instead.
 
 import argparse
 import logging
+from time import sleep  # module-level name so tests patch commands.sleep only
 from typing import NamedTuple
 
 from ....mcp_workspace_github import (
@@ -18,12 +19,13 @@ from ....mcp_workspace_github import (
     RepoIdentifier,
     update_issue_labels_in_cache,
 )
-from ....utils.jenkins_operations.client import JenkinsClient
+from ....utils.jenkins_operations.client import JenkinsClient, JenkinsError
 from ....utils.log_utils import OUTPUT
 from ....utils.user_config import (
     create_default_config,
     get_cache_refresh_minutes,
     get_config_file_path,
+    get_dispatch_delay_seconds,
     load_config,
 )
 from ....workflow_utils.issue_trust import evaluate_body_trust
@@ -38,6 +40,7 @@ from .core import (
     DispatchResult,
     build_jenkins_label,
     dispatch_workflow,
+    find_waiting_build,
     get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
@@ -183,6 +186,10 @@ class _Repo(NamedTuple):
     config: dict[str, str]
     issue_manager: IssueManager
     branch_manager: IssueBranchManager
+    # Blocked-state key, as Jenkins reports it: two spellings of one path share it.
+    job_url: str
+    # First configured path that resolved to job_url; used for capacity checks.
+    job_path: str
 
 
 def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
@@ -195,9 +202,16 @@ def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
 
 
 def _collect_work(
-    repo_names: list[str], force_refresh: bool
+    repo_names: list[str],
+    force_refresh: bool,
+    jenkins_client: JenkinsClient,
+    blocked: set[str],
 ) -> list[tuple[IssueData, _Repo]]:
     """Load each repo's config and fetch its eligible issues, in config order.
+
+    Resolves each repo's executor job and checks its capacity once per job URL,
+    before any GitHub call. A busy job's URL is added to ``blocked`` and its
+    repos are skipped: no managers, no fetch (``force_refresh`` does not override).
 
     An invalid repo config (ValueError) and a rate limit during a fetch
     propagate to the caller's handlers.
@@ -205,12 +219,20 @@ def _collect_work(
     Args:
         repo_names: Repository names from the config, in config order.
         force_refresh: Bypass the issue cache.
+        jenkins_client: Client for the job lookups and capacity checks.
+        blocked: Job URLs without capacity; busy jobs found here are added.
 
     Returns:
         One (issue, repo) item per eligible issue, unsorted: repos in config
         order, issues in fetch order within a repo.
-    """
+
+    Raises:
+        JenkinsError: If a job lookup or capacity check fails.
+    """  # noqa: DOC502 - raised by get_job_url / find_waiting_build
     work: list[tuple[IssueData, _Repo]] = []
+    job_urls: dict[str, str] = {}  # configured path -> job URL
+    job_paths: dict[str, str] = {}  # job URL -> first configured path
+    checked: set[str] = set()
     for index, repo_name in enumerate(repo_names):
         # Load and validate repo config
         repo_config = load_repo_config(repo_name)
@@ -236,6 +258,20 @@ def _collect_work(
                 executor_os_val if isinstance(executor_os_val, str) else "linux"
             ),
         }
+
+        # Capacity gate, before any GitHub call
+        job_path = validated_config["executor_job_path"]
+        if job_path not in job_urls:
+            job_urls[job_path] = jenkins_client.get_job_url(job_path)
+        job_url = job_urls[job_path]
+        job_paths.setdefault(job_url, job_path)
+        if job_url not in checked:
+            checked.add(job_url)
+            if find_waiting_build(jenkins_client, job_paths[job_url]):
+                blocked.add(job_url)
+        if job_url in blocked:
+            logger.debug("Skipping repository %s: executor job busy", repo_name)
+            continue
 
         # Create managers
         issue_manager = IssueManager(repo_url=validated_config["repo_url"])
@@ -277,9 +313,34 @@ def _collect_work(
             config=validated_config,
             issue_manager=issue_manager,
             branch_manager=branch_manager,
+            job_url=job_url,
+            job_path=job_paths[job_url],
         )
         work.extend((issue, repo) for issue in eligible_issues)
     return work
+
+
+def _recheck_after_delay(
+    jenkins_client: JenkinsClient, pending: _Repo, delay: int, blocked: set[str]
+) -> None:
+    """Sleep ``delay`` seconds, then re-check the job that got the last build.
+
+    Adds ``pending.job_url`` to ``blocked`` when that job still has a waiting
+    build. The delay must exceed the Jenkins quiet period: a build in its quiet
+    period is a queue item, not a build, and so invisible to the check.
+
+    Args:
+        jenkins_client: Client for the capacity check.
+        pending: Repo whose executor job got the last started build.
+        delay: Seconds to wait before the check.
+        blocked: Job URLs without capacity; updated in place.
+
+    Raises:
+        JenkinsError: If the build list cannot be read.
+    """  # noqa: DOC502 - raised by find_waiting_build
+    sleep(delay)
+    if find_waiting_build(jenkins_client, pending.job_path):
+        blocked.add(pending.job_url)
 
 
 def execute_coordinator_run(args: argparse.Namespace) -> int:
@@ -311,6 +372,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             )
             return 1  # Exit to let user configure
 
+        # Wrong TOML type -> ValueError -> ERROR line, exit 1
+        delay = get_dispatch_delay_seconds()
+
         # Step 2: Determine repository list
         if args.repo:
             # Single repository mode
@@ -336,13 +400,20 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
         # Step 4: Collect the eligible issues of all repos, then sort globally
         # (stable: keeps fetch order on ties)
-        work = _collect_work(repo_names, args.force_refresh)
+        # Busy executor jobs end up in ``blocked`` (job URLs); ``pending`` is the
+        # repo whose job got the last build and still needs its re-check.
+        blocked: set[str] = set()
+        work = _collect_work(repo_names, args.force_refresh, jenkins_client, blocked)
         work.sort(key=_dispatch_sort_key)
 
         # Step 5: Dispatch workflows for each eligible issue (fail-fast)
         skipped: dict[str, list[tuple[int, BodyTrustResult]]] = {}
+        pending: _Repo | None = None
         try:
             for issue, repo in work:
+                if repo.job_url in blocked:
+                    continue
+
                 # Find current bot_pickup label to determine workflow
                 current_label = None
                 for label in issue["labels"]:
@@ -355,6 +426,15 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         f"Issue #{issue['number']} has no workflow label, skipping"
                     )
                     continue
+
+                # The delay is taken before the next attempt, so none after the
+                # last dispatch. Outside the dispatch try: a gate error is not an
+                # issue failure.
+                if pending is not None:
+                    _recheck_after_delay(jenkins_client, pending, delay, blocked)
+                    pending = None
+                    if repo.job_url in blocked:
+                        continue
 
                 # Gate: never feed an untrusted body to a workflow.
                 # Outside the dispatch try so a rate limit stops the run.
@@ -386,6 +466,8 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     if result is DispatchResult.STARTED_LABEL_RATE_LIMITED:
                         # Job started, label swap hit a rate limit
                         return 1
+                    if result is DispatchResult.STARTED:
+                        pending = repo
 
                     # Update cache with new labels immediately after successful dispatch
                     try:
@@ -426,6 +508,11 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
     except GitHubRateLimitError as e:
         log_rate_limit_stop(e)
         return 0
+
+    except JenkinsError as e:
+        # Job lookup or capacity check failed: the message is the diagnosis.
+        logger.error("%s", e)
+        return 1
 
     except ValueError as e:
         if (rl := as_rate_limit(e)) is not None:

@@ -17,6 +17,7 @@ from mcp_coder.mcp_workspace_github import (
 from tests.github_factories import make_issue_data
 
 _COMMANDS = "mcp_coder.cli.commands.coordinator.commands"
+EXECUTOR_JOB_URL = "https://jenkins.example.com/job/MCP_Coder/job/executor-test/"
 
 TRUSTED = BodyTrustResult(status=BodyTrust.TRUSTED, reason="")
 UNTRUSTED = BodyTrustResult(status=BodyTrust.UNTRUSTED, reason="author not trusted")
@@ -70,7 +71,7 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[dict[str, MagicMock]]:
             f"{_COMMANDS}.get_jenkins_credentials",
             return_value=("https://jenkins.example.com", "u", "t"),
         ),
-        patch(f"{_COMMANDS}.JenkinsClient"),
+        patch(f"{_COMMANDS}.JenkinsClient") as jenkins_cls,
         patch(f"{_COMMANDS}.load_repo_config", return_value=repo_config),
         patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
         patch(f"{_COMMANDS}.IssueBranchManager"),
@@ -81,6 +82,9 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[dict[str, MagicMock]]:
         ) as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
     ):
+        jenkins = jenkins_cls.return_value
+        jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        jenkins.get_recent_builds.return_value = []
         yield {
             "trust": _trusted_issue_bodies,
             "issue_mgr": issue_mgr_cls.return_value,

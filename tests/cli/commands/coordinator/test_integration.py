@@ -17,6 +17,8 @@ from mcp_coder.cli.commands.coordinator import (
 from mcp_coder.mcp_workspace_github import RepoIdentifier
 from tests.github_factories import make_issue_data
 
+EXECUTOR_JOB_URL = "https://jenkins.example.com/job/MCP_Coder/job/executor-test/"
+
 
 class TestCoordinatorRunCacheIntegration:
     """Integration tests for coordinator run with caching."""
@@ -69,6 +71,8 @@ class TestCoordinatorRunCacheIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
         mock_dispatch_workflow.return_value = DispatchResult.STARTED
@@ -151,6 +155,8 @@ class TestCoordinatorRunCacheIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
@@ -222,6 +228,8 @@ class TestCoordinatorRunCacheIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
@@ -321,6 +329,8 @@ class TestCacheUpdateIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
@@ -408,6 +418,8 @@ class TestCacheUpdateIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
@@ -498,6 +510,8 @@ class TestCacheUpdateIntegration:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
 

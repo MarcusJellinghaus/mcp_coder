@@ -43,6 +43,12 @@ def _repo_config(name: str) -> dict[str, Any]:
     }
 
 
+def _job_url(path: str) -> str:
+    return "https://jenkins.example.com/" + "".join(
+        f"job/{part}/" for part in path.split("/")
+    )
+
+
 def _args() -> argparse.Namespace:
     return argparse.Namespace(
         command="coordinator",
@@ -86,7 +92,7 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[_Mocks]:
             f"{_COMMANDS}.get_jenkins_credentials",
             return_value=("https://jenkins.example.com", "u", "t"),
         ),
-        patch(f"{_COMMANDS}.JenkinsClient"),
+        patch(f"{_COMMANDS}.JenkinsClient") as jenkins_cls,
         patch(f"{_COMMANDS}.load_repo_config", side_effect=_repo_config),
         patch(f"{_COMMANDS}.validate_repo_config") as validate,
         patch(f"{_COMMANDS}.get_cache_refresh_minutes", return_value=1440),
@@ -97,8 +103,12 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[_Mocks]:
         patch(f"{_COMMANDS}.dispatch_workflow") as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
     ):
+        jenkins = jenkins_cls.return_value
+        jenkins.get_job_url.side_effect = _job_url
+        jenkins.get_recent_builds.return_value = []
         state = _Mocks(
             {
+                "jenkins": jenkins,
                 "trust": _trusted_issue_bodies,
                 "validate": validate,
                 "issue_mgr_cls": issue_mgr_cls,
@@ -247,7 +257,9 @@ class TestCollectWork:
         mocks.issues["repo_a"] = [_issue(1, AWAITING_PLANNING), _issue(2, READY_PR)]
         mocks.issues["repo_b"] = [_issue(3, FAILING_CI)]
 
-        work = _collect_work(["repo_a", "repo_b"], force_refresh=False)
+        work = _collect_work(
+            ["repo_a", "repo_b"], False, mocks["jenkins"], blocked=set()
+        )
 
         assert [issue["number"] for issue, _ in work] == [1, 2, 3]
         repos = [repo for _, repo in work]
@@ -261,7 +273,9 @@ class TestCollectWork:
     def test_repo_without_issues_contributes_nothing(self, mocks: _Mocks) -> None:
         mocks.issues["repo_b"] = [_issue(3, PLAN_READY)]
 
-        work = _collect_work(["repo_a", "repo_b"], force_refresh=False)
+        work = _collect_work(
+            ["repo_a", "repo_b"], False, mocks["jenkins"], blocked=set()
+        )
 
         assert [(issue["number"], repo.name) for issue, repo in work] == [(3, "repo_b")]
 
@@ -270,7 +284,7 @@ class TestCollectWork:
         mocks["get_cached"].side_effect = RuntimeError("cache broken")
         mocks["get_eligible"].return_value = [fallback_issue]
 
-        work = _collect_work(["repo_a"], force_refresh=True)
+        work = _collect_work(["repo_a"], True, mocks["jenkins"], blocked=set())
 
         assert [(issue, repo.name) for issue, repo in work] == [
             (fallback_issue, "repo_a")
@@ -283,6 +297,6 @@ class TestCollectWork:
         mocks["validate"].side_effect = ValueError("value for field missing")
 
         with pytest.raises(ValueError, match="value for field missing"):
-            _collect_work(["repo_a", "repo_b"], force_refresh=False)
+            _collect_work(["repo_a", "repo_b"], False, mocks["jenkins"], blocked=set())
 
         mocks["get_cached"].assert_not_called()

@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Capacity gate and delay in `execute_coordinator_run` — [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, mypy, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, mypy, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Documentation — [step_7.md](./steps/step_7.md)
 
