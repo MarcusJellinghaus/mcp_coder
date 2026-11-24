@@ -8,6 +8,7 @@ import pytest
 
 from mcp_coder.llm.interface import prompt_llm, prompt_llm_stream
 from mcp_coder.utils import prompt_slots
+from mcp_coder.utils.prompt_slots import RERUN_INTRO
 from mcp_coder.utils.pyproject_config import PromptsConfig
 
 _RESPONSE = {
@@ -123,6 +124,7 @@ class TestPromptLlmFillsInjectedPrompts:
         assert "[check_instructions]" not in sent
         assert "[language_context]" not in sent
         assert _COMMAND_CHECKS not in sent
+        assert RERUN_INTRO not in sent
         assert "No security vulnerabilities should be introduced" in sent
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
@@ -144,7 +146,8 @@ class TestPromptLlmFillsInjectedPrompts:
         )
 
         sent = _sent_prompt(mock_ask)
-        assert _COMMAND_CHECKS in sent
+        assert RERUN_INTRO + "- `make check:*`" in sent
+        assert _COMMAND_CHECKS not in sent
         assert "[check_instructions]" not in sent
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")

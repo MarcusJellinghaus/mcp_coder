@@ -112,27 +112,26 @@ class CommandToolkit(Toolkit):
         return items or [VerifyItem(name=_GLOBAL_NAME, status="ok")]
 
     def prompt_fragments(self) -> dict[str, str]:
-        """Return the check re-run instructions and the generic fix texts.
+        """Return the unattended re-run instructions and the generic fix texts.
+
+        `check_instructions` is always "": `resolve_prompt_slots` builds that
+        re-run list from the session's own grants. The key stays so the slot
+        never falls back to the neutral default.
 
         Returns:
             `language_context`, `check_instructions`,
-            `check_instructions.unattended`, `fix.check` and `fix.test`; the
-            check instructions are empty when the LLM gets no grants.
+            `check_instructions.unattended`, `fix.check` and `fix.test`;
+            `check_instructions.unattended` lists the `test.unattended` steps
+            and is empty when the LLM gets no grants.
         """
         parsed = parse_config(self.config)
         none = self.config.get("llm_permissions", "bash") == "none" or bool(
             parsed.global_errors()
         )
-        all_steps = [
-            step
-            for depths in parsed.steps.values()
-            for steps in depths.values()
-            for step in steps
-        ]
         unattended = parsed.steps.get("test", {}).get("unattended")
         return {
             "language_context": "",
-            "check_instructions": "" if none else _RERUN_INTRO + _steps_text(all_steps),
+            "check_instructions": "",
             "check_instructions.unattended": (
                 ""
                 if none or unattended is None

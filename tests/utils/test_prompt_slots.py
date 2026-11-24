@@ -2,18 +2,21 @@
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils import prompt_slots
 from mcp_coder.utils.prompt_slots import (
     DEFAULT_CHECK_INSTRUCTIONS,
     DEFAULT_LANGUAGE_CONTEXT,
+    RERUN_INTRO,
     fill_prompt,
     resolve_prompt_slots,
     toolkit_declares_bash_grants,
 )
+from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
 
 BOTH_SLOTS = "Intro\n[language_context]\nBody\n[check_instructions]\n"
 
@@ -177,14 +180,53 @@ class TestResolvePromptSlots:
         result = resolve_prompt_slots("[check_instructions]", tmp_path, "claude", [])
         assert result == {"check_instructions": ""}
 
-    def test_bash_toolkit_claude_with_grants_keeps_fragment(
+    def test_bash_toolkit_claude_with_grants_lists_grants(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make:*)"])
+        _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make)"])
         result = resolve_prompt_slots(
-            "[check_instructions]", tmp_path, "claude", ["Bash(make:*)"]
+            "[check_instructions]", tmp_path, "claude", ["Bash(make)"]
         )
-        assert result == {"check_instructions": "Run make"}
+        assert result == {"check_instructions": RERUN_INTRO + "- `make`"}
+
+    def test_bash_toolkit_lists_only_session_grants(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(
+            monkeypatch,
+            {"check_instructions": "Run everything"},
+            ["Bash(npm run lint)", "Bash(npm test)", "Bash(npm run full)"],
+        )
+        result = resolve_prompt_slots(
+            "[check_instructions]", tmp_path, "claude", ["Bash(npm run lint)"]
+        )
+        assert result == {"check_instructions": RERUN_INTRO + "- `npm run lint`"}
+        assert "everything" not in result["check_instructions"]
+
+    def test_bash_toolkit_two_grants_in_grant_order(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(
+            monkeypatch,
+            {"check_instructions": ""},
+            ["Bash(npm run lint)", "Bash(npm test)"],
+        )
+        result = resolve_prompt_slots(
+            "[check_instructions]",
+            tmp_path,
+            "claude",
+            ["Bash(npm test)", "Bash(npm run lint)"],
+        )
+        assert result == {
+            "check_instructions": RERUN_INTRO + "- `npm test`\n- `npm run lint`"
+        }
+
+    def test_bash_toolkit_claude_none_grants_empties_checks(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make)"])
+        result = resolve_prompt_slots("[check_instructions]", tmp_path, "claude", None)
+        assert result == {"check_instructions": ""}
 
     def test_non_bash_toolkit_non_claude_keeps_fragment(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -210,12 +252,47 @@ class TestResolvePromptSlots:
     def test_provider_none_without_env_is_claude(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make:*)"])
+        _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make)"])
         monkeypatch.delenv("MCP_CODER_LLM_PROVIDER", raising=False)
         result = resolve_prompt_slots(
-            "[check_instructions]", tmp_path, None, ["Bash(make:*)"]
+            "[check_instructions]", tmp_path, None, ["Bash(make)"]
         )
-        assert result == {"check_instructions": "Run make"}
+        assert result == {"check_instructions": RERUN_INTRO + "- `make`"}
+
+
+_REBASE_SCOPE_CONFIG = """\
+[tool.mcp-coder.toolkit]
+toolkit = "command"
+
+[tool.mcp-coder.toolkit.command]
+check.quick = [{ argv = ["npm", "run", "lint:quick"], name = "lint-quick" }]
+check.standard = [{ argv = ["npm", "run", "lint"], name = "lint" }]
+test.quick = [{ argv = ["npm", "run", "test:quick"], name = "unit-quick" }]
+test.standard = [{ argv = ["npm", "test"], name = "unit" }]
+test.unattended = [{ argv = ["npm", "run", "test:ci"], name = "unit-ci" }]
+"""
+
+
+class TestRebaseScope:
+    """A real command toolkit: the rebase session lists only its binding's steps."""
+
+    def test_rebase_grants_list_only_rebase_binding_steps(self, tmp_path: Path) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(_REBASE_SCOPE_CONFIG, encoding="utf-8")
+        with patch(
+            "mcp_coder.utils.toolkit_runner._toolkit_class",
+            lambda _name: CommandToolkit,
+        ):
+            grants = bash_grants_of(llm_permissions(tmp_path, "claude", "rebase"))
+            result = resolve_prompt_slots(
+                "[check_instructions]", tmp_path, "claude", grants
+            )
+
+        text = result["check_instructions"]
+        assert text.startswith(RERUN_INTRO)
+        listed = text[len(RERUN_INTRO) :].splitlines()
+        assert listed == ["- `npm run lint`", "- `npm test`"]
+        for command in ("npm run lint:quick", "npm run test:quick", "npm run test:ci"):
+            assert command not in text
 
 
 class TestFillPrompt:

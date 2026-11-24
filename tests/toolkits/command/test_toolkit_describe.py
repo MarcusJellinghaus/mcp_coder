@@ -123,12 +123,25 @@ class TestPromptFragments:
         assert fragments["fix.check"]
         assert fragments["fix.test"]
 
+    def test_check_instructions_empty_with_granted_steps(self) -> None:
+        config = {"check": {"q": [_LINT]}, "test": {"q": [_UNIT]}}
+        fragments = CommandToolkit(config).prompt_fragments()
+        assert fragments["check_instructions"] == ""
+
     def test_grants_verbatim_and_ungranted_marked(self) -> None:
         config = {
-            "check": {"q": [_LINT, {"argv": ["fakenpm", "a b"], "name": "spaced"}]},
-            "test": {"q": [_UNIT, _LINT]},
+            "test": {
+                "unattended": [
+                    _LINT,
+                    {"argv": ["fakenpm", "a b"], "name": "spaced"},
+                    _UNIT,
+                    _LINT,
+                ]
+            },
         }
-        text = CommandToolkit(config).prompt_fragments()["check_instructions"]
+        text = CommandToolkit(config).prompt_fragments()[
+            "check_instructions.unattended"
+        ]
         lines = text.splitlines()
         assert lines[0].startswith("Re-run the checks with these exact commands")
         assert lines[1:] == [
@@ -139,12 +152,16 @@ class TestPromptFragments:
 
     def test_same_name_different_commands_both_listed(self) -> None:
         config = {
-            "check": {
-                "quick": [{"argv": ["npm", "run", "lint"], "name": "lint"}],
-                "full": [{"argv": ["npm", "run", "lint:strict"], "name": "lint"}],
+            "test": {
+                "unattended": [
+                    {"argv": ["npm", "run", "lint"], "name": "lint"},
+                    {"argv": ["npm", "run", "lint:strict"], "name": "lint"},
+                ],
             }
         }
-        text = CommandToolkit(config).prompt_fragments()["check_instructions"]
+        text = CommandToolkit(config).prompt_fragments()[
+            "check_instructions.unattended"
+        ]
         assert "- `npm run lint`" in text.splitlines()
         assert "- `npm run lint:strict`" in text.splitlines()
 

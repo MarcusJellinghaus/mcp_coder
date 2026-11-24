@@ -1,8 +1,11 @@
 """Fill toolkit prompt slots and [placeholder] substitutions.
 
 Prompts carry two slots, ``[language_context]`` and ``[check_instructions]``,
-filled from the configured toolkit's ``prompt_fragments()``. Callers resolve
-the slots for a template, then fill slots and substitutions in one pass::
+filled from the configured toolkit's ``prompt_fragments()``. For a toolkit
+that declares ``Bash(...)`` grants, ``check_instructions`` is instead built
+here from the session's own grants, so it lists exactly the commands the
+session may re-run. Callers resolve the slots for a template, then fill slots
+and substitutions in one pass::
 
     slots = resolve_prompt_slots(template, project_dir, provider, bash_grants)
     prompt = fill_prompt(template, substitutions, slots)
@@ -24,6 +27,12 @@ DEFAULT_CHECK_INSTRUCTIONS = (
     "Run the project's quality checks (linters, type checkers, tests) "
     "and fix all issues."
 )
+# Same text as the command toolkit's own intro for check_instructions.unattended
+RERUN_INTRO = (
+    "Re-run the checks with these exact commands; run each one unchanged — "
+    "extra arguments, flags or changed spacing are denied:\n"
+)
+_BASH_PREFIX = "Bash("
 
 
 def _defaults() -> dict[str, str]:
@@ -72,9 +81,10 @@ def resolve_prompt_slots(
         bash_grants: ``Bash(...)`` grants the session gets, if any.
 
     Returns:
-        Values for the slots present in ``text`` only; ``{}`` if none.
-        ``check_instructions`` is "" when the toolkit declares ``Bash(...)``
-        grants the session does not get.
+        Values for the slots present in ``text`` only; ``{}`` if none. For a
+        toolkit that declares ``Bash(...)`` grants, ``check_instructions``
+        lists exactly the session's granted commands, or is "" when the
+        session gets none (or the provider isn't Claude).
     """
     present = [s for s in SLOT_NAMES if f"[{s}]" in text]
     if not present:
@@ -87,10 +97,13 @@ def resolve_prompt_slots(
             if slot in fragments:
                 values[slot] = fragments[slot]
         resolved = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
-        if toolkit_declares_bash_grants(project_dir) and (
-            resolved != "claude" or not bash_grants
-        ):
-            values["check_instructions"] = ""
+        if toolkit_declares_bash_grants(project_dir):
+            if resolved != "claude" or not bash_grants:
+                values["check_instructions"] = ""
+            else:
+                values["check_instructions"] = RERUN_INTRO + "\n".join(
+                    f"- `{grant[len(_BASH_PREFIX) : -1]}`" for grant in bash_grants
+                )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning("Prompt slots fall back to defaults: %s", exc)
         values = _defaults()

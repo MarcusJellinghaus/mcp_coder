@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Build the `check_instructions` re-run list from the session's Bash grants
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests first (`test_prompt_slots.py`, `test_interface_prompt_slots.py`, `test_toolkit_describe.py`), then `RERUN_INTRO` + grant-based re-run list in `utils/prompt_slots.py` and `check_instructions` fragment always `""` in `toolkits/command/toolkit.py`
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`test_prompt_slots.py`, `test_interface_prompt_slots.py`, `test_toolkit_describe.py`), then `RERUN_INTRO` + grant-based re-run list in `utils/prompt_slots.py` and `check_instructions` fragment always `""` in `toolkits/command/toolkit.py`
+- [x] Quality checks (pylint, pytest, mypy, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Scope each session's Bash grants to its binding entries
 See [step_2.md](./steps/step_2.md)
