@@ -28,6 +28,7 @@ from .verify_formatting import (
     _format_section,
     _hint,
 )
+from .verify_project_keys import key_warning_rows
 from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
 from .verify_toolkit_rows import check_type_hints_row, toolkit_rows
@@ -440,6 +441,7 @@ def _print_project_section(
         ok = _format_code_row(project_dir, symbols, out, indent=2)
         ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
         ok = setup_rows(project_dir, symbols, out, indent=2) and ok
+        out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
         out.close()
         return ok and file_access_ok
     out.add(Row("pyproject.toml", symbols["success"], "found"))
@@ -462,6 +464,7 @@ def _print_project_section(
         )
         ok = False
     ok = check_type_hints_row(project_dir, symbols, out) and ok
+    out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
     out.close()
     return ok and file_access_ok
 

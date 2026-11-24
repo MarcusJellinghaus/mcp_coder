@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: `verify` warnings for unknown, retired, misplaced and conflicting keys — [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: tests first (`test_verify_project_keys.py` unit + integration), then `verify_project_keys.py` (`_SCHEMA`, `KeyWarning`, `scan_project_keys`, `key_warning_rows`), PROJECT rows in `_print_project_section` (both branches), PROMPTS rows in `verify.py`; exit code unchanged
-- [ ] Quality checks: pylint, mypy, pytest, lint-imports, tach, vulture, file size, format — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`test_verify_project_keys.py` unit + integration), then `verify_project_keys.py` (`_SCHEMA`, `KeyWarning`, `scan_project_keys`, `key_warning_rows`), PROJECT rows in `_print_project_section` (both branches), PROMPTS rows in `verify.py`; exit code unchanged
+- [x] Quality checks: pylint, mypy, pytest, lint-imports, tach, vulture, file size, format — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
