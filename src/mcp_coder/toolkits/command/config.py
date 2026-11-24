@@ -143,6 +143,22 @@ def _exit_codes_errors(value: Any) -> tuple[ExitCodes, list[str]]:
     return table, errors
 
 
+def exit_code_status(table: ExitCodes, code: int) -> str:
+    """Return the status the table maps `code` to.
+
+    Keys never overlap, so the first match is the only one. A code no key
+    matches is `ok` when it is 0 and `error` otherwise.
+
+    Returns:
+        One of `STATUSES`.
+    """
+    for key, status in table.items():
+        lo, hi = key if isinstance(key, tuple) else (key, key)
+        if lo <= code <= hi:
+            return status
+    return "ok" if code == 0 else "error"
+
+
 def _timeout_error(value: Any) -> str | None:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         return f"timeout must be a positive integer, got {value!r}"

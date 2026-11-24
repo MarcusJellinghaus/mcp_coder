@@ -7,9 +7,11 @@ import pytest
 from mcp_coder.toolkits.command.config import (
     DEFAULT_EXIT_CODES,
     DEFAULT_TIMEOUT,
+    ExitCodes,
     ParsedConfig,
     Problem,
     Step,
+    exit_code_status,
     parse_config,
 )
 
@@ -208,6 +210,21 @@ class TestExitCodes:
         )
         assert len(parsed.global_errors()) == 1
         assert _only_step(parsed, "check", "quick").exit_codes == DEFAULT_EXIT_CODES
+
+    @pytest.mark.parametrize(
+        "table,code,expected",
+        [
+            ({0: "ok", (1, 125): "findings"}, 7, "findings"),
+            ({0: "ok", (1, 125): "findings"}, 126, "error"),
+            ({1: "findings"}, 0, "ok"),
+            ({0: "findings"}, 0, "findings"),
+            ({(0, 5): "skipped"}, 0, "skipped"),
+            (DEFAULT_EXIT_CODES, 1, "findings"),
+            (DEFAULT_EXIT_CODES, -1, "error"),
+        ],
+    )
+    def test_exit_code_status(self, table: ExitCodes, code: int, expected: str) -> None:
+        assert exit_code_status(table, code) == expected
 
 
 class TestUnknownKeys:

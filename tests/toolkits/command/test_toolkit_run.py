@@ -175,6 +175,28 @@ class TestExitCodes:
         assert _run(config, project_dir).status == "skipped"
         assert _run(config, project_dir, depth="f").status == "findings"
 
+    def test_range_exit_codes(self, fake_npm: Path, project_dir: Path) -> None:
+        _exit_script(fake_npm, "lint", 7)
+        _exit_script(fake_npm, "crash", 126)
+        exit_codes = {"0": "ok", "1-125": "findings"}
+        config = {
+            "check": {
+                "q": [{"argv": ["fakenpm", "lint"], "exit_codes": exit_codes}],
+                "f": [{"argv": ["fakenpm", "crash"], "exit_codes": exit_codes}],
+            }
+        }
+        assert _run(config, project_dir).status == "findings"
+        assert _run(config, project_dir, depth="f").status == "error"
+
+    def test_unlisted_zero_is_ok(self, fake_npm: Path, project_dir: Path) -> None:
+        _exit_script(fake_npm, "lint", 0)
+        config = {
+            "check": {
+                "q": [{"argv": ["fakenpm", "lint"], "exit_codes": {"1": "findings"}}]
+            }
+        }
+        assert _run(config, project_dir).status == "ok"
+
 
 class TestMerge:
     """Merging several steps."""

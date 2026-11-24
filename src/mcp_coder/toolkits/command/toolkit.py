@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from xml.etree import ElementTree  # noqa: S405  # nosec B405
 
-from mcp_coder.toolkits.command.config import Step, parse_config
+from mcp_coder.toolkits.command.config import Step, exit_code_status, parse_config
 from mcp_coder.utils.executable import resolve_executable
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.utils.toolkit import (
@@ -229,7 +229,7 @@ def _run_step(step: Step, project_dir: Path) -> ActionResult:
         message = f"{label}: {res.execution_error}"
         return ActionResult(status="error", summary=message, fix_text=message)
 
-    status = step.exit_codes.get(res.return_code, "error")
+    status = exit_code_status(step.exit_codes, res.return_code)
     raw = (res.stdout + "\n" + res.stderr).strip()
     output = _tail(res.stdout, res.stderr)
     summary = f"{label}: {status}"

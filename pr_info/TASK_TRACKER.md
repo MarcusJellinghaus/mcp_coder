@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Look up exit codes by range, unlisted `0` is `ok`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests in test_config.py and test_toolkit_run.py, then `exit_code_status` in `config.py` used by `toolkit.py::_run_step`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in test_config.py and test_toolkit_run.py, then `exit_code_status` in `config.py` used by `toolkit.py::_run_step`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Document range keys and the unlisted-`0` rule
 See [step_3.md](./steps/step_3.md)
