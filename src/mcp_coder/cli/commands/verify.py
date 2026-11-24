@@ -60,6 +60,7 @@ from .verify_formatting import (
     _looks_like_key,
 )
 from .verify_jenkins import verify_jenkins
+from .verify_project_keys import key_warning_rows
 from .verify_render import SectionBuilder
 
 # Bound as module globals on purpose: ``execute_verify`` resolves these names
@@ -298,6 +299,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
                     "project prompt is CLAUDE.md (will skip for Claude)",
                 )
             )
+    prompt_lines.extend(key_warning_rows(project_dir, "PROMPTS", symbols))
     out.section("PROMPTS", prompt_lines)
 
     # 0c. Project configuration section

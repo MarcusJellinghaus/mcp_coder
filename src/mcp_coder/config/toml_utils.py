@@ -5,10 +5,13 @@ reader (``user_config``) and the project-level reader (``pyproject_config``)
 can report syntax errors the same way.
 """
 
+import logging
 import re
 import tomllib
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Curly quotes pasted from chat windows or documents (U+201C/U+201D/U+2018/U+2019)
 _SMART_QUOTES = "“”‘’"
@@ -104,6 +107,28 @@ def find_mcp_coder_table(project_dir: Path, table: str) -> tuple[str, Any] | Non
     if not found:
         return None
     return next(iter(found.items()))
+
+
+def find_mcp_coder_table_lenient(project_dir: Path, key: str) -> tuple[str, Any] | None:
+    """Like find_mcp_coder_table, but log a warning and return None on a problem.
+
+    Run-time readers use this so a malformed file, a non-table
+    'tool'/'mcp-coder', or the key in both files falls back to the default
+    instead of crashing.
+
+    Args:
+        project_dir: Project root containing pyproject.toml / mcp-coder.toml.
+        key: Name of the key or table below [tool.mcp-coder].
+
+    Returns:
+        The file name and the raw TOML value, or None when no file defines
+        the key or the lookup failed (a warning is logged).
+    """
+    try:
+        return find_mcp_coder_table(project_dir, key)
+    except ValueError as exc:
+        logger.warning("%s; using the default for [tool.mcp-coder] %s", exc, key)
+        return None
 
 
 def format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:

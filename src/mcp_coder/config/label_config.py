@@ -5,7 +5,8 @@ from JSON files.
 
 Config resolution order:
 1. Explicit ``config_override`` path (highest priority, e.g. ``--config`` flag)
-2. ``[tool.mcp-coder] labels-config`` in ``pyproject.toml`` (relative to project root)
+2. ``[tool.mcp-coder] labels-config`` in ``pyproject.toml``, else
+   ``mcp-coder.toml`` (relative to the project root)
 3. Bundled package defaults (``mcp_coder/config/labels.json``)
 
 Usage patterns:
@@ -14,7 +15,7 @@ Usage patterns:
     config_path = get_labels_config_path(project_dir, config_override=Path("custom.json"))
     labels_config = load_labels_config(config_path)
 
-    # Project with pyproject.toml config
+    # Project with pyproject.toml / mcp-coder.toml config
     config_path = get_labels_config_path(project_dir)
     labels_config = load_labels_config(config_path)
 
@@ -24,10 +25,14 @@ Usage patterns:
 """
 
 import json
-import tomllib
+import logging
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, TypedDict
+
+from .toml_utils import find_mcp_coder_table_lenient
+
+logger = logging.getLogger(__name__)
 
 
 class LabelLookups(TypedDict):
@@ -128,28 +133,28 @@ def validate_labels_config(labels_config: dict[str, Any]) -> None:
             )
 
 
-# The TOML boilerplate below duplicates utils.pyproject_config._load_pyproject on
-# purpose: mcp_coder.config sits below mcp_coder.utils in the layer stack, so it
-# cannot import pyproject_config.
-def _get_labels_config_from_pyproject(project_dir: Path) -> Path | None:
-    """Read labels-config from [tool.mcp-coder] in pyproject.toml.
+def _get_labels_config_from_project(project_dir: Path) -> Path | None:
+    """Read [tool.mcp-coder] labels-config from pyproject.toml, else mcp-coder.toml.
+
+    A malformed file, the key in both files, or a non-string value logs a
+    warning and returns None, so the bundled labels are used.
 
     Returns:
         Absolute Path if configured and file exists, None otherwise.
     """
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
+    found = find_mcp_coder_table_lenient(project_dir, "labels-config")
+    if found is None:
         return None
-    try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-    except (tomllib.TOMLDecodeError, OSError):
+    source, value = found
+    if not isinstance(value, str):
+        logger.warning(
+            "Invalid [tool.mcp-coder] labels-config in %s: expected a string, "
+            "got %s; using the bundled labels",
+            source,
+            type(value).__name__,
+        )
         return None
-    try:
-        config_value = data["tool"]["mcp-coder"]["labels-config"]
-    except KeyError:
-        return None
-    resolved = project_dir / config_value
+    resolved = project_dir / value
     return resolved if resolved.exists() else None
 
 
@@ -161,11 +166,13 @@ def get_labels_config_path(
 
     Resolution order:
     1. config_override (explicit --config flag, highest priority)
-    2. [tool.mcp-coder] labels-config in pyproject.toml (relative to project root)
+    2. [tool.mcp-coder] labels-config in pyproject.toml, else mcp-coder.toml
+       (relative to the project root)
     3. Bundled package defaults (mcp_coder/config/labels.json)
 
     Args:
-        project_dir: Optional project directory for pyproject.toml lookup.
+        project_dir: Optional project directory for the pyproject.toml /
+                    mcp-coder.toml lookup.
                     Pass None to always use bundled config (coordinator pattern).
         config_override: Optional explicit path to a labels config file.
                         Raises FileNotFoundError if the file does not exist.
@@ -184,11 +191,11 @@ def get_labels_config_path(
             raise FileNotFoundError(f"Config override not found: {config_override}")
         return config_override
 
-    # 2. pyproject.toml lookup
+    # 2. pyproject.toml / mcp-coder.toml lookup
     if project_dir is not None:
-        pyproject_path = _get_labels_config_from_pyproject(project_dir)
-        if pyproject_path is not None:
-            return pyproject_path
+        project_path = _get_labels_config_from_project(project_dir)
+        if project_path is not None:
+            return project_path
 
     # 3. Bundled package defaults
     return resources.files("mcp_coder.config") / "labels.json"

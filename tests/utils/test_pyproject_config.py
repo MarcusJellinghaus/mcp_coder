@@ -163,29 +163,72 @@ class TestGetFormatCode:
     """Tests for get_format_code."""
 
     def test_absent_defaults_to_enabled(self, tmp_path: Path) -> None:
-        """Missing key → enabled, not explicit."""
+        """Missing key → enabled, no source."""
         (tmp_path / "pyproject.toml").write_text("[tool.mcp-coder]\n", encoding="utf-8")
-        assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=True, explicit=False
-        )
+        assert get_format_code(tmp_path) == FormatCodeSetting(enabled=True, source=None)
 
     def test_true(self, tmp_path: Path) -> None:
-        """format_code = true → enabled, explicit."""
+        """format_code = true → enabled, from pyproject.toml."""
         (tmp_path / "pyproject.toml").write_text(
             "[tool.mcp-coder]\nformat_code = true\n", encoding="utf-8"
         )
         assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=True, explicit=True
+            enabled=True, source="pyproject.toml"
         )
 
     def test_false(self, tmp_path: Path) -> None:
-        """format_code = false → disabled, explicit."""
+        """format_code = false → disabled, from pyproject.toml."""
         (tmp_path / "pyproject.toml").write_text(
             "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
         )
         assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=False, explicit=True
+            enabled=False, source="pyproject.toml"
         )
+
+    def test_mcp_coder_toml_only(self, tmp_path: Path) -> None:
+        """format_code = false in mcp-coder.toml → disabled, from mcp-coder.toml."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+        )
+        assert get_format_code(tmp_path) == FormatCodeSetting(
+            enabled=False, source="mcp-coder.toml"
+        )
+
+    def test_both_files_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The key in both files → default, plus a logged warning."""
+        for name in ("pyproject.toml", "mcp-coder.toml"):
+            (tmp_path / name).write_text(
+                "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+            )
+        with caplog.at_level(logging.WARNING):
+            setting = get_format_code(tmp_path)
+        assert setting == FormatCodeSetting(enabled=True, source=None)
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+    def test_malformed_mcp_coder_toml_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Malformed mcp-coder.toml → default, plus a logged warning."""
+        (tmp_path / "mcp-coder.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            setting = get_format_code(tmp_path)
+        assert setting == FormatCodeSetting(enabled=True, source=None)
+        assert any(
+            r.levelno == logging.WARNING and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_non_bool_in_mcp_coder_toml_raises(self, tmp_path: Path) -> None:
+        """A non-bool value in mcp-coder.toml names that file."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nformat_code = "no"\n', encoding="utf-8"
+        )
+        with pytest.raises(ValueError) as exc_info:
+            get_format_code(tmp_path)
+        assert "format_code" in str(exc_info.value)
+        assert str(tmp_path / "mcp-coder.toml") in str(exc_info.value)
 
     def test_non_bool_raises(self, tmp_path: Path) -> None:
         """A string value raises ValueError naming key and file."""
@@ -198,16 +241,20 @@ class TestGetFormatCode:
         assert str(tmp_path / "pyproject.toml") in str(exc_info.value)
 
     def test_missing_file_defaults_to_enabled(self, tmp_path: Path) -> None:
-        """No pyproject.toml → enabled, not explicit."""
-        assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=True, explicit=False
-        )
+        """No config file → enabled, no source."""
+        assert get_format_code(tmp_path) == FormatCodeSetting(enabled=True, source=None)
 
-    def test_malformed_file_defaults_to_enabled(self, tmp_path: Path) -> None:
-        """Malformed pyproject.toml → enabled, not explicit."""
+    def test_malformed_file_defaults_to_enabled(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Malformed pyproject.toml → enabled, no source, plus a logged warning."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
-        assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=True, explicit=False
+        with caplog.at_level(logging.WARNING):
+            setting = get_format_code(tmp_path)
+        assert setting == FormatCodeSetting(enabled=True, source=None)
+        assert any(
+            r.levelno == logging.WARNING and "pyproject.toml" in r.getMessage()
+            for r in caplog.records
         )
 
     def test_legacy_key_is_not_read(self, tmp_path: Path) -> None:
@@ -215,8 +262,97 @@ class TestGetFormatCode:
         (tmp_path / "pyproject.toml").write_text(
             "[tool.mcp-coder.implement]\nformat_code = false\n", encoding="utf-8"
         )
-        assert get_format_code(tmp_path) == FormatCodeSetting(
-            enabled=True, explicit=False
+        assert get_format_code(tmp_path) == FormatCodeSetting(enabled=True, source=None)
+
+
+class TestGetPromptsConfigFiles:
+    """Tests for get_prompts_config reading pyproject.toml or mcp-coder.toml."""
+
+    def test_mcp_coder_toml_only(self, tmp_path: Path) -> None:
+        """[tool.mcp-coder.prompts] in mcp-coder.toml is used."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder.prompts]\n"
+            'project-prompt = "p.md"\n'
+            'claude-system-prompt-mode = "replace"\n',
+            encoding="utf-8",
+        )
+        config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt == "p.md"
+        assert config.claude_system_prompt_mode == "replace"
+
+    def test_both_files_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Both files define the table, even with different keys → defaults."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.prompts]\nsystem-prompt = "s.md"\n', encoding="utf-8"
+        )
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.prompts]\nproject-prompt = "p.md"\n', encoding="utf-8"
+        )
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING
+            and "pyproject.toml" in r.getMessage()
+            and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_malformed_mcp_coder_toml_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Malformed mcp-coder.toml beside a valid pyproject.toml → defaults."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.prompts]\nsystem-prompt = "s.md"\n', encoding="utf-8"
+        )
+        (tmp_path / "mcp-coder.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_invalid_mode_warning_names_mcp_coder_toml(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The invalid-mode warning names the file the mode came from."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder.prompts]\nclaude-system-prompt-mode = "bogus"\n',
+            encoding="utf-8",
+        )
+        with caplog.at_level(logging.WARNING):
+            get_prompts_config(tmp_path)
+        assert any(
+            r.levelno == logging.WARNING
+            and "claude-system-prompt-mode" in r.getMessage()
+            and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_non_table_prompts_default_and_warn(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """prompts = "x" → defaults and a warning, not an AttributeError."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nprompts = "x"\n', encoding="utf-8"
+        )
+        with caplog.at_level(logging.WARNING):
+            config = get_prompts_config(tmp_path)
+        assert config.system_prompt is None
+        assert config.project_prompt is None
+        assert config.claude_system_prompt_mode == "append"
+        assert any(
+            r.levelno == logging.WARNING and "mcp-coder.toml" in r.getMessage()
+            for r in caplog.records
         )
 
 

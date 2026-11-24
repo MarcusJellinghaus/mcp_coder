@@ -28,6 +28,7 @@ from .verify_formatting import (
     _format_section,
     _hint,
 )
+from .verify_project_keys import key_warning_rows
 from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
 from .verify_toolkit_rows import check_type_hints_row, toolkit_rows
@@ -389,14 +390,15 @@ def _file_access_row(
 
 
 def _format_code_row(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
+    project_dir: Path, symbols: dict[str, str], out: SectionBuilder, indent: int = 4
 ) -> bool:
-    """Add the ``[tool.mcp-coder] format_code`` row to *out*.
+    """Add the ``[tool.mcp-coder] format_code`` row to *out*, naming its source.
 
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
         out: Builder the row is added to.
+        indent: Indent of the row.
 
     Returns:
         False if the value is invalid (row added as [ERR]).
@@ -404,15 +406,14 @@ def _format_code_row(
     try:
         setting = get_format_code(project_dir)
     except ValueError as exc:
-        out.add(Row("format_code", symbols["failure"], str(exc), 4))
+        out.add(Row("format_code", symbols["failure"], str(exc), indent))
         return False
-    if not setting.enabled:
-        value = "disabled"
-    elif setting.explicit:
-        value = "enabled"
-    else:
+    if setting.source is None:
         value = "enabled (default)"
-    out.add(Row("format_code", symbols["success"], value, 4))
+    else:
+        state = "enabled" if setting.enabled else "disabled"
+        value = f"{state} ({setting.source})"
+    out.add(Row("format_code", symbols["success"], value, indent))
     return True
 
 
@@ -437,8 +438,10 @@ def _print_project_section(
         out.add(Row("pyproject.toml", symbols["warning"], "not found"))
         out.add(Row("Language", symbols["success"], "(none detected)"))
         file_access_ok = _file_access_row(project_dir, symbols, out)
-        ok = toolkit_rows(project_dir, symbols, out, indent=2)
+        ok = _format_code_row(project_dir, symbols, out, indent=2)
+        ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
         ok = setup_rows(project_dir, symbols, out, indent=2) and ok
+        out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
         out.close()
         return ok and file_access_ok
     out.add(Row("pyproject.toml", symbols["success"], "found"))
@@ -461,6 +464,7 @@ def _print_project_section(
         )
         ok = False
     ok = check_type_hints_row(project_dir, symbols, out) and ok
+    out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
     out.close()
     return ok and file_access_ok
 
