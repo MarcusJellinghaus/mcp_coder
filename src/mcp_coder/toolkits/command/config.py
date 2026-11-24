@@ -6,17 +6,26 @@ collected as `Problem` items, tagged global or `(action, depth)`.
 """
 
 import os
+import re
 import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Any, Literal
+
+ExitCodes = dict[int | tuple[int, int], str]
+"""Exit code table: a single code is an `int` key, a range `N-M` is `(N, M)`."""
 
 ACTIONS = ("format", "check", "test")
 PARSERS = ("exit-code", "junit")
 STATUSES = ("ok", "findings", "skipped", "error")
 LLM_PERMISSIONS = ("bash", "none")
-DEFAULT_EXIT_CODES: dict[int, str] = {0: "ok", 1: "findings"}
+DEFAULT_EXIT_CODES: ExitCodes = {0: "ok", 1: "findings"}
 DEFAULT_TIMEOUT = 600
+
+# ASCII digits only (`\d` matches other scripts); used with `fullmatch`
+# because `$` also matches before a trailing newline.
+_EXIT_CODE_KEY = re.compile(r"([0-9]+)(?:-([0-9]+))?")
 
 _DEFAULT_KEYS = ("llm_permissions", "parser", "exit_codes", "timeout")
 _STEP_KEYS = ("argv", "name", "parser", "exit_codes", "timeout", "report")
@@ -30,7 +39,7 @@ class Step:
     argv: tuple[str, ...]
     name: str | None
     parser: str
-    exit_codes: dict[int, str]
+    exit_codes: ExitCodes
     timeout: int
     report: str | None
     grant: str | None
@@ -83,23 +92,41 @@ class ParsedConfig:
 class _Defaults:
     llm_permissions: str | None  # None when the configured value is invalid
     parser: str
-    exit_codes: dict[int, str]
+    exit_codes: ExitCodes
     timeout: int
 
 
-def _exit_codes_errors(value: Any) -> tuple[dict[int, str], list[str]]:
+def _exit_code_key(key: Any) -> int | tuple[int, int] | None:
+    """Return `N` for `"N"`, `(N, M)` for `"N-M"`, or None when malformed."""
+    match = _EXIT_CODE_KEY.fullmatch(key) if isinstance(key, str) else None
+    if match is None:
+        return None
+    try:
+        start = int(match.group(1))
+        end = int(match.group(2) or match.group(1))
+    except ValueError:  # strings over Python's int digit limit
+        return None
+    if start > end:
+        return None
+    return (start, end) if match.group(2) else start
+
+
+def _exit_codes_errors(value: Any) -> tuple[ExitCodes, list[str]]:
+    """Return the parsed table and its errors; the table is unusable on errors."""
     if not isinstance(value, Mapping):
         return {}, [f"exit_codes must be a table, got {value!r}"]
-    table: dict[int, str] = {}
+    table: ExitCodes = {}
     errors: list[str] = []
+    spans: list[tuple[Any, int, int]] = []
     for key, status in value.items():
-        try:
-            if isinstance(key, bool):
-                raise ValueError
-            code = int(key)
-        except (TypeError, ValueError):
-            errors.append(f"exit_codes key must be an integer, got {key!r}")
+        code = _exit_code_key(key)
+        if code is None:
+            errors.append(
+                f"exit_codes key must be a code or a range N-M with N <= M, got {key!r}"
+            )
             continue
+        start, end = code if isinstance(code, tuple) else (code, code)
+        spans.append((key, start, end))
         if status not in STATUSES:
             errors.append(
                 f"exit_codes value for {key!r} must be one of "
@@ -107,7 +134,29 @@ def _exit_codes_errors(value: Any) -> tuple[dict[int, str], list[str]]:
             )
             continue
         table[code] = status
+    for (key_a, lo_a, hi_a), (key_b, lo_b, hi_b) in combinations(spans, 2):
+        if lo_a <= hi_b and lo_b <= hi_a:
+            errors.append(
+                "exit_codes key must not overlap another key, "
+                f"got {key_b!r} (overlaps {key_a!r})"
+            )
     return table, errors
+
+
+def exit_code_status(table: ExitCodes, code: int) -> str:
+    """Return the status the table maps `code` to.
+
+    Keys never overlap, so the first match is the only one. A code no key
+    matches is `ok` when it is 0 and `error` otherwise.
+
+    Returns:
+        One of `STATUSES`.
+    """
+    for key, status in table.items():
+        lo, hi = key if isinstance(key, tuple) else (key, key)
+        if lo <= code <= hi:
+            return status
+    return "ok" if code == 0 else "error"
 
 
 def _timeout_error(value: Any) -> str | None:
