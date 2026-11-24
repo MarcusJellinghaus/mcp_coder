@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Parse range keys strictly and reject overlaps
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests in `TestExitCodes` (test_config.py), then `ExitCodes` alias, strict key parsing and overlap check in `config.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Look up exit codes by range, unlisted `0` is `ok`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: tests in test_config.py and test_toolkit_run.py, then `exit_code_status` in `config.py` used by `toolkit.py::_run_step`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Document range keys and the unlisted-`0` rule
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: update `exit_codes` rows and add dependency-cruiser rule in `docs/configuration/toolkits.md`
+- [ ] Quality checks: pytest — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`, address findings
+- [ ] PR summary prepared
