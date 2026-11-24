@@ -25,7 +25,7 @@ Confirm and display the current feature branch name.
 
 Use `mcp__mcp-workspace__git` with command `"diff"` to get the changes to review.
 
-No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.
+No need to run all checks; do not report linter warnings. Feel free to further analyse any mentioned files and/or the file structure.
 
 ### Focus Areas:
 - Logic errors or bugs

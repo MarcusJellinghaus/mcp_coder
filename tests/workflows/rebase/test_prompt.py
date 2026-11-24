@@ -2,7 +2,7 @@
 
 Covers the ``Rebase Conflict Resolution`` and ``Rebase Regression Fix`` sections
 used by the Python-driven rebase, including a drift check that keeps the
-conflict prompt's strategy rows in sync with the packaged ``SKILL.md``, plus a
+conflict prompt's strategy rows in sync with the repo-root ``SKILL.md``, plus a
 guard that the legacy ``Automated Rebase`` section stays removed.
 """
 
@@ -15,13 +15,13 @@ import pytest
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.toolkits.command import CommandToolkit
-from mcp_coder.utils.data_files import find_data_file
 from mcp_coder.utils.toolkit_runner import llm_permissions
 from mcp_coder.workflows.rebase_prompt import (
     _build_regression_fix_prompt,
     _check_tool_texts,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
 _CONFLICT_HEADER = "Rebase Conflict Resolution"
 _REGRESSION_HEADER = "Rebase Regression Fix"
 
@@ -41,8 +41,8 @@ def _table_rows(lines: list[str]) -> set[str]:
 
 
 def _skill_strategy_rows() -> set[str]:
-    """Conflict-strategy table rows from the packaged ``SKILL.md``."""
-    skill_path = find_data_file("mcp_coder", "resources/claude/skills/rebase/SKILL.md")
+    """Conflict-strategy table rows from the repo-root ``SKILL.md``."""
+    skill_path = REPO_ROOT / ".claude" / "skills" / "rebase" / "SKILL.md"
     skill = skill_path.read_text(encoding="utf-8")
     section: list[str] = []
     capturing = False

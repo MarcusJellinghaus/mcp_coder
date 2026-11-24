@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Toolkit-neutral prose in every deployed `.claude/` file — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code): `test_init_deployed_neutral.py`, retarget `test_prompt.py`, neutralise skill/agent/knowledge-base bodies, extend `python.md`, sync `prompts.md` rebase row
-- [ ] Quality checks (format, pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `test_init_deployed_neutral.py`, retarget `test_prompt.py`, neutralise skill/agent/knowledge-base bodies, extend `python.md`, sync `prompts.md` rebase row
+- [x] Quality checks (format, pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
