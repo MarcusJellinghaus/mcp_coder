@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+from mcp_coder.cli.commands.coordinator import DispatchResult, execute_coordinator_run
 from mcp_coder.mcp_workspace_github import (
     BodyTrust,
     BodyTrustResult,
@@ -76,7 +76,9 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[dict[str, MagicMock]]:
         patch(f"{_COMMANDS}.IssueBranchManager"),
         patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
         patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
-        patch(f"{_COMMANDS}.dispatch_workflow", return_value=True) as dispatch,
+        patch(
+            f"{_COMMANDS}.dispatch_workflow", return_value=DispatchResult.STARTED
+        ) as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
     ):
         yield {
@@ -206,3 +208,37 @@ class TestCoordinatorTrustGate:
         assert result == 0
         mocks["trust"].assert_called_once_with(mocks["issue_mgr"], fallback_issue)
         mocks["dispatch"].assert_not_called()
+
+
+class TestCoordinatorDispatchResult:
+    """How execute_coordinator_run reacts to each DispatchResult."""
+
+    def test_not_started_still_updates_cache_and_continues(
+        self, mocks: dict[str, MagicMock]
+    ) -> None:
+        mocks["get_cached"].return_value = [_issue(1), _issue(2)]
+        mocks["dispatch"].side_effect = [
+            DispatchResult.NOT_STARTED,
+            DispatchResult.STARTED,
+        ]
+
+        result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert _dispatched_numbers(mocks["dispatch"]) == [1, 2]
+        cached = [
+            c.kwargs["issue_number"] for c in mocks["update_cache"].call_args_list
+        ]
+        assert cached == [1, 2]
+
+    def test_label_rate_limited_stops_run_with_exit_1(
+        self, mocks: dict[str, MagicMock]
+    ) -> None:
+        mocks["get_cached"].return_value = [_issue(1), _issue(2)]
+        mocks["dispatch"].return_value = DispatchResult.STARTED_LABEL_RATE_LIMITED
+
+        result = execute_coordinator_run(_args())
+
+        assert result == 1
+        assert _dispatched_numbers(mocks["dispatch"]) == [1]
+        mocks["update_cache"].assert_not_called()

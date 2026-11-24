@@ -32,6 +32,7 @@ from .commands_vscodeclaude import (
     execute_coordinator_vscodeclaude_status,
 )
 from .core import (
+    DispatchResult,
     _filter_eligible_issues,
     dispatch_workflow,
     get_cached_eligible_issues,
@@ -50,6 +51,7 @@ __all__ = [
     "execute_coordinator_vscodeclaude_status",
     "format_job_output",
     # Public business logic
+    "DispatchResult",
     "dispatch_workflow",
     "get_cached_eligible_issues",
     "get_eligible_issues",

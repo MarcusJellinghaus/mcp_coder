@@ -7,6 +7,7 @@ This module contains:
 """
 
 import logging
+from enum import Enum
 
 from ....config.label_config import load_labels_config
 from ....mcp_workspace_github import (
@@ -363,6 +364,14 @@ def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:
     return f"{repo_name} - {identifier} - {action}"
 
 
+class DispatchResult(Enum):
+    """Outcome of dispatch_workflow."""
+
+    STARTED = "started"
+    NOT_STARTED = "not_started"  # no linked branch, or invalid repo URL
+    STARTED_LABEL_RATE_LIMITED = "started_label_rate_limited"
+
+
 def dispatch_workflow(
     issue: IssueData,
     workflow_name: str,  # pylint: disable=unused-argument
@@ -372,7 +381,7 @@ def dispatch_workflow(
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
     log_level: str,
-) -> bool:
+) -> DispatchResult:
     """Trigger Jenkins job for workflow and update issue label.
 
     Args:
@@ -386,8 +395,10 @@ def dispatch_workflow(
         log_level: Log level to pass to workflow command
 
     Returns:
-        True unless the Jenkins job started but the label swap hit a GitHub
-        rate limit.
+        STARTED when the Jenkins job started and the label was swapped;
+        NOT_STARTED when no job was started (no linked branch, or invalid
+        repo URL); STARTED_LABEL_RATE_LIMITED when the job started but the
+        label swap hit a GitHub rate limit.
 
     Raises:
         ValueError: If linked branch missing for implement/create-pr
@@ -415,7 +426,7 @@ def dispatch_workflow(
             logger.error(
                 f"Invalid GitHub URL in repo config: {repo_config['repo_url']}"
             )
-            return True
+            return DispatchResult.NOT_STARTED
 
         repo_owner, issue_repo_name = repo_id.owner, repo_id.repo_name
 
@@ -433,7 +444,7 @@ def dispatch_workflow(
                 f"  Issue URL: {issue['url']}\n"
                 f"  Requirement: Issue must have linked branch or draft/open PR"
             )
-            return True
+            return DispatchResult.NOT_STARTED
 
         branch_name = resolved_branch
 
@@ -491,7 +502,7 @@ def dispatch_workflow(
             workflow_config["next_label"],
             exc,
         )
-        return False
+        return DispatchResult.STARTED_LABEL_RATE_LIMITED
 
     # Step 8: Log success with issue and Jenkins links
     issue_url = issue["url"]
@@ -500,4 +511,4 @@ def dispatch_workflow(
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
         f"Issue: {issue_url} | {jenkins_link}",
     )
-    return True
+    return DispatchResult.STARTED

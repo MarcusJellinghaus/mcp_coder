@@ -15,6 +15,7 @@ import pytest
 
 from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND,
+    DispatchResult,
     execute_coordinator_run,
     execute_coordinator_test,
     format_job_output,
@@ -261,7 +262,7 @@ class TestExecuteCoordinatorRun:
         ]
 
         # Setup - Mock dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = True
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
 
         # Execute
         result = execute_coordinator_run(args)

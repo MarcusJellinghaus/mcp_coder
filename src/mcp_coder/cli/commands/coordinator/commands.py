@@ -33,6 +33,7 @@ from ....workflow_utils.rate_limit import (
 from ...utils import log_command_startup
 from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import (
+    DispatchResult,
     build_jenkins_label,
     dispatch_workflow,
     get_cached_eligible_issues,
@@ -316,7 +317,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     workflow_name = workflow_config["workflow"]
 
                     try:
-                        if not dispatch_workflow(
+                        result = dispatch_workflow(
                             issue=issue,
                             workflow_name=workflow_name,
                             repo_config=validated_config,
@@ -325,7 +326,8 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                             issue_manager=issue_manager,
                             branch_manager=branch_manager,
                             log_level=args.log_level,
-                        ):
+                        )
+                        if result is DispatchResult.STARTED_LABEL_RATE_LIMITED:
                             # Job started, label swap hit a rate limit
                             return 1
 

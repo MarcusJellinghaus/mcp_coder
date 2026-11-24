@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    DispatchResult,
     execute_coordinator_run,
 )
 from mcp_coder.mcp_workspace_github import RepoIdentifier
@@ -70,6 +71,7 @@ class TestCoordinatorRunCacheIntegration:
         mock_jenkins_class.return_value = mock_jenkins
         mock_issue_mgr_class.return_value = mock_issue_mgr
         mock_branch_mgr_class.return_value = mock_branch_mgr
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
 
         # Setup - Mock eligible issues from cache (force refresh scenario)
         mock_get_cached_issues.return_value = [
@@ -336,7 +338,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = True
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
 
         # Execute
         result = execute_coordinator_run(args)
@@ -423,7 +425,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds, but cache update fails
-        mock_dispatch_workflow.return_value = True
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
         mock_update_cache.side_effect = Exception("Cache update error")
 
         # Execute
@@ -535,7 +537,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = test_issues
 
         # Setup - All dispatches succeed
-        mock_dispatch_workflow.return_value = True
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
 
         # Execute
         result = execute_coordinator_run(args)

@@ -3,7 +3,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator import WORKFLOW_MAPPING, dispatch_workflow
+from mcp_coder.cli.commands.coordinator import (
+    WORKFLOW_MAPPING,
+    DispatchResult,
+    dispatch_workflow,
+)
 from mcp_coder.mcp_workspace_github import GithubException, IssueData
 from tests.github_factories import make_issue_data
 
@@ -57,7 +61,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
-        assert result is True
+        assert result is DispatchResult.STARTED
 
         # Verify - Jenkins job started with correct parameters
         mock_jenkins.start_job.assert_called_once()
@@ -178,7 +182,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
-        assert result is True
+        assert result is DispatchResult.NOT_STARTED
 
         # Verify RepoIdentifier.from_repo_url was called
         mock_repo_id_cls.from_repo_url.assert_called_once_with(
@@ -197,6 +201,46 @@ class TestDispatchWorkflow:
         mock_jenkins.start_job.assert_not_called()
 
         # Verify no label updates occurred (should return early)
+        mock_issue_mgr.remove_labels.assert_not_called()
+        mock_issue_mgr.add_labels.assert_not_called()
+
+    def test_dispatch_workflow_invalid_repo_url_not_started(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unparseable repo_url logs an error and starts no Jenkins job."""
+        issue = make_issue_data(
+            number=157,
+            title="Implement feature",
+            labels=["status-05:plan-ready"],
+            url="https://github.com/test/repo/issues/157",
+        )
+        repo_config = {
+            "repo_url": "not-a-github-url",
+            "executor_job_path": "Tests/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        caplog.set_level(logging.ERROR, logger="mcp_coder.cli.commands.coordinator")
+
+        result = dispatch_workflow(
+            issue=issue,
+            workflow_name="implement",
+            repo_config=repo_config,
+            repo_name="mcp_coder",
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        assert result is DispatchResult.NOT_STARTED
+        assert "Invalid GitHub URL in repo config: not-a-github-url" in caplog.text
+        mock_branch_mgr.get_branch_with_pr_fallback.assert_not_called()
+        mock_jenkins.start_job.assert_not_called()
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
@@ -253,7 +297,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
-        assert result is True
+        assert result is DispatchResult.STARTED
 
         # Verify RepoIdentifier.from_repo_url was called
         mock_repo_id_cls.from_repo_url.assert_called_once_with(
@@ -287,7 +331,7 @@ def _rest_rate_limit() -> GithubException:
 
 
 class TestDispatchWorkflowRateLimit:
-    """Rate limits during dispatch: before start_job propagate, after it return False."""
+    """Rate limits during dispatch: before start_job propagate, after it are reported."""
 
     REPO_CONFIG = {
         "repo_url": "https://github.com/test/repo.git",
@@ -325,7 +369,7 @@ class TestDispatchWorkflowRateLimit:
 
         mock_jenkins.start_job.assert_not_called()
 
-    def test_label_swap_rate_limit_returns_false(
+    def test_label_swap_rate_limit_returns_started_label_rate_limited(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         mock_jenkins = MagicMock()
@@ -348,7 +392,7 @@ class TestDispatchWorkflowRateLimit:
                 log_level="INFO",
             )
 
-        assert result is False
+        assert result is DispatchResult.STARTED_LABEL_RATE_LIMITED
         mock_jenkins.start_job.assert_called_once()
         errors = [r for r in caplog.records if r.levelno == logging.ERROR]
         assert len(errors) == 1
