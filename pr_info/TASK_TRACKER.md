@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Parse range keys strictly and reject overlaps
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `TestExitCodes` (test_config.py), then `ExitCodes` alias, strict key parsing and overlap check in `config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `TestExitCodes` (test_config.py), then `ExitCodes` alias, strict key parsing and overlap check in `config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Look up exit codes by range, unlisted `0` is `ok`
 See [step_2.md](./steps/step_2.md)

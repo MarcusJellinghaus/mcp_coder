@@ -127,6 +127,88 @@ class TestExitCodes:
         assert len(parsed.global_errors()) == 1
         assert parsed.global_errors()[0].scope is None
 
+    def test_range_key_becomes_tuple(self) -> None:
+        parsed = parse_config(
+            {
+                "check": {
+                    "quick": [
+                        {
+                            "argv": ["lint"],
+                            "exit_codes": {"0": "ok", "1-125": "findings"},
+                        }
+                    ]
+                }
+            }
+        )
+        assert parsed.problems == []
+        assert _only_step(parsed, "check", "quick").exit_codes == {
+            0: "ok",
+            (1, 125): "findings",
+        }
+
+    @pytest.mark.parametrize(
+        "exit_codes",
+        [
+            {"+3": "ok"},
+            {"1_0": "ok"},
+            {"-1": "ok"},
+            {" 3 ": "ok"},
+            {"3\n": "ok"},
+            {"٣": "ok"},
+            {"1-2-3": "ok"},
+            {"3-": "ok"},
+            {3: "ok"},
+            {"9" * 5000: "ok"},
+            {"5-3": "findings"},
+            {"1-5": "findings", "4-9": "error"},
+            {"1-5": "findings", "3": "error"},
+            {"1": "findings", "01": "error"},
+            {"1-5": "great"},
+        ],
+    )
+    def test_invalid_table_is_error(self, exit_codes: dict[Any, Any]) -> None:
+        parsed = parse_config(
+            {"check": {"quick": [{"argv": ["lint"], "exit_codes": exit_codes}]}}
+        )
+        assert parsed.errors_for("check", "quick")
+        assert parsed.steps["check"]["quick"] == []
+
+    def test_malformed_key_message(self) -> None:
+        parsed = parse_config(
+            {"check": {"quick": [{"argv": ["lint"], "exit_codes": {"+3": "ok"}}]}}
+        )
+        message = _messages(parsed.errors_for("check", "quick"))
+        assert "exit_codes key must be" in message
+        assert repr("+3") in message
+
+    def test_overlap_message(self) -> None:
+        parsed = parse_config(
+            {
+                "check": {
+                    "quick": [
+                        {
+                            "argv": ["lint"],
+                            "exit_codes": {"1-5": "findings", "4-9": "error"},
+                        }
+                    ]
+                }
+            }
+        )
+        message = _messages(parsed.errors_for("check", "quick"))
+        assert "overlap" in message
+        assert repr("1-5") in message
+        assert repr("4-9") in message
+
+    def test_bad_default_range_is_global_error(self) -> None:
+        parsed = parse_config(
+            {
+                "exit_codes": {"5-3": "findings"},
+                "check": {"quick": [{"argv": ["lint"]}]},
+            }
+        )
+        assert len(parsed.global_errors()) == 1
+        assert _only_step(parsed, "check", "quick").exit_codes == DEFAULT_EXIT_CODES
+
 
 class TestUnknownKeys:
     """Unknown top-level, action and step keys."""
