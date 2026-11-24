@@ -15,3 +15,11 @@ Add a test on the same real command-toolkit project. It should feed the scoped g
 Verdict(decision='tasks', tasks=["In pr_info/steps/summary.md:31, replace 'Rebase doesn't change' with a statement that rebase sessions now list only the rebase binding's grants in the [check_instructions] slot, under Decision 4. In pr_info/steps/step_1.md, add one test that pins this: a rebase session's resolved [check_instructions] lists only the rebase binding's grants.", "In pr_info/steps/step_1.md, make resolve_prompt_slots the only place that builds the re-run list. Change CommandToolkit.prompt_fragments()['check_instructions'] so it no longer builds _RERUN_INTRO + _steps_text(all_steps). Keep only the '' result needed for llm_permissions = 'none'. Drop the planned toolkit→prompt_slots import and do not move RERUN_INTRO across layers. Update test_toolkit_describe.py to match.", "In pr_info/steps/step_2.md, add an acceptance test on the same real command-toolkit project. It passes the scoped grants for implement_task + implement_final, and for implement_final alone, into resolve_prompt_slots('[check_instructions]', ...). For implement_task, assert the listed commands are exactly the union of check@quick, check@standard and test@quick. For both cases, assert that check.full, test.mutation, format.apply and format.check do not appear."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-24
+**Findings**:
+Checking the command toolkit's grant format and session call sites against the plan's claims.Nearly done — checking pylint limits that could affect step 3's added helper and the larger `toolkit_rows`.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
