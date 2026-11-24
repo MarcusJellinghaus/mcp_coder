@@ -18,6 +18,7 @@ from mcp_coder.utils.toolkit import (
 )
 from mcp_coder.utils.toolkit_runner import (
     LoadedToolkit,
+    can_request,
     get_fragment,
     load_toolkit,
     load_toolkit_config,
@@ -242,6 +243,21 @@ class TestLoadToolkit:
 def test_resolve_depth(declared: list[str], depth: str, expected: str | None) -> None:
     """Declared runs; standard depths fall back downward; others don't."""
     assert resolve_depth(declared, depth) == expected
+
+
+@pytest.mark.parametrize(
+    ("action", "depth", "expected"),
+    [
+        ("format", "check", False),
+        ("format", "apply", True),
+        ("check", "full", True),
+        ("test", "mutation", True),
+        ("lint", "quick", False),
+    ],
+)
+def test_can_request(action: str, depth: str, expected: bool) -> None:
+    """Only an action no entry allows, or a forbidden request, can't be requested."""
+    assert can_request(action, depth) is expected
 
 
 class TestRunRequest:

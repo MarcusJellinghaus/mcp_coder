@@ -43,7 +43,9 @@ class TestBashGrants:
 
         _run_ci_fix(config, "the problem", fix_attempt=0)
 
-        mock_perms.assert_called_once_with(config.project_dir, config.provider)
+        mock_perms.assert_called_once_with(
+            config.project_dir, config.provider, "implement_final"
+        )
         grants = mock_prompt_llm.call_args.kwargs["bash_grants"]
         assert grants == ["Bash(npm test)"]
         assert mock_slots.call_args.args[3] == grants

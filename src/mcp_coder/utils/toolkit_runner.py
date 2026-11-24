@@ -85,6 +85,9 @@ _NO_TOOLKIT_HELP = (
     f"e.g. test@quick and test@unattended). See {_CONFIGURE_URL}"
 )
 
+# Entry-point key of the command toolkit, whose depths and grants the user writes
+COMMAND_TOOLKIT = "command"
+
 _BASH_PREFIX = "Bash("
 # Warn once per process when Bash grants are dropped for a non-Claude provider
 _bash_drop_warned = False
@@ -382,6 +385,23 @@ def resolve_depth(declared: list[str], depth: str) -> str | None:
         if candidate in declared:
             return candidate
     return None
+
+
+def can_request(action: str, depth: str) -> bool:
+    """Whether any binding entry may request ``action@depth``.
+
+    Args:
+        action: Action name.
+        depth: Depth name.
+
+    Returns:
+        True if some entry allows the action and doesn't forbid the request.
+    """
+    request = f"{action}@{depth}"
+    return any(
+        action in allowed and request not in _FORBIDDEN_REQUESTS.get(entry, ())
+        for entry, allowed in _ALLOWED_ACTIONS.items()
+    )
 
 
 def run_request(loaded: LoadedToolkit, project_dir: Path, request: str) -> ActionResult:

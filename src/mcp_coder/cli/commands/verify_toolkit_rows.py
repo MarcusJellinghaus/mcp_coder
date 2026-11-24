@@ -1,8 +1,10 @@
 """Toolkit rows of the verify command's PROJECT section.
 
 Holds the Toolkit row, the toolkit's verify items per requested action, one
-row per requested depth the toolkit doesn't declare, and the row for the
-retired ``[tool.mcp-coder.implement] check_type_hints`` key. Same
+row per requested depth the toolkit doesn't declare, one row per declared
+depth (naming the bindings that run it, or for the command toolkit warning
+when none does), and the row for the retired
+``[tool.mcp-coder.implement] check_type_hints`` key. Same
 one-directional shape as ``verify_setup``: nothing here reaches back into
 ``verify_sections`` or ``verify.py``.
 """
@@ -13,7 +15,9 @@ from pathlib import Path
 from ...utils.pyproject_config import get_format_code, get_leftover_check_type_hints
 from ...utils.toolkit import VerifyItem
 from ...utils.toolkit_runner import (
+    COMMAND_TOOLKIT,
     LoadedToolkit,
+    can_request,
     load_toolkit,
     load_toolkit_config,
     resolve_depth,
@@ -114,15 +118,87 @@ def _depth_row(
     return Row(label, symbols["failure"], f"not declared {by}", indent, wrap=True)
 
 
+def _ran_by(
+    loaded: LoadedToolkit, requests: dict[tuple[str, str], list[str]]
+) -> dict[tuple[str, str], list[str]]:
+    """Map each depth that runs to the entries whose requests resolve to it.
+
+    Args:
+        loaded: The loaded toolkit.
+        requests: ``(action, depth)`` mapped to the requesting entries.
+
+    Returns:
+        ``(action, resolved depth)`` mapped to the binding entries, both in
+        first-seen order; requests that can't run are left out.
+    """
+    out: dict[tuple[str, str], list[str]] = {}
+    for (action, depth), entries in requests.items():
+        resolved = resolve_depth(loaded.info.actions.get(action, []), depth)
+        if resolved is None:
+            continue
+        ran = out.setdefault((action, resolved), [])
+        for entry in entries:
+            if entry not in ran:
+                ran.append(entry)
+    return out
+
+
+def _declared_row(
+    action: str,
+    depth: str,
+    ran: dict[tuple[str, str], list[str]],
+    ran_any: dict[tuple[str, str], list[str]],
+    command: bool,
+    symbols: dict[str, str],
+    indent: int,
+) -> Row | None:
+    """Row for one declared depth; None for an unrequested depth of other toolkits.
+
+    Args:
+        action: Declared action.
+        depth: Declared depth.
+        ran: Depths that run, mapped to their entries, as configured.
+        ran_any: The same with ``format_code`` on.
+        command: Whether the toolkit is the command toolkit.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+        indent: Number of leading spaces.
+
+    Returns:
+        An ok row naming the entries that run the depth; for the command
+        toolkit a warning row when none does; otherwise None.
+    """
+    label = f"{action}@{depth}"
+    key = (action, depth)
+    if key in ran:
+        message = f"requested by {', '.join(ran[key])}"
+        return Row(label, symbols["success"], message, indent, wrap=True)
+    if not command:
+        return None
+    if not can_request(action, depth):
+        message = "no binding can request it; delete it"
+    elif key in ran_any:
+        message = "unused while format_code is off"
+    else:
+        message = "not requested by any binding; delete it or add it to a binding"
+    return Row(label, symbols["warning"], message, indent, wrap=True)
+
+
 def toolkit_rows(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
 ) -> bool:
-    """Add the Toolkit row, the global items, then one group per requested action.
+    """Add the Toolkit row, the global items, then one group per action.
 
-    ``verify()`` runs once per requested action the toolkit declares; ``commit``
-    requests count only while ``format_code`` is on. When two or more actions
-    return items, the items every one of them returns are shown once as global
-    items, and the other ``check`` / ``test`` errors are shown as warnings.
+    Groups cover the requested actions and, for the command toolkit, every
+    declared action. ``verify()`` runs once per requested action the toolkit
+    declares; ``commit`` requests count only while ``format_code`` is on. When
+    two or more actions return items, the items every one of them returns are
+    shown once as global items, and the other ``check`` / ``test`` errors are
+    shown as warnings.
+
+    Each group lists its verify items, a row per requested depth the toolkit
+    doesn't declare, then a row per declared depth: ok naming the bindings that
+    run it (fallback included); for the command toolkit a warning when no
+    binding runs it. Warnings never make the result False.
 
     Args:
         project_dir: Path to the project directory.
@@ -142,6 +218,13 @@ def toolkit_rows(
 
     requests = _requests(loaded.config.bindings, _formatting_enabled(project_dir))
     actions = list(dict.fromkeys(action for action, _ in requests))
+    # Only the command toolkit's depths are user-written, so only they are flagged
+    command = loaded.name == COMMAND_TOOLKIT
+    groups = list(
+        dict.fromkeys(actions + (list(loaded.info.actions) if command else []))
+    )
+    ran = _ran_by(loaded, requests)
+    ran_any = _ran_by(loaded, _requests(loaded.config.bindings, True))
     returned: dict[str, list[VerifyItem]] = {}
     raised: dict[str, str] = {}
     for action in actions:
@@ -176,7 +259,7 @@ def toolkit_rows(
     out.add(*rows)
     ok = all(row.marker != symbols["failure"] for row in rows)
 
-    for action in actions:
+    for action in groups:
         group: list[Row] = []
         if action in raised:
             severity = "failure" if action == "format" else "warning"
@@ -203,6 +286,12 @@ def toolkit_rows(
             row = _depth_row(loaded, action, depth, entries, symbols, indent + 4)
             if row is not None:
                 group.append(row)
+        for depth in loaded.info.actions.get(action, []):
+            declared_row = _declared_row(
+                action, depth, ran, ran_any, command, symbols, indent + 4
+            )
+            if declared_row is not None:
+                group.append(declared_row)
         if group:
             out.add(" " * (indent + 2) + action, *group)
             ok = ok and all(row.marker != symbols["failure"] for row in group)

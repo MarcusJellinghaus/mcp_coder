@@ -204,8 +204,9 @@ def _run_ci_fix(
     """
     # Load fix prompt with problem_description and the toolkit's slots
     try:
+        # Least privilege: a CI fix is held to the implement_final checks
         bash_grants = bash_grants_of(
-            llm_permissions(config.project_dir, config.provider)
+            llm_permissions(config.project_dir, config.provider, "implement_final")
         )
         template = get_prompt(str(PROMPTS_FILE_PATH), config.fix_prompt_header)
         fix_prompt = fill_prompt(

@@ -183,7 +183,12 @@ def process_single_task(
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
     try:
-        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+        # Least privilege: grants only for the depths the task's work is
+        # checked against, i.e. both implement bindings
+        permissions = llm_permissions(
+            project_dir, provider, "implement_task"
+        ) + llm_permissions(project_dir, provider, "implement_final")
+        bash_grants = bash_grants_of(list(dict.fromkeys(permissions)))
         template = get_prompt(
             str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
         )

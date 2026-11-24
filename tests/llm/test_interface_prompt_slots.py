@@ -8,6 +8,7 @@ import pytest
 
 from mcp_coder.llm.interface import prompt_llm, prompt_llm_stream
 from mcp_coder.utils import prompt_slots
+from mcp_coder.utils.prompt_slots import RERUN_INTRO
 from mcp_coder.utils.pyproject_config import PromptsConfig
 
 _RESPONSE = {
@@ -38,9 +39,11 @@ def _patch_toolkit(
     monkeypatch: pytest.MonkeyPatch,
     fragments: dict[str, str],
     permissions: list[str],
+    name: str,
 ) -> MagicMock:
     """Patch the toolkit seen by prompt_slots; return the load_toolkit mock."""
     loaded = MagicMock()
+    loaded.name = name
     loaded.toolkit = _FakeToolkit(fragments)
     load = MagicMock(return_value=loaded)
     monkeypatch.setattr(prompt_slots, "load_toolkit", load)
@@ -57,6 +60,7 @@ def _command_toolkit(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         monkeypatch,
         {"language_context": "", "check_instructions": _COMMAND_CHECKS},
         ["Bash(make check:*)"],
+        "command",
     )
 
 
@@ -65,6 +69,7 @@ def _python_toolkit(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         monkeypatch,
         {"language_context": _PY_CONTEXT, "check_instructions": _PY_CHECKS},
         ["mcp__fake-tools__run_check"],
+        "fake-tools",
     )
 
 
@@ -123,6 +128,7 @@ class TestPromptLlmFillsInjectedPrompts:
         assert "[check_instructions]" not in sent
         assert "[language_context]" not in sent
         assert _COMMAND_CHECKS not in sent
+        assert RERUN_INTRO not in sent
         assert "No security vulnerabilities should be introduced" in sent
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
@@ -144,7 +150,8 @@ class TestPromptLlmFillsInjectedPrompts:
         )
 
         sent = _sent_prompt(mock_ask)
-        assert _COMMAND_CHECKS in sent
+        assert RERUN_INTRO + "- `make check:*`" in sent
+        assert _COMMAND_CHECKS not in sent
         assert "[check_instructions]" not in sent
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")

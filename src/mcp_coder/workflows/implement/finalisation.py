@@ -68,7 +68,10 @@ def run_finalisation(
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
 
-    bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+    # Least privilege: finalisation's work is checked against implement_final
+    bash_grants = bash_grants_of(
+        llm_permissions(project_dir, provider, "implement_final")
+    )
     template = get_prompt(str(PROMPTS_FILE_PATH), "Finalisation Prompt")
     finalisation_prompt = fill_prompt(
         template,

@@ -142,6 +142,7 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
     env_vars: dict[str, str] | None,
     mcp_config: str | None,
     settings_file: str | None,
+    entry: str,
 ) -> CheckOutcome | None:
     """Run one LLM fix turn.
 
@@ -155,13 +156,15 @@ def _fix_turn(  # pylint: disable=too-many-arguments,too-many-positional-argumen
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json
+        entry: Binding entry being fixed; scopes the session's Bash grants
 
     Returns:
         None when the turn went through; otherwise the outcome that ends the
         loop. Never raises.
     """
     try:
-        bash_grants = bash_grants_of(llm_permissions(project_dir, provider))
+        # Least privilege: grants only for the depths this binding checks
+        bash_grants = bash_grants_of(llm_permissions(project_dir, provider, entry))
         check_instructions = ""
         if toolkit_declares_bash_grants(project_dir):
             # Toolkits that check through Bash tell the LLM how to re-run checks
@@ -294,6 +297,7 @@ def check_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arg
             env_vars,
             mcp_config,
             settings_file,
+            entry,
         )
         if ended:
             return ended

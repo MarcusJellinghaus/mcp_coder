@@ -244,11 +244,17 @@ the last 200 lines of stdout followed by stderr.
   Extra arguments, added flags or changed spacing are denied, so the prompt
   tells the LLM to run each command unchanged. With `llm_permissions = "none"`
   there are no grants.
-- **Which sessions.** Only Claude sessions that re-run checks get grants:
-  implement task and its fix calls, finalisation, CI fix (union of all grants),
-  and rebase fix turns (only the active rebase binding's grants at the resolved
-  depth). Other sessions keep Bash off. Copilot and Langchain get no grants
-  and log a warning once when grants are dropped.
+- **Which sessions.** Only Claude sessions that re-run checks get grants, each
+  scoped to its bindings:
+  - implement task: the depths of `implement_task` and `implement_final`;
+  - fix turns: the binding entry being fixed;
+  - finalisation and CI fix: `implement_final`;
+  - rebase fix turns: the active rebase binding at the resolved depth.
+
+  A request that falls back grants the lower depth that runs, and the re-run
+  list in the prompt lists exactly the granted commands. Other sessions keep
+  Bash off. Copilot and Langchain get no grants and log a warning once when
+  grants are dropped.
 - **Read-only commands.** Once Bash is on, Claude Code auto-approves read-only
   commands (e.g. `ls`, `cat`) without a grant; see
   [Claude Code's docs](https://code.claude.com/docs). Nothing that writes runs
@@ -323,23 +329,16 @@ exit_codes = { 0 = "ok", 1 = "findings" }
 
 [tool.mcp-coder.toolkit.command.format]
 apply = [ { argv = ["npm", "run", "format"] } ]
-check = [ { argv = ["npm", "run", "format:check"] } ]
 
 [tool.mcp-coder.toolkit.command.check]
 quick    = [ { argv = ["npm", "run", "typecheck"] },
              { argv = ["npm", "run", "lint"] } ]
 standard = [ { argv = ["npm", "run", "check"] } ]
-full     = [ { argv = ["npm", "run", "check"] },
-             { argv = ["npm", "run", "arch"] },
-             { argv = ["npm", "run", "deadcode"] },
-             { argv = ["npm", "run", "audit"] } ]
 
 [tool.mcp-coder.toolkit.command.test]
 quick      = [ { argv = ["npm", "test"], parser = "junit", report = "reports/junit.xml" } ]
 standard   = [ { argv = ["npm", "run", "test"], parser = "junit", report = "reports/junit.xml" } ]
-full       = [ { argv = ["npm", "run", "test:coverage"], parser = "junit", report = "reports/junit.xml" } ]
 unattended = [ { argv = ["npm", "run", "test:ci"], parser = "junit", report = "reports/junit.xml" } ]
-mutation   = [ { argv = ["npm", "run", "test:mutation"], timeout = 3600 } ]  # extra depth, requested explicitly
 ```
 
 Claude sessions get grants such as `Bash(npm run lint)`, `Bash(npm run typecheck)`
