@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .toml_utils import load_toml
+from ..config.toml_utils import load_toml
 
 logger = logging.getLogger(__name__)
 

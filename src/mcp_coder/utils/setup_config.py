@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .toml_utils import find_mcp_coder_table
+from ..config.toml_utils import find_mcp_coder_table
 
 BUILTINS = frozenset({"python"})
 DEFAULT_STEP_TIMEOUT = 1800

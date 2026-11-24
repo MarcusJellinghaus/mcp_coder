@@ -16,9 +16,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..config.toml_utils import format_toml_error
 from .config_hints import unknown_key_hint
 from .log_utils import log_function_call
-from .toml_utils import format_toml_error
 from .user_app_data import get_user_app_data_dir
 
 

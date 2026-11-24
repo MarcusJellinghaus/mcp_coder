@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
+from ...config.toml_utils import TomlReadError
 from ...mcp_workspace_git import get_current_branch_name
 from ...mcp_workspace_github import (
     BodyTrust,
@@ -23,7 +24,6 @@ from ...utils.pyproject_config import (
 )
 from ...utils.setup_config import load_setup_config
 from ...utils.subprocess_runner import launch_process
-from ...utils.toml_utils import TomlReadError
 from ...utils.user_config import get_cache_refresh_minutes
 from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited

@@ -256,7 +256,7 @@ def _resolvable_formatter(
     """
     from mcp_tools_py.toolkit import PythonToolkit
 
-    from mcp_coder.utils.toml_utils import find_mcp_coder_table as real_find
+    from mcp_coder.config.toml_utils import find_mcp_coder_table as real_find
 
     def _with_toolkit(project_dir: Path, table: str) -> tuple[str, Any] | None:
         found = real_find(project_dir, table)

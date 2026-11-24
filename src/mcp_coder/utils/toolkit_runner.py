@@ -20,7 +20,7 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
-from .toml_utils import find_mcp_coder_table
+from ..config.toml_utils import find_mcp_coder_table
 from .toolkit import (
     ActionRequest,
     ActionResult,

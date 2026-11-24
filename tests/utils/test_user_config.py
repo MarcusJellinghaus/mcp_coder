@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.toml_utils import format_toml_error
+from mcp_coder.config.toml_utils import format_toml_error
 from mcp_coder.utils.user_config import (
     get_cache_refresh_minutes,
     get_config_file_path,

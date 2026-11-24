@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Move `toml_utils` into `mcp_coder.config` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move `utils/toml_utils.py` to `config/toml_utils.py` with `move_module`, fix remaining references (no behaviour change; existing suite is the safety net)
-- [ ] Quality checks: pylint, mypy, pytest, lint-imports, tach, format — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `utils/toml_utils.py` to `config/toml_utils.py` with `move_module`, fix remaining references (no behaviour change; existing suite is the safety net)
+- [x] Quality checks: pylint, mypy, pytest, lint-imports, tach, format — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Lenient lookup, `format_code` from either file, `format_code` row for every repo — [step_2.md](./steps/step_2.md)
 

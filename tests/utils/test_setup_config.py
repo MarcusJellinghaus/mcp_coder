@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.config.toml_utils import find_mcp_coder_table
 from mcp_coder.utils.setup_config import (
     DEFAULT_STEP_TIMEOUT,
     SetupConfig,
     SetupStep,
     load_setup_config,
 )
-from mcp_coder.utils.toml_utils import find_mcp_coder_table
 from mcp_coder.utils.toolkit_runner import load_toolkit_config
 
 MALFORMED_TOML = "this is not valid toml {{{"
