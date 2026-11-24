@@ -58,7 +58,7 @@ With --all:
 
 Config resolution:
   1. --config PATH (explicit, highest priority)
-  2. [tool.mcp-coder] labels-config in pyproject.toml
+  2. [tool.mcp-coder] labels-config in pyproject.toml or mcp-coder.toml
   3. Bundled package defaults""",
         formatter_class=WideHelpFormatter,
     )
@@ -85,7 +85,7 @@ Config resolution:
         type=str,
         default=None,
         metavar="PATH",
-        help="Path to labels config file (overrides pyproject.toml and bundled defaults)",
+        help="Path to labels config file (overrides pyproject.toml / mcp-coder.toml and bundled defaults)",
     )
     define_labels_parser.add_argument(
         "--generate-github-actions",

@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `labels-config` from either file, CLI help — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: tests first (`mcp-coder.toml` / conflict / malformed / non-string), then rename to `_get_labels_config_from_project` based on `find_mcp_coder_table_lenient`, docstrings, `gh_parsers.py` help strings, `label-setup.md` and `cli-reference.md`
-- [ ] Quality checks: pylint, mypy, pytest, lint-imports, tach, format — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`mcp-coder.toml` / conflict / malformed / non-string), then rename to `_get_labels_config_from_project` based on `find_mcp_coder_table_lenient`, docstrings, `gh_parsers.py` help strings, `label-setup.md` and `cli-reference.md`
+- [x] Quality checks: pylint, mypy, pytest, lint-imports, tach, format — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `verify` warnings for unknown, retired, misplaced and conflicting keys — [step_5.md](./steps/step_5.md)
 

@@ -123,7 +123,7 @@ mcp-coder gh-tool define-labels
 | `--dry-run` | Preview changes without applying them |
 | `--init` | Assign the default label to open issues without a status label |
 | `--validate` | Check all open issues for errors and warnings |
-| `--config PATH` | Path to labels config file (overrides pyproject.toml and bundled defaults) |
+| `--config PATH` | Path to labels config file (overrides pyproject.toml / mcp-coder.toml and bundled defaults) |
 | `--generate-github-actions` | Write `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` |
 | `--all` | Enable all optional operations (`--init --validate --generate-github-actions`) |
 

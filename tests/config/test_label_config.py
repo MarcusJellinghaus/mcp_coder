@@ -3,13 +3,14 @@
 # ruff: noqa: S324
 
 import json
+import logging
 from importlib.resources.abc import Traversable
 from pathlib import Path
 
 import pytest
 
 from mcp_coder.config.label_config import (
-    _get_labels_config_from_pyproject,
+    _get_labels_config_from_project,
     build_label_lookups,
     get_labels_config_path,
     load_labels_config,
@@ -629,13 +630,80 @@ class TestConfigDiscovery:
         result = get_labels_config_path(project_dir=tmp_path)
         assert isinstance(result, Traversable)
 
+    def test_mcp_coder_toml_labels_config(self, tmp_path: Path) -> None:
+        """labels-config in mcp-coder.toml is used when pyproject.toml lacks it."""
+        labels_file = tmp_path / "my_labels.json"
+        labels_file.write_text('{"workflow_labels": []}', encoding="utf-8")
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
+            encoding="utf-8",
+        )
 
-class TestGetLabelsConfigFromPyproject:
-    """Tests for _get_labels_config_from_pyproject() helper."""
+        result = get_labels_config_path(project_dir=tmp_path)
+        assert result == labels_file
+
+    def test_both_files_define_labels_config_falls_back(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """labels-config in both files falls back to bundled with a warning."""
+        (tmp_path / "my_labels.json").write_text(
+            '{"workflow_labels": []}', encoding="utf-8"
+        )
+        for file_name in ("pyproject.toml", "mcp-coder.toml"):
+            (tmp_path / file_name).write_text(
+                '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
+                encoding="utf-8",
+            )
+
+        with caplog.at_level(logging.WARNING):
+            result = get_labels_config_path(project_dir=tmp_path)
+
+        assert isinstance(result, Traversable)
+        assert "labels-config" in caplog.text
+
+    def test_malformed_mcp_coder_toml_falls_back(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Malformed mcp-coder.toml falls back to bundled even if pyproject.toml is valid."""
+        (tmp_path / "my_labels.json").write_text(
+            '{"workflow_labels": []}', encoding="utf-8"
+        )
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "mcp-coder.toml").write_text(
+            "this is {{{ not valid TOML", encoding="utf-8"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            result = get_labels_config_path(project_dir=tmp_path)
+
+        assert isinstance(result, Traversable)
+        assert "mcp-coder.toml" in caplog.text
+
+    def test_non_string_labels_config_falls_back(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A non-string labels-config falls back to bundled with a warning."""
+        (tmp_path / "mcp-coder.toml").write_text(
+            "[tool.mcp-coder]\nlabels-config = 5\n", encoding="utf-8"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            assert _get_labels_config_from_project(tmp_path) is None
+            result = get_labels_config_path(project_dir=tmp_path)
+
+        assert isinstance(result, Traversable)
+        assert "mcp-coder.toml" in caplog.text
+
+
+class TestGetLabelsConfigFromProject:
+    """Tests for _get_labels_config_from_project() helper."""
 
     def test_no_pyproject_returns_none(self, tmp_path: Path) -> None:
         """No pyproject.toml file returns None."""
-        result = _get_labels_config_from_pyproject(tmp_path)
+        result = _get_labels_config_from_project(tmp_path)
         assert result is None
 
     def test_valid_config_returns_path(self, tmp_path: Path) -> None:
@@ -649,7 +717,7 @@ class TestGetLabelsConfigFromPyproject:
             encoding="utf-8",
         )
 
-        result = _get_labels_config_from_pyproject(tmp_path)
+        result = _get_labels_config_from_project(tmp_path)
         assert result == labels
 
     def test_missing_tool_section_returns_none(self, tmp_path: Path) -> None:
@@ -657,7 +725,7 @@ class TestGetLabelsConfigFromPyproject:
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text("[project]\nname = 'foo'\n", encoding="utf-8")
 
-        result = _get_labels_config_from_pyproject(tmp_path)
+        result = _get_labels_config_from_project(tmp_path)
         assert result is None
 
     def test_malformed_toml_returns_none(self, tmp_path: Path) -> None:
@@ -665,7 +733,7 @@ class TestGetLabelsConfigFromPyproject:
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text("{{{ bad toml", encoding="utf-8")
 
-        result = _get_labels_config_from_pyproject(tmp_path)
+        result = _get_labels_config_from_project(tmp_path)
         assert result is None
 
     def test_file_not_found_returns_none(self, tmp_path: Path) -> None:
@@ -676,5 +744,5 @@ class TestGetLabelsConfigFromPyproject:
             encoding="utf-8",
         )
 
-        result = _get_labels_config_from_pyproject(tmp_path)
+        result = _get_labels_config_from_project(tmp_path)
         assert result is None
