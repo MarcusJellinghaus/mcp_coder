@@ -37,9 +37,11 @@ def _patch(
     monkeypatch: pytest.MonkeyPatch,
     fragments: dict[str, str] | Exception,
     permissions: list[str] | Exception | None = None,
+    name: str = "command",
 ) -> MagicMock:
     """Patch load_toolkit and llm_permissions; return the load_toolkit mock."""
     loaded = MagicMock()
+    loaded.name = name
     loaded.toolkit = _FakeToolkit(fragments)
     load = MagicMock(return_value=loaded)
     monkeypatch.setattr(prompt_slots, "load_toolkit", load)
@@ -227,6 +229,23 @@ class TestResolvePromptSlots:
         _patch(monkeypatch, {"check_instructions": "Run make"}, ["Bash(make)"])
         result = resolve_prompt_slots("[check_instructions]", tmp_path, "claude", None)
         assert result == {"check_instructions": ""}
+
+    def test_other_bash_toolkit_keeps_own_fragment(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _patch(
+            monkeypatch,
+            {"check_instructions": "Run `make check` and fix what it reports."},
+            ["Bash(make:*)"],
+            name="make-toolkit",
+        )
+        result = resolve_prompt_slots(
+            "[check_instructions]", tmp_path, "claude", ["Bash(make:*)"]
+        )
+        assert result == {
+            "check_instructions": "Run `make check` and fix what it reports."
+        }
+        assert "- `make:*`" not in result["check_instructions"]
 
     def test_non_bash_toolkit_non_claude_keeps_fragment(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

@@ -85,6 +85,9 @@ _NO_TOOLKIT_HELP = (
     f"e.g. test@quick and test@unattended). See {_CONFIGURE_URL}"
 )
 
+# Entry-point key of the command toolkit, whose depths and grants the user writes
+COMMAND_TOOLKIT = "command"
+
 _BASH_PREFIX = "Bash("
 # Warn once per process when Bash grants are dropped for a non-Claude provider
 _bash_drop_warned = False

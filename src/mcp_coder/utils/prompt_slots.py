@@ -1,11 +1,11 @@
 """Fill toolkit prompt slots and [placeholder] substitutions.
 
 Prompts carry two slots, ``[language_context]`` and ``[check_instructions]``,
-filled from the configured toolkit's ``prompt_fragments()``. For a toolkit
-that declares ``Bash(...)`` grants, ``check_instructions`` is instead built
-here from the session's own grants, so it lists exactly the commands the
-session may re-run. Callers resolve the slots for a template, then fill slots
-and substitutions in one pass::
+filled from the configured toolkit's ``prompt_fragments()``. For the command
+toolkit, ``check_instructions`` is instead built here from the session's own
+grants, so it lists exactly the commands the session may re-run. Callers
+resolve the slots for a template, then fill slots and substitutions in one
+pass::
 
     slots = resolve_prompt_slots(template, project_dir, provider, bash_grants)
     prompt = fill_prompt(template, substitutions, slots)
@@ -17,7 +17,12 @@ import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from .toolkit_runner import bash_grants_of, llm_permissions, load_toolkit
+from .toolkit_runner import (
+    COMMAND_TOOLKIT,
+    bash_grants_of,
+    llm_permissions,
+    load_toolkit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ DEFAULT_CHECK_INSTRUCTIONS = (
     "Run the project's quality checks (linters, type checkers, tests) "
     "and fix all issues."
 )
-# Same text as the command toolkit's own intro for check_instructions.unattended
+# Intro of every command-toolkit re-run list, the session's and the unattended one
 RERUN_INTRO = (
     "Re-run the checks with these exact commands; run each one unchanged — "
     "extra arguments, flags or changed spacing are denied:\n"
@@ -82,9 +87,10 @@ def resolve_prompt_slots(
 
     Returns:
         Values for the slots present in ``text`` only; ``{}`` if none. For a
-        toolkit that declares ``Bash(...)`` grants, ``check_instructions``
-        lists exactly the session's granted commands, or is "" when the
-        session gets none (or the provider isn't Claude).
+        toolkit that declares ``Bash(...)`` grants, ``check_instructions`` is
+        "" when the session gets none (or the provider isn't Claude);
+        otherwise the command toolkit's lists exactly the session's granted
+        commands and other toolkits keep their own fragment.
     """
     present = [s for s in SLOT_NAMES if f"[{s}]" in text]
     if not present:
@@ -92,7 +98,8 @@ def resolve_prompt_slots(
 
     values = _defaults()
     try:
-        fragments = load_toolkit(project_dir).toolkit.prompt_fragments()
+        loaded = load_toolkit(project_dir)
+        fragments = loaded.toolkit.prompt_fragments()
         for slot in SLOT_NAMES:
             if slot in fragments:
                 values[slot] = fragments[slot]
@@ -100,7 +107,8 @@ def resolve_prompt_slots(
         if toolkit_declares_bash_grants(project_dir):
             if resolved != "claude" or not bash_grants:
                 values["check_instructions"] = ""
-            else:
+            elif loaded.name == COMMAND_TOOLKIT:
+                # Command grants are exact argv strings, so they list verbatim
                 values["check_instructions"] = RERUN_INTRO + "\n".join(
                     f"- `{grant[len(_BASH_PREFIX) : -1]}`" for grant in bash_grants
                 )

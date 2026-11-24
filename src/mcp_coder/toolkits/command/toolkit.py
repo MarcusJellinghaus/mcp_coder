@@ -11,6 +11,7 @@ from xml.etree import ElementTree  # noqa: S405  # nosec B405
 
 from mcp_coder.toolkits.command.config import Step, parse_config
 from mcp_coder.utils.executable import resolve_executable
+from mcp_coder.utils.prompt_slots import RERUN_INTRO
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.utils.toolkit import (
     ActionRequest,
@@ -26,10 +27,6 @@ logger = logging.getLogger(__name__)
 _SEVERITY = {"skipped": 0, "ok": 1, "findings": 2, "error": 3}
 _TAIL_LINES = 200
 _GLOBAL_NAME = "command"
-_RERUN_INTRO = (
-    "Re-run the checks with these exact commands; run each one unchanged — "
-    "extra arguments, flags or changed spacing are denied:\n"
-)
 _FIX_CHECK = (
     "Fix the findings reported in the check output below. Make minimal "
     "changes and fix the cause in the code, not the check or its configuration."
@@ -135,7 +132,7 @@ class CommandToolkit(Toolkit):
             "check_instructions.unattended": (
                 ""
                 if none or unattended is None
-                else _RERUN_INTRO + _steps_text(unattended)
+                else RERUN_INTRO + _steps_text(unattended)
             ),
             "fix.check": _FIX_CHECK,
             "fix.test": _FIX_TEST,

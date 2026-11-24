@@ -15,6 +15,7 @@ from pathlib import Path
 from ...utils.pyproject_config import get_format_code, get_leftover_check_type_hints
 from ...utils.toolkit import VerifyItem
 from ...utils.toolkit_runner import (
+    COMMAND_TOOLKIT,
     LoadedToolkit,
     can_request,
     load_toolkit,
@@ -24,9 +25,6 @@ from ...utils.toolkit_runner import (
 )
 from .verify_formatting import Row
 from .verify_render import SectionBuilder
-
-# The toolkit whose depths the user writes; only its unused depths are flagged
-_COMMAND_TOOLKIT = "command"
 
 # Implement entries the retired key used to filter
 _IMPLEMENT_ENTRIES: tuple[str, ...] = ("implement_task", "implement_final")
@@ -220,7 +218,8 @@ def toolkit_rows(
 
     requests = _requests(loaded.config.bindings, _formatting_enabled(project_dir))
     actions = list(dict.fromkeys(action for action, _ in requests))
-    command = loaded.name == _COMMAND_TOOLKIT
+    # Only the command toolkit's depths are user-written, so only they are flagged
+    command = loaded.name == COMMAND_TOOLKIT
     groups = list(
         dict.fromkeys(actions + (list(loaded.info.actions) if command else []))
     )

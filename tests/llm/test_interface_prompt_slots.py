@@ -39,9 +39,11 @@ def _patch_toolkit(
     monkeypatch: pytest.MonkeyPatch,
     fragments: dict[str, str],
     permissions: list[str],
+    name: str,
 ) -> MagicMock:
     """Patch the toolkit seen by prompt_slots; return the load_toolkit mock."""
     loaded = MagicMock()
+    loaded.name = name
     loaded.toolkit = _FakeToolkit(fragments)
     load = MagicMock(return_value=loaded)
     monkeypatch.setattr(prompt_slots, "load_toolkit", load)
@@ -58,6 +60,7 @@ def _command_toolkit(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         monkeypatch,
         {"language_context": "", "check_instructions": _COMMAND_CHECKS},
         ["Bash(make check:*)"],
+        "command",
     )
 
 
@@ -66,6 +69,7 @@ def _python_toolkit(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         monkeypatch,
         {"language_context": _PY_CONTEXT, "check_instructions": _PY_CHECKS},
         ["mcp__fake-tools__run_check"],
+        "fake-tools",
     )
 
 
