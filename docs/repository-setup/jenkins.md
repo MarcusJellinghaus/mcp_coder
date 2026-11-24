@@ -88,7 +88,7 @@ proof that the name is wrong.
 ### 403 Forbidden on `/crumbIssuer/api/json`
 
 ```
-Failed to start job 'Windows-Agents/Executor': 403 Forbidden on /crumbIssuer/api/json -
+Failed to look up job 'Windows-Agents/Executor': 403 Forbidden on /crumbIssuer/api/json -
 "job_manager is missing the Overall/Read permission". The API user is authenticated but not
 authorized; Jenkins requires Overall/Read for any REST call. Grant it in the global
 authorization matrix (it cannot be granted per-job). See docs/repository-setup/jenkins.md
@@ -100,19 +100,19 @@ Jenkins knows who they are, which is why the message names them. It refuses the 
 
 **Fix:** grant `Overall/Read` in the **global** authorization matrix.
 
-Granting `Job/Build` on the executor job does **not** fix this. It is the natural first response —
-the failing operation is a build trigger — and it changes nothing: the crumb request is made
-against the server root, before any job is addressed, so no per-job permission is consulted.
-`Overall/Read` cannot be granted per-job at all.
+Granting `Job/Build` or `Job/Read` on the executor job does **not** fix this, and it changes
+nothing: the crumb request is made against the server root, before any job is addressed, so no
+per-job permission is consulted. `Overall/Read` cannot be granted per-job at all.
 
 A 403 that survives after `Overall/Read` is granted is a *different* permission, specific to the
-failing request — most often `Job/Build` on the executor job. The reported message says so and
-quotes the permission Jenkins named.
+failing request — most often `Job/Build` on the executor job, which fails later, as
+`Failed to start job 'Windows-Agents/Executor': 403 ...`. The reported message says so and quotes
+the permission Jenkins named.
 
 ### 404 on `<job path>`
 
 ```
-Failed to start job 'Windows-Agents/Executor': 404 on 'Windows-Agents/Executor' - the folder
+Failed to look up job 'Windows-Agents/Executor': 404 on 'Windows-Agents/Executor' - the folder
 'Windows-Agents' is readable; 'Executor' under it is not. Either the name is wrong or the API
 user lacks Job/Read on it. Check both. See docs/repository-setup/jenkins.md
 ```
@@ -133,6 +133,16 @@ the segment named after it is in question. If no folder in the path is readable 
 instead — suspect `Overall/Read` first in that case. For a top-level job there is no parent folder
 to probe, so the message says only that both the name and `Job/Read` are still open questions.
 
+### `not a job (a folder or other item)`
+
+```
+Failed to look up job 'Windows-Agents': not a job (a folder or other item); executor_job_path
+must name a job
+```
+
+`executor_job_path` names a folder (or a multibranch project) instead of the job inside it. Use the
+full path to the job, e.g. `Windows-Agents/Executor`.
+
 ### 401 Unauthorized
 
 Authentication failed: the username or API token is wrong, or the token was revoked. Re-check
@@ -148,8 +158,10 @@ page contains a live CSRF crumb and the username — do not paste it into an iss
 ## The Coordinator Is Fail-Fast
 
 `mcp-coder coordinator --all` (and `mcp-coder coordinator --repo NAME`) stops at the **first**
-failing issue. It logs the error and returns immediately — remaining issues in that repository are
-not attempted, and under `--all` neither are the remaining repositories.
+failing issue. It collects the eligible issues of all repositories first and dispatches them from
+one global list; the first failure logs the error and ends the run — remaining issues, of any
+repository, are not attempted. A rate limit or config error in a later repository ends the run
+during collection, before any dispatch.
 
 This is intentional: a Jenkins misconfiguration affects every dispatch equally, and retrying it
 once per issue per repo only multiplies the same error. It does mean a single bad issue or a single
@@ -157,11 +169,84 @@ permission gap ends the whole run, and that issues already dispatched before the
 been dispatched — re-running after the fix picks up where it stopped, because dispatched issues
 have moved to their next status label.
 
-A failed run ends with a single coordinator error line — `Failed processing issue #N: ...` — and
-exit code 1. No traceback is attached to it. One may still appear just above, logged by the
-operation that raised (`start_job` logs `... FAILED` with the stack), but it no longer carries the
-Jenkins page. Read the error line; that is the diagnosis. `mcp-coder coordinator --dry-run` differs
-— it re-raises, so the CLI's top-level error boundary prints a traceback as well.
+A failed run ends with a single coordinator error line and exit code 1. The line is one of:
+
+- `Failed to look up job '<path>': ...` — the executor job lookup at run start (wrong path,
+  missing `Job/Read` or `Overall/Read`, or a folder instead of a job). No traceback above it.
+- `Failed to list builds under '<path>': ...` — the [capacity gate](#executor-capacity-gate)
+  could not read the job's builds.
+- `Failed processing issue #N: ...` — the dispatch of one issue failed.
+
+No traceback is attached to the error line. One may still appear just above, logged by the
+operation that raised (`start_job` and `get_recent_builds` log `... FAILED` with the stack), but it
+no longer carries the Jenkins page. Read the error line; that is the diagnosis.
+`mcp-coder coordinator --dry-run` differs — it re-raises, so the CLI's top-level error boundary
+prints a traceback as well.
+
+## Executor Capacity Gate
+
+The coordinator starts an Executor build only while the executor job has **capacity**: no build
+waiting for an agent executor. Without the gate, every eligible issue would get a build at once and
+the builds would queue for the agents first-in, first-out, regardless of
+[dispatch order](#dispatch-order).
+
+Before every dispatch the coordinator lists the executor job's running builds. A running build
+still named `#<number>` is waiting for an agent → that job is **blocked** for the rest of the run
+and its issues are skipped; issues of other executor jobs continue in dispatch order. Repositories
+whose executor job is busy at run start are not fetched from GitHub at all, also with
+`--force-refresh`.
+
+### Dependency on the Executor pipeline
+
+The signal is the build's display name, so the gate depends on two things outside this repository:
+
+- the top-level `agent { label 'windows-agent' }` in the Executor job's inline pipeline script
+  (AutoRunner `jenkins-windows/README.md`, Step 4 item 7; not version-controlled), and
+- `mcpCoderExecutorWindows.groovy` setting `currentBuild.displayName` from `LABEL` at its start,
+  i.e. after the agent is allocated.
+
+If the name is ever set before agent allocation (e.g. in a controller-side stage), the gate
+silently stops blocking.
+
+The gate reads the build list, not the queue: after the quiet period the build runs on the
+controller (library checkout) and waits for the agent as a `PlaceholderTask` that does not reliably
+carry the job URL.
+
+### Delay between starts
+
+After a build started, the coordinator waits `[coordinator] dispatch_delay_seconds` (default 15,
+see the [Configuration Guide](../configuration/config.md#coordinator)) before the next dispatch,
+then re-checks the job that got the build. There is no delay after the last dispatch.
+
+The delay must exceed the Jenkins **quiet period** (5 s by default). A build in its quiet period is
+a queue item, not a build, so a shorter delay misses the build just started and dispatches again. A
+re-check that comes after the quiet period but before the new build got its agent blocks the job
+until the next run — harmless. `buildWithParameters?delay=` is not used for the same reason: a
+delayed build sits in the queue, invisible to the gate.
+
+### Side effects
+
+- **Manual Executor builds without `LABEL`** keep `#<number>`: they block the coordinator until they
+  finish and, after 60 min, log a WARNING on every run (→ UNSTABLE coordinator build). Accepted:
+  they do use an executor.
+- **The coordinator holds an agent executor itself** (it runs on `windows-agent`) and its
+  `venvLockResource` slot, both also while it sleeps. The waiting build usually gets that executor
+  once the coordinator run ends.
+- **Run length:** each started build adds one delay before the next dispatch, so a run with a few
+  starts exceeds 60 s and the next coordinator build (`disableConcurrentBuilds()`) starts right
+  after it. The next run sees the last started build only because its own startup (library
+  checkout, agent allocation, Python startup) takes longer than the quiet period.
+- **Per-job scope:** blocking is per executor job, while capacity is per agent label. Correct while
+  the configured repositories share one executor job; two executor jobs on the same agent label
+  would compete first-in, first-out again.
+
+### Dispatch order
+
+One list across all repositories, in reverse pipeline order (closest to done first):
+
+`status-81` → `status-71` → `status-08` → `status-17` → `status-05` → `status-14` → `status-02`
+
+Ties keep the repository order of the config file.
 
 ## Related Documentation
 

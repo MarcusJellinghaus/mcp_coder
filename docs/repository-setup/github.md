@@ -425,7 +425,7 @@ A maintainer accepts an issue by editing its body, which makes them the last edi
 
 Trust results are never cached.
 
-- Untrusted issues keep their label, so every coordinator run repeats one lookup and one summary entry per such issue.
+- Untrusted issues keep their label. The trust lookup runs only for issues reached while their executor job is free (repos of a busy job are not fetched), so an untrusted issue costs at most one lookup and one summary entry per coordinator run.
 - A `/approve`d untrusted issue is explained only in the coordinator log.
 - `vscodeclaude status` makes one lookup per launchable row whose author is not trusted.
 

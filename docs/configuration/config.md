@@ -171,11 +171,14 @@ trusted_commenters = ["your-ci-bot"]
 
 ### [coordinator]
 
-Coordinator-specific settings for GitHub API optimization and caching.
+Coordinator-specific settings for GitHub API caching and Jenkins dispatch.
 
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|----------|
 | `cache_refresh_minutes` | integer | Minutes before GitHub API cache expires | No | 1440 (24 hours) |
+| `dispatch_delay_seconds` | integer | Seconds to wait after starting a build, before the next dispatch; must exceed the Jenkins quiet period (5 s default) | No | 15 |
+
+A non-integer `dispatch_delay_seconds` is a config error (exit 1); a value ≤ 0 logs a warning and 15 is used. Why the delay exists: [Jenkins Setup → Executor Capacity Gate](../repository-setup/jenkins.md#executor-capacity-gate).
 
 #### Configuration Examples
 
@@ -184,6 +187,7 @@ Coordinator-specific settings for GitHub API optimization and caching.
 ```toml
 [coordinator]
 cache_refresh_minutes = 1440  # 24 hours (default)
+dispatch_delay_seconds = 15  # default
 ```
 
 **Active Development (1-hour refresh):**
