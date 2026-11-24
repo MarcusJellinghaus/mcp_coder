@@ -28,7 +28,7 @@ entry's requests, including depth fallback. It is used as is:
 - `llm_permissions` gets no new parameter.
 - `entry=None` still means "everything declared".
 - `required_mcp_servers` (`mcp_verification.py`) and `toolkit_declares_bash_grants` keep using the union.
-- Rebase doesn't change.
+- Rebase grants keep their per-binding scope. Under Decision 4, rebase sessions' injected `[check_instructions]` slot now lists only the rebase binding's grants. Rebase passes `bash_grants` to `prompt_llm`, which fills the system prompt through `resolve_prompt_slots`. Before this change the slot listed every declared step.
 
 ### 2. The re-run list is built from the session's grants
 
@@ -46,7 +46,8 @@ RERUN_INTRO + "\n".join(f"- `{grant[len('Bash('):-1]}`" for grant in bash_grants
 - This needs no change to the `Toolkit` interface and no import of `mcp_coder.toolkits` from `utils`, so the import-linter contract `toolkits_isolation` still holds.
 - The same rule fills the injected system prompt (`llm/interface.py` passes the caller's `bash_grants` through). Callers with `bash_grants=None` (create_plan, icoder, the prompt CLI, verify's test prompt) still get `""` for Bash toolkits.
 - Toolkits without Bash grants (mcp-tools-py) keep their own `check_instructions` fragment unchanged.
-- `RERUN_INTRO` moves from `toolkits/command/toolkit.py` to `utils/prompt_slots.py`. The command toolkit imports it, so the intro text is defined once. `CommandToolkit.prompt_fragments()` output is unchanged.
+- `resolve_prompt_slots` is the only place that builds the `check_instructions` re-run list. `utils/prompt_slots.py` defines its own `RERUN_INTRO`. The command toolkit doesn't import it: no toolkit→`prompt_slots` import and no cross-layer move.
+- `CommandToolkit.prompt_fragments()["check_instructions"]` is always `""`. That is the value `llm_permissions = "none"` and global config errors need. For a Bash toolkit, `resolve_prompt_slots` overrides it. The key stays present, so the slot never falls back to `DEFAULT_CHECK_INSTRUCTIONS`. The toolkit keeps `_RERUN_INTRO` and `_steps_text` for `check_instructions.unattended`, which rebase reads directly through `get_fragment`.
 
 ### 3. `verify`: one row per declared depth
 
@@ -83,7 +84,7 @@ In `docs/configuration/toolkits.md`:
 Modified:
 
 - `src/mcp_coder/utils/prompt_slots.py`: `RERUN_INTRO`, re-run list from grants
-- `src/mcp_coder/toolkits/command/toolkit.py`: import `RERUN_INTRO` instead of defining it
+- `src/mcp_coder/toolkits/command/toolkit.py`: `check_instructions` fragment always `""`
 - `src/mcp_coder/workflows/implement/task_processing.py`: two-entry grants
 - `src/mcp_coder/workflows/implement/finalisation.py`: `implement_final` grants
 - `src/mcp_coder/workflow_steps/ci.py`: `implement_final` grants
@@ -94,6 +95,7 @@ Modified:
 - Tests:
   - `tests/utils/test_prompt_slots.py`
   - `tests/llm/test_interface_prompt_slots.py`
+  - `tests/toolkits/command/test_toolkit_describe.py`
   - `tests/utils/test_toolkit_permissions.py`
   - `tests/utils/test_toolkit_runner.py`
   - `tests/workflows/implement/test_task_processing_bash_grants.py`
@@ -107,7 +109,7 @@ No new modules or packages.
 
 ## Steps
 
-1. Re-run list built from the session's grants (`prompt_slots.py`, `RERUN_INTRO` move).
+1. Re-run list built from the session's grants (`prompt_slots.py`; command toolkit's `check_instructions` fragment becomes `""`).
 2. Per-session grant scope in the four sessions.
 3. `verify` rows for declared depths (`can_request` + `verify_toolkit_rows.py`).
 4. Docs in `docs/configuration/toolkits.md`.

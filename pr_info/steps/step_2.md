@@ -79,3 +79,10 @@ fix turn:      grants = bash_grants_of(llm_permissions(.., entry))   # entry fro
   - `implement_task` → only the `check.quick` grant;
   - `implement_final` → only the `check.standard` and `test.quick` grants;
   - neither entry yields grants for `check.full`, `test.mutation`, `format.apply` or `format.check`.
+- **Acceptance, re-run list**, also in `tests/utils/test_toolkit_permissions.py`, on the same real project. Build the scoped grants the way the sessions do:
+  - task session: `bash_grants_of(list(dict.fromkeys(llm_permissions(p, "claude", "implement_task") + llm_permissions(p, "claude", "implement_final"))))`;
+  - finalisation / CI fix: `bash_grants_of(llm_permissions(p, "claude", "implement_final"))`.
+
+  Pass each into `resolve_prompt_slots("[check_instructions]", p, "claude", grants)` and assert:
+  - task session: the listed commands (the `` - `…` `` lines after `RERUN_INTRO`) are exactly the steps of `check.quick`, `check.standard` and `test.quick`;
+  - both cases: none of the `check.full`, `test.mutation`, `format.apply` or `format.check` commands appears in the text.
