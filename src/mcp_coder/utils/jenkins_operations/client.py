@@ -515,6 +515,46 @@ class JenkinsClient:
             raise JenkinsError(f"{context}: {e}") from e
         return select_builds(found, limit, statuses, name_pattern)
 
+    # No @log_function_call: it logs ERROR with a traceback before re-raising, and a
+    # wrong executor_job_path must end the coordinator run with one error line.
+    def get_job_url(self, job_path: str) -> str:
+        """Return the URL Jenkins reports for a job.
+
+        The URL is the identity of the job: two spellings of one path resolve to it.
+
+        Uses ``get_info`` rather than ``get_job_info``, which turns a 404 into a
+        plain JenkinsException and so loses the 404 diagnosis.
+
+        Args:
+            job_path: Full job path from the root, e.g. "A/Executor".
+
+        Returns:
+            The job URL as Jenkins reports it, e.g.
+            "http://jenkins:8080/job/A/job/Executor/".
+
+        Raises:
+            JenkinsError: For any Jenkins or transport failure (a 404 carries the
+                diagnose_404 diagnosis), or when the path is not a job (e.g. a folder).
+        """
+        # Unencoded on purpose: get_info applies quote() to item itself.
+        item = "/".join(f"job/{part}" for part in job_path.split("/") if part)
+        context = f"Failed to look up job '{job_path}'"
+        try:
+            info = self._client.get_info(item=item, query="?tree=url,buildable")
+        except JenkinsException as e:
+            raise self._wrap_jenkins_error(e, context, job_path=job_path) from None
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise JenkinsError(f"{context}: {e}") from e
+        # Only jobs report "buildable"; folders, multibranch projects and the root don't.
+        is_job = isinstance(info, dict) and "buildable" in info
+        url = info.get("url") if is_job else None
+        if not isinstance(url, str):
+            raise JenkinsError(
+                f"{context}: not a job (a folder or other item); "
+                "executor_job_path must name a job"
+            )
+        return url
+
     # No @log_function_call: it would log the whole console log.
     def get_console_output(self, job_path: str, build_number: int) -> str:
         """Fetch the full console log of one build.
