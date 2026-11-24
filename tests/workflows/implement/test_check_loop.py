@@ -219,7 +219,7 @@ class TestFixTurns:
         env.fix_turn.assert_called_once()
 
     def test_forwards_llm_params_to_fix_turn(self, env: _Env) -> None:
-        env.binding("check@quick")
+        env.binding("check@quick", entry="implement_task")
         env.results({"check@quick": _findings("x")}, {})
 
         check_and_fix(
@@ -229,6 +229,7 @@ class TestFixTurns:
             env_vars={"A": "1"},
             mcp_config="mcp.json",
             settings_file="s.json",
+            entry="implement_task",
         )
 
         assert env.fix_turn.call_args.args == (
@@ -241,6 +242,7 @@ class TestFixTurns:
             {"A": "1"},
             "mcp.json",
             "s.json",
+            "implement_task",
         )
 
 

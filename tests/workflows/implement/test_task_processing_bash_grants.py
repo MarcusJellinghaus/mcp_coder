@@ -24,7 +24,10 @@ class TestProcessSingleTaskBashGrants:
     @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     @patch(
         "mcp_coder.workflows.implement.task_processing.llm_permissions",
-        return_value=["Bash(npm test)", "mcp__x__y"],
+        side_effect=[
+            ["Bash(npm run lint)", "mcp__x__y"],
+            ["Bash(npm run lint)", "Bash(npm test)"],
+        ],
     )
     def test_passes_bash_grants(
         self,
@@ -39,7 +42,7 @@ class TestProcessSingleTaskBashGrants:
         _mock_push: MagicMock,
         _mock_count: MagicMock,
     ) -> None:
-        """Only the Bash entries reach prompt_llm."""
+        """Bash grants of both implement entries reach prompt_llm once, in order."""
         project = Path("/test/project")
         mock_get_incomplete.return_value = ["Step 1: Create test file"]
         mock_get_prompt.return_value = "Implementation template"
@@ -52,8 +55,14 @@ class TestProcessSingleTaskBashGrants:
 
         process_single_task(project, "claude")
 
-        mock_perms.assert_called_once_with(project, "claude")
-        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm test)"]
+        assert [c.args for c in mock_perms.call_args_list] == [
+            (project, "claude", "implement_task"),
+            (project, "claude", "implement_final"),
+        ]
+        assert mock_prompt_llm.call_args.kwargs["bash_grants"] == [
+            "Bash(npm run lint)",
+            "Bash(npm test)",
+        ]
 
 
 class TestProcessSingleTaskPromptSlots:

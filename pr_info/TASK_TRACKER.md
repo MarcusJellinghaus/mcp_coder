@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Scope each session's Bash grants to its binding entries
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests first (task processing, finalisation, CI, check loop, acceptance in `test_toolkit_permissions.py`), then per-entry `llm_permissions` calls in `task_processing.py`, `finalisation.py`, `workflow_steps/ci.py` and `_fix_turn(entry=...)` in `check_loop.py`
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (task processing, finalisation, CI, check loop, acceptance in `test_toolkit_permissions.py`), then per-entry `llm_permissions` calls in `task_processing.py`, `finalisation.py`, `workflow_steps/ci.py` and `_fix_turn(entry=...)` in `check_loop.py`
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `verify` rows for declared toolkit depths
 See [step_3.md](./steps/step_3.md)

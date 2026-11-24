@@ -515,7 +515,7 @@ class TestRunFinalisationBashGrants:
 
         run_finalisation(tmp_path, "claude")
 
-        mock_perms.assert_called_once_with(tmp_path, "claude")
+        mock_perms.assert_called_once_with(tmp_path, "claude", "implement_final")
         assert mock_prompt_llm.call_args.kwargs["bash_grants"] == ["Bash(npm run lint)"]
 
 

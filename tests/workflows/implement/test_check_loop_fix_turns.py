@@ -70,7 +70,16 @@ def mocks() -> Iterator[_Mocks]:
 
 def _turn(turn: int = 1) -> CheckOutcome | None:
     return _fix_turn(
-        _FRAGMENT, "a.py:1: error", _PROJECT, "claude", turn, 2, None, None, None
+        _FRAGMENT,
+        "a.py:1: error",
+        _PROJECT,
+        "claude",
+        turn,
+        2,
+        None,
+        None,
+        None,
+        "implement_task",
     )
 
 
@@ -124,6 +133,7 @@ class TestSuccess:
             {"A": "1"},
             "mcp.json",
             "s.json",
+            "implement_final",
         )
 
         kwargs = mocks.prompt_llm.call_args.kwargs
@@ -142,7 +152,8 @@ class TestBashGrants:
 
         assert _turn() is None
 
-        mocks.perms.assert_called_once_with(_PROJECT, "claude")
+        mocks.perms.assert_called_once_with(_PROJECT, "claude", "implement_task")
+        mocks.declares.assert_called_once_with(_PROJECT)
         mocks.slots.assert_called_once_with(
             "[check_instructions]", _PROJECT, "claude", ["Bash(npm run lint)"]
         )
