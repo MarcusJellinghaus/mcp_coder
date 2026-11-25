@@ -248,6 +248,30 @@ class TestPhaseOverridesDryRun:
         assert "langchain" in joined
         assert "mlflow" in joined
 
+    def test_non_table_install_from_github_raises(self, tmp_path: Path) -> None:
+        """A non-table install-from-github is a ValueError naming file and key."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.mcp-coder]\ninstall-from-github = 1\n", encoding="utf-8"
+        )
+        config = InstallConfig.from_args(
+            _namespace(
+                check=True,
+                target=tmp_path,
+                source="local",
+                local_path=tmp_path,
+                extras="",
+            )
+        )
+        with pytest.raises(ValueError) as exc_info:
+            _phases.phase_overrides(
+                config, _STUB_UV, tmp_path / "python", is_editable=False
+            )
+        message = str(exc_info.value)
+        assert str(pyproject) in message
+        assert "'install-from-github'" in message
+        assert "expected a table" in message
+
 
 class TestBootstrapSkippedOnlyForLocalSync:
     """Regression test for the Windows uv.exe write-then-delete race.

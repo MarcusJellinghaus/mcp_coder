@@ -578,3 +578,4 @@ class TestNonTableConfigVerify:
         assert any(line.startswith("=== GIT ") for line in lines)
         if fragment == "cannot be parsed":
             assert "[ERR]" in _row(lines, "Toolkit")
+            assert "[ERR]" in _row(lines, "Setup")
