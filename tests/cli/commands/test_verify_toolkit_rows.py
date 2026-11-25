@@ -138,6 +138,13 @@ def test_requests_commit_only_while_formatting() -> None:
     assert ("format", "apply") not in _requests(DEFAULT_BINDINGS, formatting=False)
 
 
+def test_toolkit_row_names_source(run: Callable[..., _Run]) -> None:
+    """The Toolkit row names the file its config came from."""
+    row = run().row("Toolkit")
+    assert "[OK]" in row
+    assert "fake (mcp-coder.toml)" in row
+
+
 class TestDepthRows:
     """One row per requested depth the toolkit doesn't declare."""
 

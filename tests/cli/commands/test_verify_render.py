@@ -250,9 +250,9 @@ class TestSectionHelpersThroughBuilder:
                 _print_project_section(tmp_path, STATUS_SYMBOLS, out)
         output = capsys.readouterr().out
         lines = output.splitlines()
-        assert "  [Python]" in lines
+        assert "  [Python]" not in lines
         assert _assert_section_aligned(output) >= 5
-        for prefix in ("  pyproject.toml ", "    format_code ", "        ruff "):
+        for prefix in ("  Project config ", "  format_code ", "      ruff "):
             line = next(line for line in lines if line.startswith(prefix))
             _assert_value_at_column(line, _DEFAULT_COL)
 

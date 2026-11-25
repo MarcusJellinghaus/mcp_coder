@@ -206,7 +206,7 @@ class TestUnresolvedAfterPython:
 
 @pytest.mark.usefixtures("no_venv")
 class TestProjectSectionWiring:
-    """The PROJECT section shows the Setup row in both branches."""
+    """The PROJECT section shows the Setup row at indent 2, with or without pyproject.toml."""
 
     @pytest.fixture(autouse=True)
     def _no_toolkit_verify(self) -> Generator[None, None, None]:
@@ -218,7 +218,7 @@ class TestProjectSectionWiring:
 
     @pytest.mark.parametrize(
         ("pyproject", "indent", "summary"),
-        [(False, 2, "nothing to do"), (True, 4, "default: python built-in")],
+        [(False, 2, "nothing to do"), (True, 2, "default: python built-in")],
     )
     def test_setup_row_present(
         self,

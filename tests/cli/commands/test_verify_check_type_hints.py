@@ -45,7 +45,7 @@ def test_non_false_value_warns(
     ok, lines = _run(tmp_path, _TOOLKIT + _implement(value), capsys)
     assert ok is True
     assert len(lines) == 1
-    assert lines[0].startswith("    check_type_hints")
+    assert lines[0].startswith("  check_type_hints")
     assert "[WARN]" in lines[0]
     assert "retired; remove it" in lines[0]
 
