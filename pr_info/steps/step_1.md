@@ -78,9 +78,13 @@ Intro, 2–3 lines:
     no steps; mcp-coder setup, verify's Setup row, vscodeclaude launch.
     See setup.md
   - install: pyproject.toml; extras dev, no post_install_checks;
-    mcp-coder install and setup's python built-in
+    mcp-coder install, setup's python built-in, and vscodeclaude's launch
+    policy check (validate_target_repo / _warn_python_policy)
   - install-from-github: pyproject.toml; no overrides; same readers
-  - implement: retired; verify only. See #retired-keys
+  - implement: retired; verify, and the format pre-flight
+    (check_formatter_config(warn_legacy_key=True) in
+    workflow_steps/commit.py logs that [tool.mcp-coder.implement]
+    format_code is ignored). See #retired-keys
   - labels-config: retired; ignored at run time; verify only.
     See #retired-keys
 

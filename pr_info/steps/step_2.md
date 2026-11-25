@@ -126,14 +126,16 @@ Sources to check against:
   binding, `mcp-coder rebase` the `rebase` binding."
 - **`### rebase`, the "regression check … 1800 s … `sys.executable`"
   paragraph.** Replace it with: "The checks before and after the rebase are the
-  binding's requests (an automated rebase tests at `test@unattended`); see
+  binding's requests (by default, an automated rebase tests at
+  `test@unattended`); see
   [Bindings](configuration/toolkits.md#bindings). Their timeouts, and the
   interpreter tests run in, come from the toolkit:
   [mcp-tools-py](configuration/toolkits.md#mcp-tools-py),
   [command toolkit](configuration/toolkits.md#defaults)."
-- **`### verify`.** The project section also reports `[tool.mcp-coder]` keys:
-  unknown keys, retired keys and keys in the wrong file. Link
-  `configuration/project-config.md#checked-by-verify`.
+- **`### verify`.** It also reports `[tool.mcp-coder]` keys: unknown keys,
+  retired keys and keys in the wrong file. Most appear in the project section;
+  unknown `prompts` keys and `prompts` defined in both files appear in
+  `PROMPTS`. Link `configuration/project-config.md#checked-by-verify`.
 
 ## WHAT — `docs/architecture/architecture.md`
 

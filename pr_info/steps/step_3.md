@@ -74,7 +74,11 @@ for phrase in ["two separate configuration files", "Union of all `Bash(...)` gra
 for anchor in ["prompt-configuration", "key-sections", "environment-variable-overrides",
                "adapting-deployed-files-non-python-repos", "target-repo-contracts",
                "step-to-request-table", "configure-a-toolkit", "toolmcp-codertoolkit",
-               "check-the-config", "changed-files"]:
+               "check-the-config", "changed-files",
+               # project-config.md anchors this PR creates
+               "prompts", "checked-by-verify", "retired-keys",
+               # toolkits.md anchors the Non-Python section links to
+               "npm", "defaults", "step-fields", "mcp-tools-py"]:
     search_files(pattern=anchor) -> each link's target heading exists with that slug
 ```
 
