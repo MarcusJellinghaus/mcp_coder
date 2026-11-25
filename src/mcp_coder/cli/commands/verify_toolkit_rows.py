@@ -186,14 +186,14 @@ def _declared_row(
 def toolkit_rows(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder, *, indent: int = 4
 ) -> bool:
-    """Add the Toolkit row, the global items, then one group per action.
+    """Add the Toolkit row naming its config file, global items, action groups.
 
-    Groups cover the requested actions and, for the command toolkit, every
-    declared action. ``verify()`` runs once per requested action the toolkit
-    declares; ``commit`` requests count only while ``format_code`` is on. When
-    two or more actions return items, the items every one of them returns are
-    shown once as global items, and the other ``check`` / ``test`` errors are
-    shown as warnings.
+    One group per action: groups cover the requested actions and, for the
+    command toolkit, every declared action. ``verify()`` runs once per
+    requested action the toolkit declares; ``commit`` requests count only while
+    ``format_code`` is on. When two or more actions return items, the items
+    every one of them returns are shown once as global items, and the other
+    ``check`` / ``test`` errors are shown as warnings.
 
     Each group lists its verify items, a row per requested depth the toolkit
     doesn't declare, then a row per declared depth: ok naming the bindings that
@@ -214,7 +214,14 @@ def toolkit_rows(
     except ValueError as exc:
         out.add(Row("Toolkit", symbols["failure"], str(exc), indent))
         return False
-    out.add(Row("Toolkit", symbols["success"], loaded.name, indent))
+    out.add(
+        Row(
+            "Toolkit",
+            symbols["success"],
+            f"{loaded.name} ({loaded.config.source})",
+            indent,
+        )
+    )
 
     requests = _requests(loaded.config.bindings, _formatting_enabled(project_dir))
     actions = list(dict.fromkeys(action for action, _ in requests))

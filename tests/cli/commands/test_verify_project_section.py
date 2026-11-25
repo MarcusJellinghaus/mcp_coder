@@ -250,8 +250,18 @@ class TestToolkitRows:
         ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is True
         assert _row(lines, "Toolkit") == _format_row(
-            "Toolkit", "[OK]", "mcp-tools-py", indent=4
+            "Toolkit", "[OK]", "mcp-tools-py (pyproject.toml)", indent=4
         )
+
+    def test_toolkit_table_in_pyproject_names_it(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _, lines = _run(
+            tmp_path, '[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n', capsys
+        )
+        row = _row(lines, "Toolkit")
+        assert "[OK]" in row
+        assert "mcp-tools-py (pyproject.toml)" in row
 
     def test_formatter_item_shown(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -331,7 +341,7 @@ class TestToolkitRows:
         )
         _, lines = _run(tmp_path, None, capsys)
         assert _row(lines, "Toolkit") == _format_row(
-            "Toolkit", "[OK]", "mcp-tools-py", indent=2
+            "Toolkit", "[OK]", "mcp-tools-py (mcp-coder.toml)", indent=2
         )
 
 
@@ -380,7 +390,7 @@ class TestCommandToolkitGating:
         assert not any(line.strip().startswith("Formatter ") for line in lines)
         assert not any("[ERR]" in line for line in lines)
         assert _row(lines, "Toolkit") == _format_row(
-            "Toolkit", "[OK]", "command", indent=2
+            "Toolkit", "[OK]", "command (mcp-coder.toml)", indent=2
         )
 
     def test_empty_commit_binding_skips_verify(
