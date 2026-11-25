@@ -7,8 +7,9 @@ from tabulate import tabulate
 
 from ...mcp_workspace_git import get_working_tree_status, is_git_repository
 from ...mcp_workspace_github import IssueData, IssueManager
+from ...workflow_utils.issue_helpers import get_issue_status
 from ...workflow_utils.rate_limit import raise_if_rate_limited
-from .helpers import get_issue_status, load_to_be_deleted
+from .helpers import load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
 

@@ -25,6 +25,7 @@ from ...utils.pyproject_config import (
 from ...utils.setup_config import load_setup_config
 from ...utils.subprocess_runner import launch_process
 from ...utils.user_config import get_cache_refresh_minutes
+from ...workflow_utils.issue_helpers import get_issue_status, lookup_branch
 from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
@@ -35,13 +36,11 @@ from .config import (
 )
 from .helpers import (
     build_session,
-    get_issue_status,
     get_repo_short_name_from_full,
 )
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
     is_status_eligible_for_session,
-    lookup_branch,
     status_requires_linked_branch,
 )
 from .sessions import (

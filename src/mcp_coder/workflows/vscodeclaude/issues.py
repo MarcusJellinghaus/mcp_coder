@@ -8,8 +8,6 @@ from ...config.label_config import load_labels_config
 from ...mcp_workspace_github import (
     BodyTrust,
     BranchLookupCache,
-    BranchLookupError,
-    GithubException,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -17,13 +15,13 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes, load_config
+from ...workflow_utils.issue_helpers import get_issue_status, lookup_branch
 from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
     get_github_username,
     get_vscodeclaude_config,
 )
-from .helpers import get_issue_status
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
@@ -141,19 +139,6 @@ def status_requires_linked_branch(status: str) -> bool:
     if config is None:
         return False
     return bool(config.get("requires_branch", False))
-
-
-def lookup_branch(cache: BranchLookupCache, issue: IssueData) -> str | None:
-    """Return the issue's single branch, or None for not_found/ambiguous/lookup errors.
-
-    Raises:
-        GitHubRateLimitError: On a rate limit (propagates).
-    """  # noqa: DOC502  # raised by cache.lookup, not caught here
-    try:
-        return cache.lookup(issue).branch
-    except (BranchLookupError, ValueError, GithubException) as exc:
-        logger.warning("Branch lookup failed for issue #%d: %s", issue["number"], exc)
-        return None
 
 
 def _is_issue_eligible(

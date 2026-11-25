@@ -22,7 +22,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
 from tests.github_factories import make_issue_data
 
 CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
-ISSUES = "mcp_coder.workflows.vscodeclaude.issues"
+ISSUE_HELPERS = "mcp_coder.workflow_utils.issue_helpers"
 REPO_CONFIG = {"repo_url": "https://github.com/owner/repo"}
 
 MOCK_MERGE_CONFLICT_LABELS_CONFIG: dict[str, Any] = {
@@ -406,7 +406,7 @@ class TestResolvePrTarget:
         branch_cache.lookup.side_effect = BranchLookupError("boom")
         pr_cache = MagicMock()
 
-        with caplog.at_level(logging.WARNING, logger=ISSUES):
+        with caplog.at_level(logging.WARNING, logger=ISSUE_HELPERS):
             result = _resolve_pr_target(_make_pr_issue(1), branch_cache, pr_cache)
 
         assert result == (None, None)

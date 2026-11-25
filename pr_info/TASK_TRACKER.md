@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move `get_issue_status`, `is_marked`, `lookup_branch` to `workflow_utils/issue_helpers.py` (move only)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `vscodeclaude/checks.py` to `workflows/pr_health/` with its tests (move only)
 See [step_2.md](./steps/step_2.md)
