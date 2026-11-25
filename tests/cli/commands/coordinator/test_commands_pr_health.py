@@ -1,6 +1,7 @@
 """PR-health in the coordinator run: per repo with capacity and a working cache."""
 
 import argparse
+import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
@@ -20,6 +21,7 @@ from tests.github_factories import make_issue_data
 _COMMANDS = "mcp_coder.cli.commands.coordinator.commands"
 
 PLAN_READY = "status-05:plan-ready"
+READY_PR = "status-08:ready-pr"
 PR_CREATED = "status-10:pr-created"
 
 
@@ -205,3 +207,124 @@ class TestPrHealthInCollectWork:
         assert result == 0
         assert env["get_eligible"].call_count == 2
         env["pr_health"].assert_not_called()
+
+
+def _error_messages(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == _COMMANDS and r.levelno == logging.ERROR
+    ]
+
+
+class TestMultipleStatusLabels:
+    """One ERROR per open issue with more than one status-* label."""
+
+    def test_error_per_open_issue_with_two_status_labels(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=[PLAN_READY, PR_CREATED]),
+        ]
+        env.issues["repo_b"] = [
+            make_issue_data(number=8, labels=["bug", PR_CREATED, PLAN_READY]),
+        ]
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert _error_messages(caplog) == [
+            f"repo_a #7 has multiple status labels: {PLAN_READY}, {PR_CREATED}",
+            f"repo_b #8 has multiple status labels: {PR_CREATED}, {PLAN_READY}",
+        ]
+
+    def test_no_error_for_closed_issue(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=[PLAN_READY, PR_CREATED], state="closed"),
+        ]
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert not _error_messages(caplog)
+
+    def test_no_error_for_single_status_label(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=["bug", PR_CREATED, "enhancement"]),
+        ]
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert not _error_messages(caplog)
+
+    def test_no_error_for_busy_repo(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=[PLAN_READY, PR_CREATED]),
+        ]
+        env.busy.add("Jobs/repo_a")
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert not _error_messages(caplog)
+
+    def test_no_error_on_cache_fallback(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env["get_eligible"].return_value = [
+            make_issue_data(number=7, labels=[READY_PR, PR_CREATED]),
+        ]
+        env["get_cached"].side_effect = RuntimeError("cache broken")
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert not _error_messages(caplog)
+
+    def test_error_logged_when_pr_health_rate_limited(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=[PLAN_READY, PR_CREATED]),
+        ]
+        env["pr_health"].side_effect = GitHubRateLimitError("limited")
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert _error_messages(caplog) == [
+            f"repo_a #7 has multiple status labels: {PLAN_READY}, {PR_CREATED}",
+        ]
+        env["dispatch"].assert_not_called()
+
+    def test_issue_with_multiple_labels_still_dispatched(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.issues["repo_a"] = [
+            make_issue_data(number=7, labels=[READY_PR, PR_CREATED]),
+        ]
+
+        with caplog.at_level(logging.ERROR, logger=_COMMANDS):
+            result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert _error_messages(caplog) == [
+            f"repo_a #7 has multiple status labels: {READY_PR}, {PR_CREATED}",
+        ]
+        dispatched = [
+            c.kwargs["issue"]["number"] for c in env["dispatch"].call_args_list
+        ]
+        assert dispatched == [7]

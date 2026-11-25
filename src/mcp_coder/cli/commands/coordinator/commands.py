@@ -203,6 +203,30 @@ def _dispatch_sort_key(item: tuple[IssueData, _Repo]) -> tuple[int, int]:
     return (stage_index(item[0]), item[1].config_index)
 
 
+def _log_multiple_status_labels(repo_name: str, issues: list[IssueData]) -> None:
+    """Log one ERROR per open issue that carries more than one status-* label.
+
+    Closed issues are skipped: the cached list still holds them.
+
+    Args:
+        repo_name: Repository name used in the message.
+        issues: Cached issues of the repository.
+    """
+    for issue in issues:
+        if issue.get("state") != "open":
+            continue
+        status_labels = [
+            label for label in issue["labels"] if label.startswith("status-")
+        ]
+        if len(status_labels) > 1:
+            logger.error(
+                "%s #%d has multiple status labels: %s",
+                repo_name,
+                issue["number"],
+                ", ".join(status_labels),
+            )
+
+
 def _collect_work(
     repo_names: list[str],
     force_refresh: bool,
@@ -215,9 +239,10 @@ def _collect_work(
     before any GitHub call. A busy job's URL is added to ``blocked`` and its
     repos are skipped: no managers, no fetch (``force_refresh`` does not override).
 
-    For each repo with capacity and a working issue cache, PR-health runs on
-    the full cached issue list (not only the eligible issues). A cache failure
-    falls back to a direct fetch of the eligible issues and skips PR-health.
+    For each repo with capacity and a working issue cache, the multi-status-label
+    check and PR-health run on the full cached issue list (not only the eligible
+    issues). A cache failure falls back to a direct fetch of the eligible issues
+    and skips both.
 
     An invalid repo config (ValueError) and a rate limit during a fetch or
     from PR-health propagate to the caller's handlers.
@@ -300,7 +325,9 @@ def _collect_work(
             )
             eligible_issues = get_eligible_issues(issue_manager)
         else:
-            # Only with a working cache; errors here must not trigger the fallback
+            # Only with a working cache; errors here must not trigger the fallback.
+            # Label check first, so a rate limit in PR-health cannot swallow it.
+            _log_multiple_status_labels(repo_name, all_issues)
             check_pr_health(repo_name, validated_config, all_issues)
 
         logger.info(f"Found {len(eligible_issues)} eligible issues")
