@@ -84,7 +84,14 @@ update the module docstring line "Issue filtering functions (including cached ve
    - cache failure (`get_all_cached_issues` raises `RuntimeError`) → `get_eligible_issues` used,
      `check_pr_health` not called;
    - `check_pr_health` raises `GitHubRateLimitError` → exit 0, `dispatch_workflow` not called;
-   - `check_pr_health` raises `RuntimeError` → `get_eligible_issues` not called (no fallback).
+   - `check_pr_health` raises `RuntimeError` → the error propagates out of `execute_coordinator_run`
+     (its final `except Exception` logs "Unexpected error" and re-raises, as for any other
+     non-rate-limit error): assert `pytest.raises(RuntimeError)`, `get_eligible_issues` not called
+     (no fallback) and `dispatch_workflow` not called;
+   - `_filter_eligible_issues` raises `KeyError` (labels-config error; patch
+     `commands._filter_eligible_issues`) → `get_eligible_issues` called (direct-fetch fallback),
+     `check_pr_health` not called. Replaces the deleted
+     `test_get_cached_eligible_issues_fallback_on_error`.
 4. Rewrite each `patch(...commands.get_cached_eligible_issues)` to `get_all_cached_issues` in
    `test_commands.py`, `test_integration.py`, `test_commands_capacity_gate.py`,
    `test_commands_dispatch_order.py`, `test_commands_trust_gate.py`. Not a rename:
@@ -93,7 +100,8 @@ update the module docstring line "Issue filtering functions (including cached ve
      `call_args[1]["repo_full_name"]` become `call_args.args[0].full_name`;
    - results now pass through the real `_filter_eligible_issues`: fixture issues must be open
      (`make_issue_data` default) and carry exactly one bot_pickup label, no ignore label.
-5. `test_core_eligibility.py`: delete the `get_cached_eligible_issues` test class and import.
+5. `test_core_eligibility.py`: delete the `get_cached_eligible_issues` test class and import (its
+   filter-error fallback case is replaced by the `KeyError` case in `test_commands_pr_health.py`).
 6. `test_vscodeclaude_rate_limit.py`: remove `check_pr_health` from `launch_mocks` and every
    `check_pr_health` assertion. `test_pr_health_limit_stops_before_next_repo` → delete (covered by
    `test_wrapped_limit_in_launch_exits_zero`). `test_later_repo_limit_still_reports_started_sessions` →

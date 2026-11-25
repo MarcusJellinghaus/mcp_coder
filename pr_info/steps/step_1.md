@@ -47,8 +47,12 @@ Module boilerplate: docstring, `logger = logging.getLogger(__name__)` (used by `
    - `issue_helpers.py` defines its own `logger`; it must not import `logger` (or anything) from
      `vscodeclaude`.
    - Every consumer imports the names from `...workflow_utils.issue_helpers` directly:
-     `issues.py` (`get_issue_status`), `checks.py`, `session_launch.py` (`get_issue_status`,
-     `lookup_branch`), `session_restart.py`, `status.py`, `workspace.py` (`is_marked`).
+     - `issues.py`: `get_issue_status`, `lookup_branch` (still called inside `issues.py`);
+     - `checks.py`: `get_issue_status`, `is_marked`, `lookup_branch`;
+     - `session_launch.py`: `get_issue_status`, `lookup_branch`;
+     - `session_restart.py`: `get_issue_status`, `lookup_branch`;
+     - `status.py`: `get_issue_status`;
+     - `workspace.py`: `is_marked`.
      No import of these names through `vscodeclaude.helpers` / `vscodeclaude.issues` remains.
    - Remove `"get_issue_status"` and `"is_marked"` from `vscodeclaude/helpers.py` `__all__`.
    - Remove imports left unused in `helpers.py` / `issues.py` (e.g. `BranchLookupError`,
