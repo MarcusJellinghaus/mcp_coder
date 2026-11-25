@@ -11,6 +11,7 @@
 ## WHERE
 
 - `src/mcp_coder/utils/pyproject_config.py`
+- `src/mcp_coder/install/_env.py` (docstring only)
 - `tests/utils/test_pyproject_config.py`
 - `tests/cli/commands/test_install.py`
 - `tests/install/test_project_setup.py`
@@ -37,7 +38,10 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig
   `get_github_install_config` raise `ValueError` naming the file and key when
   `tool`, `mcp-coder` or the sub-table is not a table; add
   `# noqa: DOC502` where the raise comes from a callee.
-- No entry-point source changes: `execute_install`, `project_setup`'s python
+- `InstallConfig.from_args` (`src/mcp_coder/install/_env.py`): docstring only —
+  extend its `Raises` `ValueError` entry to also cover `tool`, `mcp-coder` or
+  `install` in pyproject.toml not being a table.
+- No other entry-point source changes: `execute_install`, `project_setup`'s python
   built-in and `_warn_python_policy` already handle `ValueError`.
 
 ## ALGORITHM
@@ -87,7 +91,9 @@ strict / github non-table → `ValueError("Invalid 'install' in <path>: expected
   `"[tool.mcp-coder]\ninstall = 1\n"` and `"[tool.mcp-coder]\ninstall-from-github = 1\n"`:
   `_write_mcp_json(tmp_path)`, write pyproject, `validate_target_repo(tmp_path)` does not
   raise; exactly one warning, containing `"cannot be read as target-repo policy"`
-  and the key name.
+  and the quoted key from the `ValueError` text (`"'install'"` /
+  `"'install-from-github'"`) — the bare name would always match, since the
+  fixed warning text contains "`mcp-coder install`".
 
 ## Commit message
 
