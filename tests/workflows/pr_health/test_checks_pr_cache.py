@@ -9,9 +9,9 @@ from mcp_coder.mcp_workspace_github import (
     BranchLookupError,
     GitHubRateLimitError,
 )
-from mcp_coder.workflows.vscodeclaude.checks import check_pr_health
-from tests.workflows.vscodeclaude._review_comments_helpers import _comment
-from tests.workflows.vscodeclaude.test_checks import (
+from mcp_coder.workflows.pr_health.checks import check_pr_health
+from tests.workflows.pr_health._review_comments_helpers import _comment
+from tests.workflows.pr_health.test_checks import (
     CHECKS,
     REPO_CONFIG,
     _empty_feedback,

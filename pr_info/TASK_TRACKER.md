@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move `vscodeclaude/checks.py` to `workflows/pr_health/` with its tests (move only)
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `pr_health` behaviour — new selection, `RepoIdentifier` URL, cache write-back
 See [step_3.md](./steps/step_3.md)

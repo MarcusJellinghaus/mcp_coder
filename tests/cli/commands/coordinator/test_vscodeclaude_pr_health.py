@@ -165,7 +165,7 @@ class TestPrHealthOutsideCapacityGate:
 # Call-count acceptance: a warm second run makes almost no GitHub requests.
 # ---------------------------------------------------------------------------
 
-_CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
+_CHECKS = "mcp_coder.workflows.pr_health.checks"
 _STORE = "mcp_workspace.github_operations.caching._store"
 _EVENTS = "mcp_workspace.github_operations.issues.events_mixin.EventsMixin"
 _FETCH_ALERTS = (
@@ -234,7 +234,7 @@ class TestPrHealthWarmCacheCallCount:
             IssueData,
             RepoIdentifier,
         )
-        from mcp_coder.workflows.vscodeclaude.checks import check_pr_health
+        from mcp_coder.workflows.pr_health.checks import check_pr_health
         from tests.github_factories import make_issue_data
 
         monkeypatch.setattr(f"{_STORE}.get_user_app_data_dir", lambda app: tmp_path)

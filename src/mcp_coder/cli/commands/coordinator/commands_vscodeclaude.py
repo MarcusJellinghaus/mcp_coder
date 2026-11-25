@@ -29,12 +29,12 @@ from ....workflow_utils.rate_limit import (
     log_rate_limit_stop,
     raise_if_rate_limited,
 )
+from ....workflows.pr_health import check_pr_health
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
     apply_assessments,
     build_assessments,
-    check_pr_health,
     cleanup_stale_sessions,
     load_repo_vscodeclaude_config,
     load_sessions,

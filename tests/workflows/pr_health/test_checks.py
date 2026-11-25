@@ -13,7 +13,7 @@ from mcp_coder.mcp_workspace_github import (
     OpenPullRequest,
 )
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.workflows.vscodeclaude.checks import (
+from mcp_coder.workflows.pr_health.checks import (
     _check_ci,
     _check_merge_conflict,
     _resolve_pr_target,
@@ -21,7 +21,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
 )
 from tests.github_factories import make_issue_data
 
-CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
+CHECKS = "mcp_coder.workflows.pr_health.checks"
 ISSUE_HELPERS = "mcp_coder.workflow_utils.issue_helpers"
 REPO_CONFIG = {"repo_url": "https://github.com/owner/repo"}
 

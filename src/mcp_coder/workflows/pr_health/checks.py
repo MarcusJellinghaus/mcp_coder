@@ -27,8 +27,8 @@ from ...utils.log_utils import OUTPUT
 from ...workflow_utils.issue_helpers import get_issue_status, is_marked, lookup_branch
 from ...workflow_utils.label_transitions import update_workflow_label
 from ...workflow_utils.rate_limit import raise_if_rate_limited
-from .config import get_github_username, get_repo_full_name
-from .issues import _filter_eligible_vscodeclaude_issues
+from ..vscodeclaude.config import get_github_username, get_repo_full_name
+from ..vscodeclaude.issues import _filter_eligible_vscodeclaude_issues
 
 logger = logging.getLogger(__name__)
 
