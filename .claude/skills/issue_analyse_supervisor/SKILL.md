@@ -46,8 +46,8 @@ You are a technical lead supervising a software engineer (the `issue-analyst` ag
    - Link shared rules (e.g. `.claude/knowledge_base/refactoring_principles.md`) instead of copying them.
    - Every prohibition needs an allowed fallback or an explicit "stop and report".
    - Every step or check must be doable with MCP tools — the implement workflow has no Bash. Escalate shell-only facts (action SHA pins, build/packaging behaviour, external URLs) to the user and write the literal value into the issue. A check that needs Bash goes into an `## After merge` section of the issue.
-6. **LOOP: If this round updated the issue OR surfaced new questions/scope changes, launch a fresh `issue-analyst` agent and repeat from step 1.** Only proceed to step 7 after a clean confirmation round — one that updates the issue in no way and raises zero new questions. Do NOT stop or wait for user input between rounds — the loop is automatic.
-7. **Safety valve:** If 5 rounds have been reached, stop. Your output here *is* the list of remaining open items plus a request for guidance — not a separate "done" message followed by issues.
+6. **LOOP: If this round changed the issue in a way that matters — what gets built, the approach, a decision, or the scope — launch a fresh `issue-analyst` agent and repeat from step 1.** If its changes were only small, cosmetic or irrelevant to the implementation (wording, a stale reference, a detail the planner finds anyway), the loop ends — go to step 8. Do NOT stop or wait for user input between rounds — the loop is automatic.
+7. **Safety valve:** If round 5 would still loop back, stop. Your output here *is* the list of remaining open items plus a request for guidance — not a separate "done" message followed by issues.
 8. **Finalize:**
    - Add a `## Final Status` section to the log.
    - Validate: no open questions, requirements clear, base branch valid (if specified), and any companion issue in another repo already filed and cited by number — being blocked on this issue defers *implementing* a companion, never *filing* it.
