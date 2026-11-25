@@ -515,3 +515,66 @@ class TestExecuteVerifyProjectExit:
         toolkit = _row(capsys.readouterr().out.splitlines(), "Toolkit")
         assert "[ERR]" in toolkit
         assert "No [tool.mcp-coder.toolkit] table" in toolkit
+
+
+_IMPLEMENT_RETIRED = "[tool.mcp-coder.implement] is retired and ignored"
+
+
+class TestNonTableConfigVerify:
+    """A non-table tool / mcp-coder / implement / install never crashes verify."""
+
+    @pytest.mark.parametrize(
+        ("content", "fragment", "exit_code"),
+        [
+            ("tool = 1\n", "cannot be parsed", 1),
+            ("[tool]\nmcp-coder = 1\n", "cannot be parsed", 1),
+            ("[tool.mcp-coder]\nimplement = 1\n", _IMPLEMENT_RETIRED, 0),
+            ('[tool.mcp-coder]\nimplement = "format_code"\n', _IMPLEMENT_RETIRED, 0),
+            ('[tool.mcp-coder]\nimplement = ["format_code"]\n', _IMPLEMENT_RETIRED, 0),
+            (
+                "[tool.mcp-coder]\ninstall = 1\n",
+                "[tool.mcp-coder.install] is not a table",
+                0,
+            ),
+            (
+                "[tool.mcp-coder]\ninstall-from-github = 1\n",
+                "[tool.mcp-coder.install-from-github] is not a table",
+                0,
+            ),
+        ],
+        ids=[
+            "tool",
+            "mcp-coder",
+            "implement-int",
+            "implement-str",
+            "implement-list",
+            "install",
+            "install-from-github",
+        ],
+    )
+    def test_verify_reports_and_continues(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        content: str,
+        fragment: str,
+        exit_code: int,
+    ) -> None:
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with (
+            _make_verify_mocks(),
+            patch(
+                "mcp_coder.cli.commands.verify._print_project_section",
+                _print_project_section,
+            ),
+        ):
+            code = execute_verify(_make_args(project_dir=str(tmp_path)))
+        out = capsys.readouterr().out
+        lines = out.splitlines()
+
+        assert code == exit_code
+        assert _squash(fragment) in _squash(out)
+        assert "legacy format_code" not in out
+        assert any(line.startswith("=== GIT ") for line in lines)
+        if fragment == "cannot be parsed":
+            assert "[ERR]" in _row(lines, "Toolkit")

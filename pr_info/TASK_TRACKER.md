@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `verify` key-warning rows + end-to-end `verify` tests — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: `_classify` key-warning and `TestNonTableConfigVerify` tests + two `_classify` branches (check precondition first)
-- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_classify` key-warning and `TestNonTableConfigVerify` tests + two `_classify` branches (check precondition first)
+- [x] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

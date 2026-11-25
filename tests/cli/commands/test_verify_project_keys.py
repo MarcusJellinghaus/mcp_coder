@@ -143,6 +143,45 @@ class TestScanProjectKeys:
         assert warnings[0].file == "pyproject.toml"
         assert "cannot be parsed" in warnings[0].message
 
+    @pytest.mark.parametrize(
+        "value", ["1", '"format_code"', '["format_code"]'], ids=["int", "str", "list"]
+    )
+    def test_non_table_implement_in_pyproject_is_retired(
+        self, tmp_path: Path, value: str
+    ) -> None:
+        _write(tmp_path, "pyproject.toml", f"[tool.mcp-coder]\nimplement = {value}\n")
+
+        warnings = scan_project_keys(tmp_path)
+
+        assert warnings == [
+            KeyWarning(
+                "PROJECT",
+                "pyproject.toml",
+                "[tool.mcp-coder.implement] is retired and ignored",
+            )
+        ]
+
+    @pytest.mark.parametrize("key", ["install", "install-from-github"])
+    def test_non_table_python_only_key_in_pyproject_is_not_a_table(
+        self, tmp_path: Path, key: str
+    ) -> None:
+        _write(tmp_path, "pyproject.toml", f"[tool.mcp-coder]\n{key} = 1\n")
+
+        warnings = scan_project_keys(tmp_path)
+
+        assert warnings == [
+            KeyWarning(
+                "PROJECT", "pyproject.toml", f"[tool.mcp-coder.{key}] is not a table"
+            )
+        ]
+
+    def test_non_table_prompts_has_no_project_warning(self, tmp_path: Path) -> None:
+        _write(tmp_path, "pyproject.toml", "[tool.mcp-coder]\nprompts = 1\n")
+
+        warnings = scan_project_keys(tmp_path)
+
+        assert not [w for w in warnings if w.section == "PROJECT"]
+
     def test_format_code_in_both_files_conflicts(self, tmp_path: Path) -> None:
         for file_name in ("pyproject.toml", "mcp-coder.toml"):
             _write(tmp_path, file_name, "[tool.mcp-coder]\nformat_code = true\n")
