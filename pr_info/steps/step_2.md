@@ -54,7 +54,9 @@ Tests:
 - Leave `test_execute_set_status_no_args_shows_labels` unchanged (its `resolve_project_dir`
   patch still resolves: the main path uses it).
 - Add a test for `build_set_status_epilog`'s fallback (import `build_set_status_epilog` if
-  not yet imported):
+  not yet imported). Add it as a module-level function, not as a method of
+  `TestExecuteSetStatus` — as written (no `self`), a method would receive the `@patch`
+  mock as an extra argument and fail with `TypeError`:
   ```python
   @patch("mcp_coder.cli.commands.set_status.load_labels_config")
   def test_build_set_status_epilog_load_failure_returns_neutral_message(
