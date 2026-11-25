@@ -196,6 +196,18 @@ and its issues are skipped; issues of other executor jobs continue in dispatch o
 whose executor job is busy at run start are not fetched from GitHub at all, also with
 `--force-refresh`.
 
+### PR-health inside the gate
+
+[PR-health](../coordinator-vscodeclaude.md#pr-health-checks-for-status-10pr-created) (`status-10` →
+`status-71` / `81` / `91`) runs per repo inside the capacity gate, before dispatch. A busy repo still
+gets no GitHub call; its PRs are checked on the next run with capacity.
+
+The agent's mcp-coder config needs:
+
+- `[github] trusted_commenters` — accounts whose PR feedback counts (e.g. the machine user);
+- a `[github] token` with the PR-health permissions: Actions Read, Code scanning alerts Read, Pull
+  requests Read (see [GitHub Setup](github.md)).
+
 ### Dependency on the Executor pipeline
 
 The signal is the build's display name, so the gate depends on two things outside this repository:

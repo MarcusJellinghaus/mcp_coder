@@ -54,7 +54,7 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
 - **Label-driven state machine.** The issue's `status-NN:*` label is the only workflow state. It selects the workflow to run; the workflow moves the label on success or failure, so no local state decides what happens next. Labels are defined in `src/mcp_coder/config/labels.json` (overridable per repo) and synced with `mcp-coder gh-tool define-labels`. That file also marks which labels are promotable by `/approve` and which are failures. Three families:
   - **Main flow (01-10):** created → planning → implementing → PR created, with in-progress labels (03, 06, 09) and `f` failure variants.
   - **Optional bot review (14, 17):** used only when automated review is enabled.
-  - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every poll and routes conflicts, failing CI, code-scanning alerts and review comments back to a workflow or a human.
+  - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every run while the executor job has capacity and routes conflicts, failing CI, code-scanning alerts and review comments back to a workflow or a human.
 
   Diagram and per-label behaviour: [Development Process](../processes-prompts/development-process.md). Setup: [Label Setup](../getting-started/label-setup.md).
 - **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` runs the `implement_task` binding after each task and the `implement_final` binding after the last one, each with a capped LLM fix loop, and the final one is a gate. The commit step runs the formatter (`format_code`, on by default), and `rebase` compares checks before and after the rebase. All of these go through [the bindings of the configured toolkit](../configuration/toolkits.md#bindings) (`[tool.mcp-coder.toolkit]`). The LLM also runs the toolkit's checks during each task, as its prompt tells it to. See [toolkits](../configuration/toolkits.md) and the [toolkit interface](toolkit-interface.md).
@@ -87,7 +87,7 @@ Inside the orchestration band the order is also fixed: `workflows` on top, then 
 |-------|----------------|
 | `cli` | Argument parsing and command routing. Commands are thin and one per file. |
 | `icoder` | Interactive terminal chat. Logic lives in a Textual-free core; the UI is a thin shell, which keeps it testable. |
-| `workflows` | `implement`, `create_plan`, `create_pr`, `fix_ci`, `fix_conflict`, `review`, `vscodeclaude`. Each owns its labels, config and failure categories. |
+| `workflows` | `implement`, `create_plan`, `create_pr`, `fix_ci`, `fix_conflict`, `pr_health`, `review`, `vscodeclaude`. Each owns its labels, config and failure categories. |
 | `workflow_steps`, `workflow_utils`, `checks`, `services` | Reusable pieces under the workflows. Primitives never import upward. `workflow_steps/merge.py` is the shared auto-merge step for `create_pr`, `fix_ci` and `fix_conflict`. |
 | `llm` | One interface over Claude Code CLI (primary), Copilot CLI and LangChain. Owns streaming, session storage and logging of LLM calls. |
 | `prompts`, `prompt_manager` | Prompt templates and the system and project prompts layered on them. |

@@ -1,6 +1,6 @@
 # PR Follow-up
 
-While a PR waits at `status-10:pr-created`, the vscodeclaude coordinator checks it for merge conflicts, failing CI, code-scanning alerts and review feedback. Conflicts and CI are fixed automatically on Jenkins. Alerts and review feedback always go to a human.
+While a PR waits at `status-10:pr-created`, the Jenkins coordinator checks it for merge conflicts, failing CI, code-scanning alerts and review feedback. Conflicts and CI are fixed automatically on Jenkins. Alerts and review feedback always go to a human.
 
 ## Labels
 

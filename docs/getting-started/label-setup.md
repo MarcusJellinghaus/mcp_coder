@@ -316,7 +316,7 @@ The default workflow uses these status labels:
 
 ### PR-Health Labels
 
-After a PR is created (`status-10:pr-created`), the coordinator checks it on every poll and moves the issue to one of these labels when it needs attention. They are always active — no config flag. Conflicts are checked before CI, CI before code-scanning alerts, alerts before review comments.
+After a PR is created (`status-10:pr-created`), the Jenkins coordinator checks it on every run while the executor job has capacity and moves the issue to one of these labels when it needs attention. They are always active — no config flag. Conflicts are checked before CI, CI before code-scanning alerts, alerts before review comments.
 
 | Label | Description |
 |-------|-------------|
