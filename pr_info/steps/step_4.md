@@ -80,7 +80,9 @@ _RETRY_OK = "--- uv retry succeeded\n"
 2. `test_classify_failed_uv_retry_keeps_no_status_id` — `_PYPI_ERROR * 2` +
    `_RETRY.format("ENV-PYPI-NETWORK")` (no success line) → contains
    `MC-INSTALL-UV-RETRY` and `PIPE-NO-STATUS-ON-PRE-WORKFLOW-FAILURE`.
-3. `test_retry_line_matches_no_env_signature` — `classify(_RETRY.format("ENV-PYPI-NETWORK"))
+3. `test_retry_line_matches_no_env_signature(patterns)` — uses the module's `patterns`
+   fixture like the other classifier tests;
+   `jenkins_classify_logs.classify(_RETRY.format("ENV-PYPI-NETWORK"), patterns)
    == ["MC-INSTALL-UV-RETRY"]` (the retry line alone must not look like uv's error).
 
 Existing tests (`test_classify_signature`, `test_main_tags_index_and_reports`,
