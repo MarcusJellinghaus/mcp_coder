@@ -29,6 +29,16 @@ mcp-tools-py 0.1.11.dev27+gc46e470a1
 mcp-coder 9.9.9
 mcp-coder gh-tool set-status status-failed
 """
+_PYPI_ERROR = "error: Failed to fetch: `https://pypi.org/simple/flask-cors/`\n"
+_CACHE_ERROR = (
+    "error: Failed to write to the client cache\n"
+    "  Caused by: Failed to persist temporary file to "
+    "C:\\Users\\builder\\AppData\\Local\\uv\\cache\\simple-v14\\pypi\\starlette.rkyv: "
+    "Access is denied. (os error 5)\n"
+)
+_RETRY = "--- uv failed with a transient error ({}); retrying once in 10 s\n"
+_RETRY_OK = "--- uv retry succeeded\n"
+_NO_STATUS = "PIPE-NO-STATUS-ON-PRE-WORKFLOW-FAILURE"
 
 
 @pytest.fixture(name="patterns", scope="module")
@@ -57,6 +67,36 @@ def test_classify_tracker_invalid(patterns: object) -> None:
 
 def test_classify_no_match(patterns: object) -> None:
     assert jenkins_classify_logs.classify("all good\n", patterns) == []
+
+
+@pytest.mark.parametrize(
+    ("error", "env_id"),
+    [
+        (_PYPI_ERROR, "ENV-PYPI-NETWORK"),
+        (_CACHE_ERROR, "ENV-UV-ACCESS-DENIED-CACHE"),
+    ],
+)
+def test_classify_recovered_uv_retry_has_no_status_id(
+    patterns: object, error: str, env_id: str
+) -> None:
+    text = error + _RETRY.format(env_id) + _RETRY_OK
+    ids = jenkins_classify_logs.classify(text, patterns)
+    assert env_id in ids
+    assert "MC-INSTALL-UV-RETRY" in ids
+    assert "MC-INSTALL-UV-RETRY-OK" in ids
+    assert _NO_STATUS not in ids
+
+
+def test_classify_failed_uv_retry_keeps_no_status_id(patterns: object) -> None:
+    text = _PYPI_ERROR * 2 + _RETRY.format("ENV-PYPI-NETWORK")
+    ids = jenkins_classify_logs.classify(text, patterns)
+    assert "MC-INSTALL-UV-RETRY" in ids
+    assert _NO_STATUS in ids
+
+
+def test_retry_line_matches_no_env_signature(patterns: object) -> None:
+    text = _RETRY.format("ENV-PYPI-NETWORK")
+    assert jenkins_classify_logs.classify(text, patterns) == ["MC-INSTALL-UV-RETRY"]
 
 
 @pytest.mark.parametrize(

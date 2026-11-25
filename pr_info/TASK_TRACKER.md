@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Classifier retry signatures and PIPE-NO-STATUS suppression — [step_4.md](./steps/step_4.md)
-- [ ] Implementation: add tests to `tests/tools/test_jenkins_classify_logs.py`, then add `MC-INSTALL-UV-RETRY` / `MC-INSTALL-UV-RETRY-OK` signatures and `no_status_suppressed_by` to `jenkins_issue_patterns.toml`, honour it in `jenkins_classify_logs.py`; update `tools/jenkins_issue_analysis.md`
-- [ ] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add tests to `tests/tools/test_jenkins_classify_logs.py`, then add `MC-INSTALL-UV-RETRY` / `MC-INSTALL-UV-RETRY-OK` signatures and `no_status_suppressed_by` to `jenkins_issue_patterns.toml`, honour it in `jenkins_classify_logs.py`; update `tools/jenkins_issue_analysis.md`
+- [x] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against `main` and address findings
