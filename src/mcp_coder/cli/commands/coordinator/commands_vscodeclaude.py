@@ -29,7 +29,6 @@ from ....workflow_utils.rate_limit import (
     log_rate_limit_stop,
     raise_if_rate_limited,
 )
-from ....workflows.pr_health import check_pr_health
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
@@ -364,7 +363,7 @@ def _launch_for_repos(
     restarted: list[VSCodeClaudeSession],
     total_started: list[VSCodeClaudeSession],
 ) -> None:
-    """Run PR-health checks and launch eligible issues per repo, then summarise.
+    """Launch eligible issues per repo, then summarise.
 
     Args:
         args: Parsed launch arguments (``repo``, ``no_install_from_github``).
@@ -409,9 +408,6 @@ def _launch_for_repos(
             continue
 
         all_cached_issues = list(cached_issues_by_repo.get(repo_full_name, {}).values())
-
-        # PR-health checks run for every repo, independent of capacity
-        check_pr_health(repo_name, validated_config, all_cached_issues)
 
         started = process_eligible_issues(
             repo_name=repo_name,

@@ -187,12 +187,13 @@ class TestExecuteCoordinatorTest:
 class TestExecuteCoordinatorRun:
     """Tests for execute_coordinator_run function."""
 
+    @patch("mcp_coder.cli.commands.coordinator.commands.update_issue_labels_in_cache")
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_single_repo_success(
@@ -205,6 +206,7 @@ class TestExecuteCoordinatorRun:
         mock_jenkins_class: MagicMock,
         mock_branch_mgr_class: MagicMock,
         mock_issue_mgr_class: MagicMock,
+        mock_update_cache: MagicMock,
     ) -> None:
         """Test successful execution for single repository using cache."""
         # Setup - Mock args for single repository mode
@@ -273,10 +275,11 @@ class TestExecuteCoordinatorRun:
         # Verify - Exit code 0 (success)
         assert result == 0
 
-        # Verify - get_cached_eligible_issues was called with correct parameters
+        # Verify - get_all_cached_issues was called with correct parameters
         mock_get_cached_issues.assert_called_once()
-        call_args = mock_get_cached_issues.call_args[1]
-        assert call_args["repo_full_name"] == "user/mcp_coder"
+        identifier = mock_get_cached_issues.call_args.args[0]
+        assert identifier.full_name == "user/mcp_coder"
+        call_args = mock_get_cached_issues.call_args.kwargs
         assert call_args["issue_manager"] == mock_issue_mgr
         assert call_args["force_refresh"] is False
 
@@ -285,12 +288,16 @@ class TestExecuteCoordinatorRun:
         for call in mock_dispatch_workflow.call_args_list:
             assert call.kwargs["repo_name"] == "mcp_coder"
 
+        # Verify - the dispatch cache updates use the identifier the fetch used
+        assert mock_update_cache.call_count == 2
+        assert all(c.args[0] is identifier for c in mock_update_cache.call_args_list)
+
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_coordinator_run_error_logged_without_traceback(
@@ -424,7 +431,7 @@ class TestExecuteCoordinatorRunRateLimit:
             ) as load_repo,
             patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
             patch(f"{_COMMANDS}.IssueBranchManager") as branch_mgr_cls,
-            patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
+            patch(f"{_COMMANDS}.get_all_cached_issues") as get_cached,
             patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
             patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
         ):

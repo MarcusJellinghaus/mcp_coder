@@ -59,3 +59,16 @@ def _dispatch_delay() -> Iterator[MagicMock]:
         return_value=15,
     ) as mock_delay:
         yield mock_delay
+
+
+@pytest.fixture(autouse=True)
+def _no_pr_health() -> Iterator[MagicMock]:
+    """Keep coordinator runs from running real PR-health checks.
+
+    Yields:
+        The patched ``check_pr_health`` in the coordinator commands module.
+    """
+    with patch(
+        "mcp_coder.cli.commands.coordinator.commands.check_pr_health"
+    ) as mock_pr_health:
+        yield mock_pr_health

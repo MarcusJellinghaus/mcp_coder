@@ -1,19 +1,13 @@
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
     PRIORITY_ORDER,
     _filter_eligible_issues,
-    get_cached_eligible_issues,
     get_eligible_issues,
 )
 from mcp_coder.cli.commands.coordinator.core import stage_index
-from mcp_coder.mcp_workspace_github import (
-    GitHubRateLimitError,
-    IssueData,
-    RepoIdentifier,
-)
 from tests.github_factories import make_issue_data
 
 
@@ -120,156 +114,3 @@ class TestGetEligibleIssues:
         mock_issue_manager.list_issues.assert_called_once_with(
             state="open", include_pull_requests=False
         )
-
-
-class TestGetCachedEligibleIssues:
-    """Tests for get_cached_eligible_issues wrapper function.
-
-    Note: get_cached_eligible_issues is now a thin wrapper that:
-    1. Calls get_all_cached_issues() from issues.cache module
-    2. Filters results using _filter_eligible_issues()
-    3. Falls back to get_eligible_issues() on errors
-
-    These tests verify the wrapper behavior, not the underlying cache operations
-    (which are tested in tests/utils/github_operations/test_issues.cache.py).
-    """
-
-    @pytest.fixture
-    def sample_issue(self) -> IssueData:
-        """Sample issue data for testing."""
-        return make_issue_data(
-            number=123,
-            labels=["status-02:awaiting-planning"],
-            updated_at="2025-12-31T09:00:00Z",
-            url="https://github.com/test/repo/issues/123",
-            title="Test issue",
-            body="Test issue body",
-            user="testuser",
-            created_at="2025-12-31T08:00:00Z",
-        )
-
-    @pytest.fixture
-    def mock_issue_manager(self) -> Mock:
-        """Mock IssueManager for testing."""
-        manager = Mock()
-        manager.list_issues.return_value = []
-        return manager
-
-    def test_get_cached_eligible_issues_calls_get_all_cached_issues(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
-    ) -> None:
-        """Test that wrapper calls get_all_cached_issues and filters results."""
-        with (
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues"
-            ) as mock_get_all,
-            patch(
-                "mcp_coder.cli.commands.coordinator.core._filter_eligible_issues"
-            ) as mock_filter,
-        ):
-            mock_get_all.return_value = [sample_issue]
-            mock_filter.return_value = [sample_issue]
-
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
-
-            assert result == [sample_issue]
-            mock_get_all.assert_called_once_with(
-                RepoIdentifier.from_full_name("owner/repo"),
-                issue_manager=mock_issue_manager,
-                force_refresh=False,
-                cache_refresh_minutes=1440,
-            )
-            mock_filter.assert_called_once_with([sample_issue])
-
-    def test_get_cached_eligible_issues_passes_force_refresh(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
-    ) -> None:
-        """Test that force_refresh parameter is passed through."""
-        with (
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues"
-            ) as mock_get_all,
-            patch(
-                "mcp_coder.cli.commands.coordinator.core._filter_eligible_issues"
-            ) as mock_filter,
-        ):
-            mock_get_all.return_value = [sample_issue]
-            mock_filter.return_value = [sample_issue]
-
-            result = get_cached_eligible_issues(
-                "owner/repo", mock_issue_manager, force_refresh=True
-            )
-
-            assert result == [sample_issue]
-            mock_get_all.assert_called_once_with(
-                RepoIdentifier.from_full_name("owner/repo"),
-                issue_manager=mock_issue_manager,
-                force_refresh=True,
-                cache_refresh_minutes=1440,
-            )
-
-    def test_get_cached_eligible_issues_passes_cache_refresh_minutes(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
-    ) -> None:
-        """Test that cache_refresh_minutes parameter is passed through."""
-        with (
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues"
-            ) as mock_get_all,
-            patch(
-                "mcp_coder.cli.commands.coordinator.core._filter_eligible_issues"
-            ) as mock_filter,
-        ):
-            mock_get_all.return_value = [sample_issue]
-            mock_filter.return_value = [sample_issue]
-
-            result = get_cached_eligible_issues(
-                "owner/repo", mock_issue_manager, cache_refresh_minutes=720
-            )
-
-            assert result == [sample_issue]
-            mock_get_all.assert_called_once_with(
-                RepoIdentifier.from_full_name("owner/repo"),
-                issue_manager=mock_issue_manager,
-                force_refresh=False,
-                cache_refresh_minutes=720,
-            )
-
-    def test_get_cached_eligible_issues_fallback_on_error(
-        self, mock_issue_manager: Mock
-    ) -> None:
-        """Test graceful fallback when cache operations fail."""
-        with (
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues",
-                side_effect=ValueError("Cache error"),
-            ),
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_eligible_issues"
-            ) as mock_fallback,
-        ):
-            mock_fallback.return_value = []
-
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
-
-            # Should fall back to get_eligible_issues
-            assert result == []
-            mock_fallback.assert_called_once_with(mock_issue_manager)
-
-    def test_get_cached_eligible_issues_rate_limit_propagates(
-        self, mock_issue_manager: Mock
-    ) -> None:
-        """A rate limit is not swallowed by the cache-error fallback."""
-        with (
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues",
-                side_effect=GitHubRateLimitError("limited"),
-            ),
-            patch(
-                "mcp_coder.cli.commands.coordinator.core.get_eligible_issues"
-            ) as mock_fallback,
-        ):
-            with pytest.raises(GitHubRateLimitError):
-                get_cached_eligible_issues("owner/repo", mock_issue_manager)
-
-            mock_fallback.assert_not_called()

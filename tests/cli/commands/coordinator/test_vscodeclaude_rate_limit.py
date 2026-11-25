@@ -65,7 +65,6 @@ def launch_mocks(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         load_repo_config=MagicMock(
             side_effect=lambda name: {"repo_url": f"https://github.com/owner/{name}"}
         ),
-        check_pr_health=MagicMock(),
         process_eligible_issues=MagicMock(return_value=[]),
     )
     for name, mock in vars(mocks).items():
@@ -106,7 +105,6 @@ class TestLaunchRateLimit:
         launch_mocks.cleanup_stale_sessions.assert_called_once()
         launch_mocks.apply_assessments.assert_called_once()
         launch_mocks.restart_closed_sessions.assert_not_called()
-        launch_mocks.check_pr_health.assert_not_called()
         launch_mocks.process_eligible_issues.assert_not_called()
         assert len(_stop_lines(caplog)) == 1
 
@@ -120,7 +118,6 @@ class TestLaunchRateLimit:
 
         assert result == 0
         launch_mocks.apply_assessments.assert_called_once()
-        launch_mocks.check_pr_health.assert_not_called()
         launch_mocks.process_eligible_issues.assert_not_called()
         assert len(_stop_lines(caplog)) == 1
 
@@ -148,20 +145,6 @@ class TestLaunchRateLimit:
         assert result == 0
         assert "Restarted: repo1 #7 (status-04:plan-review) PID:4242" in caplog.text
         launch_mocks.apply_assessments.assert_called_once()
-        launch_mocks.check_pr_health.assert_not_called()
-        assert len(_stop_lines(caplog)) == 1
-
-    def test_pr_health_limit_stops_before_next_repo(
-        self, launch_mocks: SimpleNamespace, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        launch_mocks.check_pr_health.side_effect = GitHubRateLimitError("limited")
-
-        with caplog.at_level(logging.DEBUG):
-            result = execute_coordinator_vscodeclaude(_launch_args())
-
-        assert result == 0
-        assert launch_mocks.check_pr_health.call_count == 1
-        launch_mocks.process_eligible_issues.assert_not_called()
         assert len(_stop_lines(caplog)) == 1
 
     def test_wrapped_limit_in_launch_exits_zero(
@@ -184,21 +167,22 @@ class TestLaunchRateLimit:
             "issue_number": 9,
             "status": "status-07:code-review",
         }
-        launch_mocks.process_eligible_issues.side_effect = [[started]]
-        launch_mocks.check_pr_health.side_effect = [None, _rest_rate_limit()]
+        launch_mocks.process_eligible_issues.side_effect = [
+            [started],
+            _rest_rate_limit(),
+        ]
 
         with caplog.at_level(logging.DEBUG):
             result = execute_coordinator_vscodeclaude(_launch_args())
 
         assert result == 0
-        assert launch_mocks.check_pr_health.call_count == 2
-        assert launch_mocks.process_eligible_issues.call_count == 1
+        assert launch_mocks.process_eligible_issues.call_count == 2
         assert "Started 1 new session(s):" in caplog.text
         assert "repo1 - #9: status-07:code-review" in caplog.text
         assert len(_stop_lines(caplog)) == 1
 
     def test_other_error_is_reraised(self, launch_mocks: SimpleNamespace) -> None:
-        launch_mocks.check_pr_health.side_effect = RuntimeError("boom")
+        launch_mocks.process_eligible_issues.side_effect = RuntimeError("boom")
 
         with pytest.raises(RuntimeError, match="boom"):
             execute_coordinator_vscodeclaude(_launch_args())

@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Coordinator runs PR-health in `_collect_work`; vscodeclaude stops; delete `get_cached_eligible_issues`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, lint-imports, vulture, file size) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Multi-status-label ERROR in `_collect_work`
 See [step_5.md](./steps/step_5.md)

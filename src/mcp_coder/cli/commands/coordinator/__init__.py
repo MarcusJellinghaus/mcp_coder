@@ -35,7 +35,6 @@ from .core import (
     DispatchResult,
     _filter_eligible_issues,
     dispatch_workflow,
-    get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
     load_repo_config,
@@ -53,7 +52,6 @@ __all__ = [
     # Public business logic
     "DispatchResult",
     "dispatch_workflow",
-    "get_cached_eligible_issues",
     "get_eligible_issues",
     "load_repo_config",
     "validate_repo_config",

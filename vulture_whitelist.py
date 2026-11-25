@@ -537,8 +537,8 @@ _._no_uv_git_shallow
 _._posix
 _._windows
 
-# tests/cli/commands/coordinator/test_vscodeclaude_cli.py - autouse fixture
-# stubbing check_pr_health so CLI handler tests never run real PR-health checks.
+# tests/cli/commands/coordinator/conftest.py - autouse fixture
+# stubbing check_pr_health so coordinator tests never run real PR-health checks.
 _._no_pr_health
 
 # tests/workflows/pr_health/test_checks_review_comments.py and

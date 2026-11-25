@@ -2,7 +2,7 @@
 
 This module contains:
 - Configuration management functions
-- Issue filtering functions (including cached version via issue_cache)
+- Issue filtering functions (direct fetch, and a filter for cached issue lists)
 - Executor capacity check (find_waiting_build)
 - Workflow dispatch function
 """
@@ -17,7 +17,6 @@ from ....mcp_workspace_github import (
     IssueData,
     IssueManager,
     RepoIdentifier,
-    get_all_cached_issues,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.diagnostics import job_url_path
@@ -297,44 +296,6 @@ def get_eligible_issues(
     logger.debug(f"Filtered to {len(eligible_issues)} eligible issues")
 
     return eligible_issues
-
-
-def get_cached_eligible_issues(
-    repo_full_name: str,
-    issue_manager: IssueManager,
-    force_refresh: bool = False,
-    cache_refresh_minutes: int = 1440,
-) -> list[IssueData]:
-    """Get eligible issues using cache for performance and duplicate protection.
-
-    Thin wrapper that:
-    1. Calls get_all_cached_issues() for cache operations
-    2. Filters results using _filter_eligible_issues()
-    3. Falls back to get_eligible_issues() on cache errors
-
-    Args:
-        repo_full_name: Repository in "owner/repo" format
-        issue_manager: IssueManager for GitHub API calls
-        force_refresh: Bypass cache entirely
-        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
-
-    Returns:
-        Eligible issues (filtered by bot_pickup labels) in cache order; the
-        coordinator sorts globally.
-    """
-    try:
-        all_issues = get_all_cached_issues(
-            RepoIdentifier.from_full_name(repo_full_name),
-            issue_manager=issue_manager,
-            force_refresh=force_refresh,
-            cache_refresh_minutes=cache_refresh_minutes,
-        )
-        return _filter_eligible_issues(all_issues)
-    except (ValueError, KeyError, TypeError) as e:
-        logger.warning(
-            f"Cache error for {repo_full_name}: {e}, falling back to direct fetch"
-        )
-        return get_eligible_issues(issue_manager)
 
 
 def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:

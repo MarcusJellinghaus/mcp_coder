@@ -17,6 +17,7 @@ from ....mcp_workspace_github import (
     IssueData,
     IssueManager,
     RepoIdentifier,
+    get_all_cached_issues,
     update_issue_labels_in_cache,
 )
 from ....utils.jenkins_operations.client import JenkinsClient, JenkinsError
@@ -34,14 +35,15 @@ from ....workflow_utils.rate_limit import (
     log_rate_limit_stop,
     raise_if_rate_limited,
 )
+from ....workflows.pr_health import check_pr_health
 from ...utils import log_command_startup
 from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import (
     DispatchResult,
+    _filter_eligible_issues,
     build_jenkins_label,
     dispatch_workflow,
     find_waiting_build,
-    get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
     load_repo_config,
@@ -182,7 +184,7 @@ class _Repo(NamedTuple):
     # that would shadow tuple.index.
     config_index: int
     name: str
-    full_name: str
+    repo_identifier: RepoIdentifier
     config: dict[str, str]
     issue_manager: IssueManager
     branch_manager: IssueBranchManager
@@ -213,8 +215,12 @@ def _collect_work(
     before any GitHub call. A busy job's URL is added to ``blocked`` and its
     repos are skipped: no managers, no fetch (``force_refresh`` does not override).
 
-    An invalid repo config (ValueError) and a rate limit during a fetch
-    propagate to the caller's handlers.
+    For each repo with capacity and a working issue cache, PR-health runs on
+    the full cached issue list (not only the eligible issues). A cache failure
+    falls back to a direct fetch of the eligible issues and skips PR-health.
+
+    An invalid repo config (ValueError) and a rate limit during a fetch or
+    from PR-health propagate to the caller's handlers.
 
     Args:
         repo_names: Repository names from the config, in config order.
@@ -277,28 +283,25 @@ def _collect_work(
         issue_manager = IssueManager(repo_url=validated_config["repo_url"])
         branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
 
-        # Get eligible issues using cache
-        repo_url = validated_config["repo_url"]
+        # Get all issues using cache, eligible issues filtered from that list
+        repo_identifier = RepoIdentifier.from_repo_url(validated_config["repo_url"])
         try:
-            repo_identifier = RepoIdentifier.from_repo_url(repo_url)
-            repo_full_name = repo_identifier.full_name
-        except ValueError:
-            # Fallback: use repo_name if URL format is unexpected
-            repo_full_name = repo_name
-
-        try:
-            eligible_issues = get_cached_eligible_issues(
-                repo_full_name=repo_full_name,
+            all_issues = get_all_cached_issues(
+                repo_identifier,
                 issue_manager=issue_manager,
                 force_refresh=force_refresh,
                 cache_refresh_minutes=get_cache_refresh_minutes(),
             )
+            eligible_issues = _filter_eligible_issues(all_issues)
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
             raise_if_rate_limited(e)
             logger.warning(
-                f"Cache failed for {repo_full_name}: {e}, using direct fetch"
+                f"Cache failed for {repo_identifier.full_name}: {e}, using direct fetch"
             )
             eligible_issues = get_eligible_issues(issue_manager)
+        else:
+            # Only with a working cache; errors here must not trigger the fallback
+            check_pr_health(repo_name, validated_config, all_issues)
 
         logger.info(f"Found {len(eligible_issues)} eligible issues")
 
@@ -309,7 +312,7 @@ def _collect_work(
         repo = _Repo(
             config_index=index,
             name=repo_name,
-            full_name=repo_full_name,
+            repo_identifier=repo_identifier,
             config=validated_config,
             issue_manager=issue_manager,
             branch_manager=branch_manager,
@@ -472,7 +475,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     # Update cache with new labels immediately after successful dispatch
                     try:
                         update_issue_labels_in_cache(
-                            RepoIdentifier.from_full_name(repo.full_name),
+                            repo.repo_identifier,
                             issue_number=issue["number"],
                             old_label=current_label,
                             new_label=workflow_config["next_label"],

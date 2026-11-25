@@ -19,6 +19,7 @@ from mcp_coder.mcp_workspace_github import (
     BodyTrust,
     BodyTrustResult,
     IssueData,
+    RepoIdentifier,
 )
 from mcp_coder.utils.jenkins_operations.client import JenkinsError
 from mcp_coder.utils.jenkins_operations.models import BuildInfo
@@ -127,7 +128,7 @@ def env(
         patch(f"{_COMMANDS}.get_cache_refresh_minutes", return_value=1440),
         patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
         patch(f"{_COMMANDS}.IssueBranchManager"),
-        patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
+        patch(f"{_COMMANDS}.get_all_cached_issues") as get_cached,
         patch(f"{_COMMANDS}.get_eligible_issues"),
         patch(f"{_COMMANDS}.dispatch_workflow") as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
@@ -163,8 +164,8 @@ def env(
                 raise outcome
             return [_waiting_build(path, 99)] if outcome else []
 
-        def fetch(**kwargs: Any) -> list[IssueData]:
-            name = kwargs["repo_full_name"].split("/")[1]
+        def fetch(identifier: RepoIdentifier, **_kwargs: Any) -> list[IssueData]:
+            name = identifier.repo_name
             state.events.append(("fetch", name))
             return state.issues[name]
 
@@ -209,7 +210,7 @@ class TestInitialCapacityCheck:
         assert result == 0
         repo_urls = [c.kwargs["repo_url"] for c in env["issue_mgr_cls"].call_args_list]
         assert repo_urls == ["https://github.com/user/repo_b.git"]
-        fetched = [c.kwargs["repo_full_name"] for c in env["get_cached"].call_args_list]
+        fetched = [c.args[0].full_name for c in env["get_cached"].call_args_list]
         assert fetched == ["user/repo_b"]
         assert env.dispatched() == [2]
 
@@ -436,7 +437,7 @@ def _pending_repo() -> _Repo:
     return _Repo(
         config_index=0,
         name="repo_a",
-        full_name="user/repo_a",
+        repo_identifier=RepoIdentifier.from_full_name("user/repo_a"),
         config={},
         issue_manager=MagicMock(),
         branch_manager=MagicMock(),
