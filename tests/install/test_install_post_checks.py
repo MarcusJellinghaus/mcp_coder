@@ -9,15 +9,23 @@ directory it controls, so tool binaries already installed on the host
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 
 from mcp_coder.install import InstallConfig, _phases, install
 from mcp_coder.install._env import exe
+from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.subprocess_runner import CommandOptions, CommandResult
 
 from .conftest import namespace as _namespace
+
+
+@pytest.fixture(autouse=True)
+def _capture_install_output(caplog: pytest.LogCaptureFixture) -> None:
+    """Let caplog see install's OUTPUT records; the root level (WARNING) drops them."""
+    caplog.set_level(OUTPUT, logger="mcp_coder.install")
 
 
 def _ok(
@@ -103,10 +111,10 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         runner: _Runner,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         _phases.phase_post_install_checks(_config(tmp_path, []), bin_dir)
-        assert capsys.readouterr().out == ""
+        assert caplog.messages == []
         assert runner.calls == []
 
     def test_all_pass(
@@ -135,7 +143,7 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         _touch(bin_dir, exe("tool-a"))
         _touch(bin_dir, exe("tool-b"))
@@ -144,9 +152,21 @@ class TestPhasePostInstallChecks:
         with pytest.raises(SystemExit) as exc_info:
             _phases.phase_post_install_checks(config, bin_dir)
         assert exc_info.value.code == 1
-        out = capsys.readouterr().out
-        assert "1 of 2 post-install checks failed" in out
-        assert "tool-b --version: exit code 2" in out
+        headers = [
+            r for r in caplog.records if "post-install checks failed" in r.getMessage()
+        ]
+        assert len(headers) == 1
+        # The formatter renders the ERROR: prefix; the message must not repeat it.
+        assert headers[0].levelno == logging.ERROR
+        assert headers[0].getMessage() == "1 of 2 post-install checks failed:"
+        assert not headers[0].getMessage().startswith("ERROR:")
+        detail = [
+            r
+            for r in caplog.records
+            if r.getMessage() == "  tool-b --version: exit code 2"
+        ]
+        assert len(detail) == 1
+        assert detail[0].levelno == OUTPUT
 
     def test_several_failures_all_run_one_summary(
         self,
@@ -154,7 +174,7 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         _touch(bin_dir, exe("tool-a"))
         _touch(bin_dir, exe("tool-b"))
@@ -165,7 +185,7 @@ class TestPhasePostInstallChecks:
         with pytest.raises(SystemExit):
             _phases.phase_post_install_checks(config, bin_dir)
         assert len(stub.calls) == 3
-        out = capsys.readouterr().out
+        out = "\n".join(caplog.messages)
         assert out.count("post-install checks failed") == 1
         assert "3 of 4 post-install checks failed" in out
         assert "tool-a: exit code 1" in out
@@ -179,7 +199,7 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         _touch(bin_dir, exe("slow"))
         timed_out = _ok(
@@ -190,7 +210,7 @@ class TestPhasePostInstallChecks:
         monkeypatch.setattr(_phases, "execute_subprocess", _Runner([timed_out]))
         with pytest.raises(SystemExit):
             _phases.phase_post_install_checks(_config(tmp_path, [["slow"]]), bin_dir)
-        out = capsys.readouterr().out
+        out = "\n".join(caplog.messages)
         assert "slow: timed out after 300 s" in out
         assert "Process timed out" not in out
         assert "exit code" not in out
@@ -201,14 +221,14 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         _touch(bin_dir, exe("locked"))
         error = _ok(1, execution_error="PermissionError: access denied")
         monkeypatch.setattr(_phases, "execute_subprocess", _Runner([error]))
         with pytest.raises(SystemExit):
             _phases.phase_post_install_checks(_config(tmp_path, [["locked"]]), bin_dir)
-        out = capsys.readouterr().out
+        out = "\n".join(caplog.messages)
         assert "locked: PermissionError: access denied" in out
         assert "exit code" not in out
 
@@ -218,14 +238,14 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         runner: _Runner,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         with pytest.raises(SystemExit):
             _phases.phase_post_install_checks(
                 _config(tmp_path, [["nowhere", "--version"]]), bin_dir
             )
         assert runner.calls == []
-        assert "nowhere --version: not found" in capsys.readouterr().out
+        assert "  nowhere --version: not found" in caplog.messages
 
     def test_cwd_is_never_searched(
         self,
@@ -233,7 +253,7 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         runner: _Runner,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         cwd = tmp_path / "cwd"
         _touch(cwd, exe("in-cwd"))
@@ -242,7 +262,7 @@ class TestPhasePostInstallChecks:
         with pytest.raises(SystemExit):
             _phases.phase_post_install_checks(_config(tmp_path, [["in-cwd"]]), bin_dir)
         assert runner.calls == []
-        assert "in-cwd: not found" in capsys.readouterr().out
+        assert "  in-cwd: not found" in caplog.messages
 
     def test_dry_run_echoes_declared_argv(
         self,
@@ -250,14 +270,12 @@ class TestPhasePostInstallChecks:
         bin_dir: Path,
         path_dir: Path,
         runner: _Runner,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         config = _config(tmp_path, [["tool-a", "--version"], ["tool-b"]], check=True)
         _phases.phase_post_install_checks(config, bin_dir)
         assert runner.calls == []
-        lines = [
-            line for line in capsys.readouterr().out.splitlines() if line[:2] == "> "
-        ]
+        lines = [m for m in caplog.messages if m.startswith("> ")]
         assert len(lines) == 2
         assert lines[0].startswith("> tool-a --version")
         assert lines[1].startswith("> tool-b")
@@ -325,7 +343,7 @@ class TestInstallDriver:
         path_dir: Path,
         runner: _Runner,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         monkeypatch.setattr("mcp_coder.install.ensure_system_uv", lambda: "uv")
         for name in (
@@ -339,6 +357,5 @@ class TestInstallDriver:
 
         with pytest.raises(SystemExit):
             install(_config(tmp_path, [["nowhere"]]))
-        out = capsys.readouterr().out
-        assert "nowhere: not found" in out
-        assert "install complete" not in out
+        assert "  nowhere: not found" in caplog.messages
+        assert not [m for m in caplog.messages if "install complete" in m]

@@ -25,6 +25,9 @@ never blocks on user input.
 
 from __future__ import annotations
 
+import logging
+
+from ..utils.log_utils import OUTPUT
 from ._env import (
     InstallConfig,
     ensure_system_uv,
@@ -45,6 +48,8 @@ __all__ = [
     "InstallConfig",
     "install",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def install(config: InstallConfig) -> None:
@@ -71,8 +76,8 @@ def install(config: InstallConfig) -> None:
         src_label += f" ({config.local_path})"
         if config.use_sync:
             src_label += " [uv sync]"
-    print(f"=== mcp-coder install -> {config.target}")
-    print(f"    source: {src_label}")
+    logger.log(OUTPUT, "=== mcp-coder install -> %s", config.target)
+    logger.log(OUTPUT, "    source: %s", src_label)
 
     phase_venv(config, venv)
     if not (config.source == "local" and config.use_sync):
@@ -100,4 +105,4 @@ def install(config: InstallConfig) -> None:
 
     phase_report_versions(config, bin_dir, uv_bin, py_v)
     phase_post_install_checks(config, bin_dir)
-    print(f"\nOK  mcp-coder install complete: {config.target}")
+    logger.log(OUTPUT, "OK  mcp-coder install complete: %s", config.target)

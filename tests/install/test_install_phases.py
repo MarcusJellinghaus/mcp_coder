@@ -1,8 +1,8 @@
 """Unit tests for mcp_coder.install._phases and the install() driver.
 
-These tests lean on ``--check`` dry-run mode, which prints every command the
-installer would run without executing anything; they capture stdout and
-assert on the emitted ``> uv pip install ...`` lines.
+These tests lean on ``--check`` dry-run mode, which logs every command the
+installer would run without executing anything; they read the log records
+and assert on the emitted ``> uv pip install ...`` lines.
 
 Shell-quoting note: the installer uses ``subprocess.run([...])`` with an argv
 list (no shell), so shell injection is impossible by construction.
@@ -19,11 +19,18 @@ import pytest
 
 from mcp_coder.install import InstallConfig, _env, _phases, install
 from mcp_coder.install._env import REPORT_BINARIES, exe
+from mcp_coder.utils.log_utils import OUTPUT
 
 from .conftest import namespace as _namespace
 
 # Stands in for a real uv binary wherever the installer looks one up.
 _STUB_UV = "/stub/bin/uv"
+
+
+@pytest.fixture(autouse=True)
+def _capture_install_output(caplog: pytest.LogCaptureFixture) -> None:
+    """Let caplog see install's OUTPUT records; the root level (WARNING) drops them."""
+    caplog.set_level(OUTPUT, logger="mcp_coder.install")
 
 
 def _write_pyproject(
@@ -44,13 +51,10 @@ def _write_pyproject(
     (tmp_path / "pyproject.toml").write_text("\n".join(lines), encoding="utf-8")
 
 
-def _run_install_check(
-    capsys: pytest.CaptureFixture[str], **overrides: Any
-) -> list[str]:
+def _run_install_check(caplog: pytest.LogCaptureFixture, **overrides: Any) -> list[str]:
     """Run install() in dry-run mode and return the emitted `> ...` lines."""
     install(InstallConfig.from_args(_namespace(check=True, **overrides)))
-    stdout = capsys.readouterr().out
-    return [line[2:].rstrip() for line in stdout.splitlines() if line.startswith("> ")]
+    return [m[2:].rstrip() for m in caplog.messages if m.startswith("> ")]
 
 
 class TestPhaseOverridesDryRun:
@@ -77,7 +81,7 @@ class TestPhaseOverridesDryRun:
         monkeypatch.setattr(shutil, "which", lambda _: _STUB_UV)
 
     def test_with_deps_packages_emit_install_command(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         _write_pyproject(
             tmp_path,
@@ -87,7 +91,7 @@ class TestPhaseOverridesDryRun:
             ],
         )
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -104,14 +108,14 @@ class TestPhaseOverridesDryRun:
         assert no_deps_pkg_lines == []
 
     def test_packages_no_deps_emit_no_deps_install(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         _write_pyproject(
             tmp_path,
             packages_no_deps=["pkg3 @ git+https://github.com/org/pkg3.git"],
         )
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -122,7 +126,7 @@ class TestPhaseOverridesDryRun:
         assert no_deps_pkg, f"expected --no-deps line with pkg3 in:\n{joined}"
 
     def test_editable_relink_runs_after_overrides(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """After overrides apply, editable install of mcp-coder must be re-linked.
 
@@ -134,7 +138,7 @@ class TestPhaseOverridesDryRun:
             packages=["pkg1 @ git+https://github.com/org/pkg1.git"],
         )
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -156,7 +160,7 @@ class TestPhaseOverridesDryRun:
         assert relink_idx > override_idx, "editable re-link must run AFTER overrides"
 
     def test_skip_overrides_suppresses_section(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         _write_pyproject(
             tmp_path,
@@ -164,7 +168,7 @@ class TestPhaseOverridesDryRun:
             packages_no_deps=["pkg3 @ git+https://github.com/org/pkg3.git"],
         )
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -172,25 +176,29 @@ class TestPhaseOverridesDryRun:
             skip_overrides=True,
         )
         joined = "\n".join(cmds)
+        assert any(" -e " in f" {c} " for c in cmds), (
+            f"no editable install in:\n{joined}"
+        )
         assert "pkg1 @ git+https" not in joined
         assert "pkg3 @ git+https" not in joined
 
     def test_missing_pyproject_section_no_override_commands(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         _write_pyproject(tmp_path)
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
             extras="",
         )
+        assert any(" -e " in f" {c} " for c in cmds), f"no editable install in:\n{cmds}"
         # No git+https line — overrides ran but the reader returned empty lists.
         assert "git+https" not in "\n".join(cmds)
 
     def test_absent_overrides_are_reported(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Declaring no overrides is announced, not passed over in silence."""
         _write_pyproject(tmp_path)
@@ -205,12 +213,18 @@ class TestPhaseOverridesDryRun:
                 )
             )
         )
-        out = capsys.readouterr().out
+        out = "\n".join(caplog.messages)
         assert "skipping GitHub overrides" in out
         assert "install-from-github" in out
+        # One record = one line: no message carries its own leading blank line.
+        assert "--- installed versions" in caplog.messages
+        assert (
+            f"OK  mcp-coder install complete: {tmp_path.resolve()}" in caplog.messages
+        )
+        assert not [m for m in caplog.messages if m.startswith("\n")]
 
     def test_use_sync_emits_sync_command(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """With --use-sync, the installer emits `uv sync --extra dev`.
 
@@ -221,7 +235,7 @@ class TestPhaseOverridesDryRun:
         """
         _write_pyproject(tmp_path, packages=[], packages_no_deps=[])
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -233,11 +247,11 @@ class TestPhaseOverridesDryRun:
         assert any("--extra" in c and "dev" in c for c in sync_lines)
 
     def test_extra_packages_are_installed(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         _write_pyproject(tmp_path)
         cmds = _run_install_check(
-            capsys,
+            caplog,
             target=tmp_path,
             source="local",
             local_path=tmp_path,
@@ -417,24 +431,24 @@ class TestPhaseVersions:
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         bin_dir = self._make_bin_dir(tmp_path, ["mcp-coder"])
         self._run(monkeypatch, tmp_path, bin_dir)  # must not raise
-        out = capsys.readouterr().out
         for name in REPORT_BINARIES:
             if name != "mcp-coder":
-                assert f"(not installed: {name})" in out
+                assert f"  (not installed: {name})" in caplog.messages
 
     def test_present_binaries_are_queried(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         bin_dir = self._make_bin_dir(tmp_path, list(REPORT_BINARIES))
         calls = self._run(monkeypatch, tmp_path, bin_dir)
-        assert "not installed" not in capsys.readouterr().out
+        assert "--- installed versions" in caplog.messages
+        assert not [m for m in caplog.messages if "not installed" in m]
         version_calls = [c for c in calls if c[-1] == "--version"]
         assert len(version_calls) == len(REPORT_BINARIES)
 
@@ -442,10 +456,10 @@ class TestPhaseVersions:
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         bin_dir = self._make_bin_dir(tmp_path, [])
         monkeypatch.setattr(_phases, "run", lambda *_a, **_kw: 0)
         config = InstallConfig.from_args(_namespace(target=tmp_path, check=True))
         _phases.phase_report_versions(config, bin_dir, "uv", bin_dir / exe("python"))
-        assert "(skipped in --check mode)" in capsys.readouterr().out
+        assert "  (skipped in --check mode)" in caplog.messages

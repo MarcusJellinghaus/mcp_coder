@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import logging
 import os
 import shutil
 import stat
@@ -25,7 +26,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..utils.log_utils import OUTPUT
 from ..utils.pyproject_config import get_install_extras, get_post_install_checks
+
+logger = logging.getLogger(__name__)
 
 MCP_CODER_REPO = "https://github.com/MarcusJellinghaus/mcp_coder.git"
 
@@ -158,12 +162,12 @@ def run(
     dry: bool = False,
     cwd: Path | None = None,
 ) -> int:
-    """Run a subprocess command, printing it first.
+    """Run a subprocess command, logging it first.
 
     Args:
         cmd: Command + arguments as a list (no shell interpolation).
         check: Exit the process on a non-zero return code when True.
-        dry: Print only, don't execute. Wired to ``--check``.
+        dry: Log only, don't execute. Wired to ``--check``.
         cwd: Working directory for the subprocess. Required for
             ``uv sync`` which reads pyproject.toml from cwd.
 
@@ -172,7 +176,7 @@ def run(
     """
     pretty = " ".join(f'"{c}"' if " " in str(c) else str(c) for c in cmd)
     cwd_hint = f" (cwd={cwd})" if cwd else ""
-    print(">", pretty + cwd_hint)
+    logger.log(OUTPUT, "> %s%s", pretty, cwd_hint)
     if dry:
         return 0
     # check=False is subprocess's own flag. This wrapper's `check` means
@@ -206,7 +210,7 @@ def ensure_system_uv() -> str:
     if uv_bin:
         return uv_bin
 
-    print("--- uv not on PATH; attempting `python -m pip install uv`")
+    logger.log(OUTPUT, "--- uv not on PATH; attempting `python -m pip install uv`")
     try:
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "uv"],

@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Install output through logging — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: migrate `capsys` → `caplog` in `test_install_phases.py` / `test_install_post_checks.py`, then replace every `print()` in `src/mcp_coder/install/` with `logger.log(OUTPUT, ...)` / `logger.error(...)`
-- [ ] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: migrate `capsys` → `caplog` in `test_install_phases.py` / `test_install_post_checks.py`, then replace every `print()` in `src/mcp_coder/install/` with `logger.log(OUTPUT, ...)` / `logger.error(...)`
+- [x] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Capture helper and retry loop in `_env.py` — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: write `tests/install/test_install_retry.py`, then add `Signature`, `UV_TRANSIENT_SIGNATURES`, `_can_capture_stderr`, `_match_signature`, `_drain_stderr`, `_run_capturing` and `run(retry_on=...)`; update `_env.py` module docstring and `.importlinter` comment
