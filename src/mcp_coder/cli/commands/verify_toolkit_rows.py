@@ -344,9 +344,8 @@ def check_type_hints_row(
                 symbols["failure"],
                 "false is retired and checks now run; to keep skipping them set"
                 f" under [tool.mcp-coder.toolkit.bindings]: {settings}",
-                4,
             )
         )
         return False
-    out.add(Row("check_type_hints", symbols["warning"], "retired; remove it", 4))
+    out.add(Row("check_type_hints", symbols["warning"], "retired; remove it"))
     return True

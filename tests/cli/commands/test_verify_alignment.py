@@ -170,7 +170,7 @@ class TestPerFormatterAlignment:
         _assert_sections_aligned(captured)
         if has_pyproject:
             assert any(
-                line.startswith("        ruff ") for line in captured.splitlines()
+                line.startswith("      ruff ") for line in captured.splitlines()
             ), captured
 
 

@@ -18,6 +18,7 @@ from typing import Any
 
 import yaml
 
+from ...config.toml_utils import MCP_CODER_CONFIG_FILES
 from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
 from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.env_placeholders import resolve_placeholders
@@ -420,9 +421,9 @@ def _format_code_row(
 def _print_project_section(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
-    """Print the PROJECT section: language detection, the ``.mcp-file-access`` rules file and tool config.
+    """Print the PROJECT section: the project config files, ``.mcp-file-access`` and tool config.
 
-    Opens and closes the section on *out*.
+    One flat layout for every repo. Opens and closes the section on *out*.
 
     Args:
         project_dir: Path to the project directory.
@@ -430,28 +431,19 @@ def _print_project_section(
         out: Builder the section is rendered through.
 
     Returns:
-        False if any row is [ERR].
+        False if any row is [ERR]. The ``Project config`` row never fails:
+        without a config file the ``Toolkit`` row already reports [ERR].
     """
     out.open("PROJECT")
-    pyproject_exists = (project_dir / "pyproject.toml").exists()
-    if not pyproject_exists:
-        out.add(Row("pyproject.toml", symbols["warning"], "not found"))
-        out.add(Row("Language", symbols["success"], "(none detected)"))
-        file_access_ok = _file_access_row(project_dir, symbols, out)
-        ok = _format_code_row(project_dir, symbols, out, indent=2)
-        ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
-        ok = setup_rows(project_dir, symbols, out, indent=2) and ok
-        out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
-        out.close()
-        return ok and file_access_ok
-    out.add(Row("pyproject.toml", symbols["success"], "found"))
-    out.add(Row("Language", symbols["success"], "Python (detected)"))
+    found = [n for n in MCP_CODER_CONFIG_FILES if (project_dir / n).is_file()]
+    if found:
+        out.add(Row("Project config", symbols["success"], ", ".join(found)))
+    else:
+        out.add(Row("Project config", symbols["warning"], "none"))
     file_access_ok = _file_access_row(project_dir, symbols, out)
-    out.add("")
-    out.add("  [Python]")
-    ok = _format_code_row(project_dir, symbols, out)
-    ok = toolkit_rows(project_dir, symbols, out) and ok
-    ok = setup_rows(project_dir, symbols, out) and ok
+    ok = _format_code_row(project_dir, symbols, out, indent=2)
+    ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
+    ok = setup_rows(project_dir, symbols, out, indent=2) and ok
     if has_legacy_format_code_key(project_dir):
         out.add(
             Row(
@@ -459,7 +451,6 @@ def _print_project_section(
                 symbols["failure"],
                 "[tool.mcp-coder.implement] format_code ignored"
                 " — use [tool.mcp-coder] format_code",
-                4,
             )
         )
         ok = False

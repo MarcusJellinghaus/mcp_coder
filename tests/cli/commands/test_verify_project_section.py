@@ -75,7 +75,7 @@ _NOT_CHECKED = (
 
 
 class TestFileAccessRow:
-    """.mcp-file-access row reports the rules file right after Language."""
+    """.mcp-file-access row reports the rules file right after Project config."""
 
     @pytest.mark.parametrize("with_pyproject", [True, False])
     @pytest.mark.parametrize(
@@ -125,10 +125,12 @@ class TestFileAccessRow:
                 tmp_path, "[tool.black]\n" if with_pyproject else None, capsys
             )
 
-        language = next(
-            i for i, line in enumerate(lines) if line.strip().startswith("Language ")
+        project_config = next(
+            i
+            for i, line in enumerate(lines)
+            if line.strip().startswith("Project config ")
         )
-        assert lines[language + 1].startswith("  .mcp-file-access ")
+        assert lines[project_config + 1].startswith("  .mcp-file-access ")
         output = _squash("\n".join(lines))
         for fragment in expected:
             assert _squash(fragment) in output
@@ -144,7 +146,7 @@ class TestFormatCodeRow:
         ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is True
         assert _row(lines, "format_code") == _format_row(
-            "format_code", "[OK]", "enabled (default)", indent=4
+            "format_code", "[OK]", "enabled (default)", indent=2
         )
 
     def test_true_is_enabled(
@@ -155,7 +157,7 @@ class TestFormatCodeRow:
         )
         assert ok is True
         assert _row(lines, "format_code") == _format_row(
-            "format_code", "[OK]", "enabled (pyproject.toml)", indent=4
+            "format_code", "[OK]", "enabled (pyproject.toml)", indent=2
         )
 
     def test_non_bool_is_error(
@@ -173,7 +175,7 @@ class TestFormatCodeRow:
         ok, lines = _run(tmp_path, "[tool.mcp-coder]\nformat_code = false\n", capsys)
         assert ok is True
         assert _row(lines, "format_code") == _format_row(
-            "format_code", "[OK]", "disabled (pyproject.toml)", indent=4
+            "format_code", "[OK]", "disabled (pyproject.toml)", indent=2
         )
 
     def test_mcp_coder_toml_only_names_source(
@@ -250,7 +252,7 @@ class TestToolkitRows:
         ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is True
         assert _row(lines, "Toolkit") == _format_row(
-            "Toolkit", "[OK]", "mcp-tools-py (pyproject.toml)", indent=4
+            "Toolkit", "[OK]", "mcp-tools-py (pyproject.toml)", indent=2
         )
 
     def test_toolkit_table_in_pyproject_names_it(
@@ -269,10 +271,10 @@ class TestToolkitRows:
         with _items(VerifyItem("ruff", "ok"), VerifyItem("formatter", "error", "x")):
             ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is False
-        assert "      format" in lines
-        assert _row(lines, "ruff") == _format_row("ruff", "[OK]", "ok", indent=8)
+        assert "    format" in lines
+        assert _row(lines, "ruff") == _format_row("ruff", "[OK]", "ok", indent=6)
         assert _row(lines, "formatter") == _format_row(
-            "formatter", "[ERR]", "x", indent=8
+            "formatter", "[ERR]", "x", indent=6
         )
 
     def test_error_item_fails_section(
@@ -282,7 +284,7 @@ class TestToolkitRows:
             ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is False
         assert _row(lines, "ruff") == _format_row(
-            "ruff", "[ERR]", "ruff not available", indent=8
+            "ruff", "[ERR]", "ruff not available", indent=6
         )
 
     def test_warning_item_does_not_fail(
@@ -291,8 +293,8 @@ class TestToolkitRows:
         with _items(VerifyItem("mypy", "warning", "old"), action="check"):
             ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is True
-        assert "      check" in lines
-        assert _row(lines, "mypy") == _format_row("mypy", "[WARN]", "old", indent=8)
+        assert "    check" in lines
+        assert _row(lines, "mypy") == _format_row("mypy", "[WARN]", "old", indent=6)
 
     def test_invalid_config_is_error(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -317,7 +319,7 @@ class TestToolkitRows:
             ok, lines = _run(tmp_path, "[tool.black]\n", capsys)
         assert ok is False
         assert "[OK]" in _row(lines, "Toolkit")
-        format_at = lines.index("      format")
+        format_at = lines.index("    format")
         row = _row(lines, "verify")
         assert lines.index(row) == format_at + 1
         assert "[ERR]" in row
@@ -328,9 +330,9 @@ class TestToolkitRows:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         _, lines = _run(tmp_path, "[tool.black]\n", capsys)
-        assert _row(lines, "ruff").startswith("        ruff ")
-        assert _row(lines, "format_code").startswith("    format_code ")
-        assert _row(lines, "pyproject.toml").startswith("  pyproject.toml ")
+        assert _row(lines, "ruff").startswith("      ruff ")
+        assert _row(lines, "format_code").startswith("  format_code ")
+        assert _row(lines, "Project config").startswith("  Project config ")
         assert _assert_section_aligned("\n".join(lines)) >= 3
 
     def test_mcp_coder_toml_without_pyproject(
@@ -392,6 +394,11 @@ class TestCommandToolkitGating:
         assert _row(lines, "Toolkit") == _format_row(
             "Toolkit", "[OK]", "command (mcp-coder.toml)", indent=2
         )
+        assert _row(lines, "Project config") == _format_row(
+            "Project config", "[OK]", "mcp-coder.toml", indent=2
+        )
+        assert not any("pyproject.toml" in line for line in lines)
+        assert not any("Language" in line or "[Python]" in line for line in lines)
 
     def test_empty_commit_binding_skips_verify(
         self, command_project: Path, capsys: pytest.CaptureFixture[str]
@@ -439,6 +446,42 @@ class TestCommandToolkitGating:
         assert (
             _print_project_section(command_project, _SYMBOLS, SectionBuilder()) is False
         )
+
+
+class TestProjectLayout:
+    """One flat PROJECT layout, whichever config files the repo has."""
+
+    def test_both_files_order(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        (tmp_path / "mcp-coder.toml").write_text(
+            '[tool.mcp-coder]\nbogus = 1\n[tool.mcp-coder.toolkit]\ntoolkit = "mcp-tools-py"\n',
+            encoding="utf-8",
+        )
+        _, lines = _run(
+            tmp_path,
+            "[tool.mcp-coder.implement]\nformat_code = true\ncheck_type_hints = true\n",
+            capsys,
+        )
+        assert _row(lines, "Project config") == _format_row(
+            "Project config", "[OK]", "pyproject.toml, mcp-coder.toml", indent=2
+        )
+        labels = [
+            "Project config",
+            ".mcp-file-access",
+            "format_code",
+            "Toolkit",
+            "Setup",
+            "legacy format_code",
+            "check_type_hints",
+            "mcp-coder.toml",
+        ]
+        rows = [_row(lines, label) for label in labels]
+        indices = [lines.index(row) for row in rows]
+        assert indices == sorted(indices)
+        assert len(set(indices)) == len(indices)
+        for row in rows:
+            assert row.startswith("  ") and not row[2].isspace(), row
 
 
 class TestExecuteVerifyProjectExit:

@@ -662,12 +662,13 @@ class TestProjectSection:
         _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
         assert "=== PROJECT" in out
-        assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
-        assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
+        assert _format_row("Project config", "[OK]", "pyproject.toml", indent=2) in out
         assert (
-            _format_row("format_code", "[OK]", "enabled (pyproject.toml)", indent=4)
+            _format_row("format_code", "[OK]", "enabled (pyproject.toml)", indent=2)
             in out
         )
+        assert "Language" not in out
+        assert "[Python]" not in out
         assert "check_type_hints" not in out
 
     def test_project_section_python_defaults(
@@ -681,9 +682,10 @@ class TestProjectSection:
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
-        assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
-        assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
-        assert _format_row("format_code", "[OK]", "enabled (default)", indent=4) in out
+        assert _format_row("Project config", "[OK]", "pyproject.toml", indent=2) in out
+        assert _format_row("format_code", "[OK]", "enabled (default)", indent=2) in out
+        assert "Language" not in out
+        assert "[Python]" not in out
         assert "check_type_hints" not in out
         assert "not configured" not in out
 
@@ -705,18 +707,18 @@ class TestProjectSection:
         assert "[WARN]" in line
         assert "retired; remove it" in line
 
-    def test_project_section_non_python(
+    def test_project_section_no_config_files(
         self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No pyproject.toml shows [WARN] not found and (none detected)."""
+        """No config file: Project config is [WARN] none, exit-neutral."""
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
-        _print_project_section(tmp_path, symbols, SectionBuilder())
+        ok = _print_project_section(tmp_path, symbols, SectionBuilder())
         out = capsys.readouterr().out
-        assert _format_row("pyproject.toml", "[WARN]", "not found", indent=2) in out
-        assert _format_row("Language", "[OK]", "(none detected)", indent=2) in out
-        # Should NOT show [Python] subsection
+        assert _format_row("Project config", "[WARN]", "none", indent=2) in out
+        assert ok is True
+        assert "Language" not in out
         assert "[Python]" not in out
 
     def test_format_code_aligns_with_check_type_hints(
