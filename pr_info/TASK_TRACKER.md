@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shared walk `mcp_coder_section` in `config/toml_utils.py` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `TestMcpCoderSection` tests + `mcp_coder_section`; `find_mcp_coder_table` uses it
+- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `_pyproject_section` + legacy `implement` readers — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `TestNonTableImplement`, malformed-file and `check_formatter_config` tests + `_pyproject_section`; rewire `has_legacy_format_code_key` and `get_leftover_check_type_hints`
+- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Install readers and `get_github_install_config` — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: reader, install, project-setup and vscodeclaude policy tests + rewire `get_install_extras`, `get_post_install_checks`, `get_github_install_config`; `InstallConfig.from_args` docstring
+- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `verify` key-warning rows + end-to-end `verify` tests — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: `_classify` key-warning and `TestNonTableConfigVerify` tests + two `_classify` branches (check precondition first)
+- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch
+- [ ] PR summary prepared
