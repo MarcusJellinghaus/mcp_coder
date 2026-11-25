@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `Toolkit [OK]` row names its config source
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Flat PROJECT layout with the `Project config` row
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary prepared
