@@ -4,10 +4,12 @@ Everything the install phases need that is not itself a phase: the module
 constants, the frozen :class:`InstallConfig` built from parsed CLI arguments,
 and the small subprocess / filesystem helpers.
 
-Raw ``subprocess.run`` with inherited stdio is deliberate here: the shared
-``execute_command`` helper captures output and times out, and
-``stream_subprocess`` is line-based, which mangles ``uv``'s carriage-return
-progress display.
+Raw ``subprocess`` is deliberate here: the shared ``execute_command`` helper
+captures output and times out, and ``stream_subprocess`` is line-based, which
+mangles ``uv``'s carriage-return progress display. Commands normally run with
+inherited stdio. When stderr is not a terminal and ``run()`` is given
+``retry_on`` signatures, only stderr is piped: it is relayed byte for byte to
+``sys.stderr.buffer`` and its tail is matched against the signatures.
 """
 
 from __future__ import annotations
@@ -16,15 +18,17 @@ import argparse
 import contextlib
 import logging
 import os
+import re
 import shutil
 import stat
 import subprocess
 import sys
+import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from ..utils.log_utils import OUTPUT
 from ..utils.pyproject_config import get_install_extras, get_post_install_checks
@@ -48,6 +52,25 @@ REPORT_PACKAGES: tuple[str, ...] = ("mcp-coder-utils",)
 # pyproject.toml at --local-path declares anything. This is the only
 # fallback site.
 _DEFAULT_EXTRAS = "dev"
+
+# (id, regexes): a signature matches when every regex is found in the text.
+Signature = tuple[str, tuple[str, ...]]
+
+# Transient uv failures worth one retry. Keep the regexes narrow: they must
+# never match the retry log line, and any other error must fail at once.
+UV_TRANSIENT_SIGNATURES: tuple[Signature, ...] = (
+    ("ENV-PYPI-NETWORK", (r"Failed to fetch: `?https://pypi\.org",)),
+    (
+        "ENV-UV-ACCESS-DENIED-CACHE",
+        (r"Failed to persist temporary file", r"Access is denied"),
+    ),
+)
+_STDERR_TAIL_BYTES = 64 * 1024
+_READ_CHUNK_BYTES = 64 * 1024
+# A grandchild may inherit the stderr pipe and keep it open after the child
+# exits; the reader is abandoned (daemon thread) after this long.
+_READER_JOIN_TIMEOUT_SECONDS = 5.0
+_UV_RETRY_DELAY_SECONDS = 10
 
 
 @dataclass(frozen=True)
@@ -155,12 +178,84 @@ def exe(name: str) -> str:
     return f"{name}.exe" if os.name == "nt" else name
 
 
+def _can_capture_stderr() -> bool:
+    """Return True when stderr can be piped and relayed without losing a TTY."""
+    stream = sys.stderr
+    return stream is not None and hasattr(stream, "buffer") and not stream.isatty()
+
+
+def _match_signature(text: str, signatures: Sequence[Signature]) -> str | None:
+    """Return the id of the first signature whose regexes all match ``text``."""
+    for sig_id, regexes in signatures:
+        if all(re.search(rx, text) for rx in regexes):
+            return sig_id
+    return None
+
+
+def _drain_stderr(stream: IO[bytes], tail: bytearray) -> None:
+    """Relay a child's stderr pipe to ``sys.stderr.buffer``, keeping a tail.
+
+    Reads until EOF and never stops early on a relay error: a reader that
+    stopped would let the pipe fill up and deadlock the child.
+    """
+    try:
+        fd = stream.fileno()
+    except (OSError, ValueError):
+        return
+    while True:
+        try:
+            chunk = os.read(fd, _READ_CHUNK_BYTES)
+        except OSError:
+            return
+        if not chunk:
+            return
+        tail.extend(chunk)
+        del tail[:-_STDERR_TAIL_BYTES]
+        try:
+            sys.stderr.flush()
+            sys.stderr.buffer.write(chunk)
+            sys.stderr.buffer.flush()
+        except (OSError, ValueError, AttributeError):
+            pass
+
+
+def _run_capturing(
+    command: list[str], signatures: Sequence[Signature], cwd: Path | None
+) -> tuple[int, str | None]:
+    """Run ``command`` with only stderr piped and match its tail.
+
+    No ``with Popen`` and the pipe is never closed here: a grandchild that
+    inherited the pipe would otherwise block the install until it exits.
+
+    Returns:
+        The exit code and the id of the matched signature, or None.
+    """
+    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        command, cwd=cwd, stderr=subprocess.PIPE
+    )
+    assert proc.stderr is not None  # noqa: S101 -- stderr=PIPE always sets it
+    tail = bytearray()
+    reader = threading.Thread(
+        target=_drain_stderr, args=(proc.stderr, tail), daemon=True
+    )
+    reader.start()
+    try:
+        returncode = proc.wait()
+    except BaseException:
+        proc.kill()
+        raise
+    reader.join(_READER_JOIN_TIMEOUT_SECONDS)
+    text = bytes(tail).decode("utf-8", errors="replace")
+    return returncode, _match_signature(text, signatures)
+
+
 def run(
     cmd: list[str],
     *,
     check: bool = True,
     dry: bool = False,
     cwd: Path | None = None,
+    retry_on: tuple[Signature, ...] = (),
 ) -> int:
     """Run a subprocess command, logging it first.
 
@@ -170,6 +265,9 @@ def run(
         dry: Log only, don't execute. Wired to ``--check``.
         cwd: Working directory for the subprocess. Required for
             ``uv sync`` which reads pyproject.toml from cwd.
+        retry_on: Signatures that allow one retry after
+            ``_UV_RETRY_DELAY_SECONDS``; only used when stderr is not a
+            terminal.
 
     Returns:
         Subprocess return code, or 0 when ``dry=True``.
@@ -179,13 +277,29 @@ def run(
     logger.log(OUTPUT, "> %s%s", pretty, cwd_hint)
     if dry:
         return 0
-    # check=False is subprocess's own flag. This wrapper's `check` means
-    # "exit the process on failure", handled two lines below; forwarding it
-    # would raise CalledProcessError instead and change behaviour.
-    result = subprocess.run(cmd, cwd=cwd, check=False)
-    if check and result.returncode != 0:
-        sys.exit(result.returncode)
-    return result.returncode
+    if retry_on and _can_capture_stderr():
+        returncode, hit = _run_capturing(cmd, retry_on, cwd)
+        if returncode != 0 and hit:
+            # Must never contain WARNING or ERROR: (Jenkins marks the build
+            # UNSTABLE on those).
+            logger.log(
+                OUTPUT,
+                "--- uv failed with a transient error (%s); retrying once in %d s",
+                hit,
+                _UV_RETRY_DELAY_SECONDS,
+            )
+            time.sleep(_UV_RETRY_DELAY_SECONDS)
+            returncode, _ = _run_capturing(cmd, retry_on, cwd)
+            if returncode == 0:
+                logger.log(OUTPUT, "--- uv retry succeeded")
+    else:
+        # check=False is subprocess's own flag. This wrapper's `check` means
+        # "exit the process on failure", handled below; forwarding it would
+        # raise CalledProcessError instead and change behaviour.
+        returncode = subprocess.run(cmd, cwd=cwd, check=False).returncode
+    if check and returncode != 0:
+        sys.exit(returncode)
+    return returncode
 
 
 def ensure_system_uv() -> str:
