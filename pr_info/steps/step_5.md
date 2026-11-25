@@ -52,8 +52,8 @@ Add to `test_commands_pr_health.py` (use `caplog`, filter records by logger name
 - no ERROR for an issue with one `status-*` label plus non-status labels;
 - no ERROR for a repo whose executor job is busy, nor for a repo whose cache failed (fallback);
 - the ERROR is still logged when `check_pr_health` raises `GitHubRateLimitError` (exit 0);
-- dispatch eligibility unchanged (an issue with `status-08` + `status-10` still follows
-  `_filter_eligible_issues`).
+- an open issue with `status-08:ready-pr` + `status-10:pr-created`: the multi-label ERROR is logged
+  for it and `dispatch_workflow` is still called for it (exactly one bot_pickup label → eligible).
 
 Then run the whole coordinator test directory: fixtures must carry at most one `status-*` label
 (e.g. `test_commands_capacity_gate.py::_error_messages` counts ERROR records of the `commands` logger).

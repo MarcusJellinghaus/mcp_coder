@@ -30,7 +30,13 @@
 - add `from ....workflows.pr_health import check_pr_health`;
 - `.core`: replace `get_cached_eligible_issues` with `_filter_eligible_issues`.
 
-`_collect_work` signature unchanged. `_Repo.full_name` = `repo_identifier.full_name`.
+`_collect_work` signature unchanged.
+
+`_Repo`: replace the field `full_name: str` with `repo_identifier: RepoIdentifier` (its only reader is
+the dispatch write-back). `_collect_work` stores the identifier it passes to `get_all_cached_issues`.
+The dispatch write-back in `execute_coordinator_run` (`commands.py:475`) passes `repo.repo_identifier`
+instead of `RepoIdentifier.from_full_name(repo.full_name)`, so a GitHub Enterprise repo reads and
+writes the same issue-cache file (`from_full_name` always assumes github.com).
 
 ## ALGORITHM
 
@@ -47,7 +53,8 @@ except Exception as e:  # existing handler; also covers labels-config ValueError
 else:
     check_pr_health(repo_name, validated_config, all_issues)
 ```
-Then the existing `Found N eligible issues` log, `if not eligible_issues: continue`, `_Repo(...)`.
+Then the existing `Found N eligible issues` log, `if not eligible_issues: continue`,
+`_Repo(..., repo_identifier=repo_identifier, ...)`.
 The `else` runs only when the `try` succeeded, and exceptions raised in it are not caught by the
 `except` — a PR-health error never triggers the fallback; a `GitHubRateLimitError` propagates
 (run ends with exit 0, no dispatch).
@@ -100,6 +107,14 @@ update the module docstring line "Issue filtering functions (including cached ve
      `call_args[1]["repo_full_name"]` become `call_args.args[0].full_name`;
    - results now pass through the real `_filter_eligible_issues`: fixture issues must be open
      (`make_issue_data` default) and carry exactly one bot_pickup label, no ignore label.
+   - `_Repo` field rename: `_Repo(full_name="user/repo_a", ...)` in `test_commands_capacity_gate.py`
+     → `repo_identifier=RepoIdentifier.from_full_name("user/repo_a")`; `r.full_name` in
+     `test_commands_dispatch_order.py` → `r.repo_identifier.full_name`.
+   - In `test_commands.py::TestExecuteCoordinatorRun::test_execute_coordinator_run_single_repo_success`
+     (also patch `commands.update_issue_labels_in_cache`) assert that every dispatch cache update
+     gets the same `RepoIdentifier` that was passed to `get_all_cached_issues`:
+     `all(c.args[0] is get_all_cached.call_args.args[0] for c in update_cache.call_args_list)`
+     (and `update_cache.call_count == 2`).
 5. `test_core_eligibility.py`: delete the `get_cached_eligible_issues` test class and import (its
    filter-error fallback case is replaced by the `KeyError` case in `test_commands_pr_health.py`).
 6. `test_vscodeclaude_rate_limit.py`: remove `check_pr_health` from `launch_mocks` and every
