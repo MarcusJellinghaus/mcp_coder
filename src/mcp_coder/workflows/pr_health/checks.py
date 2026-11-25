@@ -20,17 +20,19 @@ from ...mcp_workspace_github import (
     OpenPullRequest,
     PullRequestCache,
     PullRequestManager,
+    RepoIdentifier,
     get_trusted_commenters,
     is_trusted_author,
+    update_issue_labels_in_cache,
 )
 from ...utils.log_utils import OUTPUT
-from ...workflow_utils.issue_helpers import get_issue_status, is_marked, lookup_branch
+from ...workflow_utils.issue_helpers import is_marked, lookup_branch
 from ...workflow_utils.label_transitions import update_workflow_label
 from ...workflow_utils.rate_limit import raise_if_rate_limited
-from ..vscodeclaude.config import get_github_username, get_repo_full_name
-from ..vscodeclaude.issues import _filter_eligible_vscodeclaude_issues
 
 logger = logging.getLogger(__name__)
+
+PR_CREATED_LABEL = "status-10:pr-created"
 
 
 def _review_comments_watermark(
@@ -68,13 +70,19 @@ def _escalate(
     to_label_name: str,
     repo_name: str,
 ) -> None:
-    """Set the escalation label; log one OUTPUT line only if the update succeeded."""
+    """Set the escalation label; on success, update the issue cache and log once."""
     if update_workflow_label(
         issue_manager,
         "pr_created",
         to_label_id,
         validated_issue_number=issue["number"],
     ):
+        update_issue_labels_in_cache(
+            issue_manager.repo_identifier,
+            issue_number=issue["number"],
+            old_label=PR_CREATED_LABEL,
+            new_label=to_label_name,
+        )
         logger.log(
             OUTPUT, "PR-health: %s #%d → %s", repo_name, issue["number"], to_label_name
         )
@@ -343,11 +351,17 @@ def check_pr_health(
 
     Never raises, except ``GitHubRateLimitError``, which propagates.
 
+    Selected are open issues carrying the ``status-10:pr-created`` label and
+    no ``ignore_labels`` label, regardless of assignee and of other
+    ``status-*`` labels.
+
     Checks run in a fixed order — merge conflict, failing CI, alerts, review
     comments — and stop at the first hit, so each issue gets at most one
-    label change per poll. All PR queries go through one run-scoped
-    ``PullRequestCache`` and branch lookups through one ``BranchLookupCache``,
-    each saved once after the loop (also when a rate limit ends it early).
+    label change per poll. Each successful escalation is written back to the
+    issue cache (status-10 → target label). All PR queries go through one
+    run-scoped ``PullRequestCache`` and branch lookups through one
+    ``BranchLookupCache``, each saved once after the loop (also when a rate
+    limit ends it early).
 
     Args:
         repo_name: Repository config name, used only in the OUTPUT line.
@@ -355,25 +369,23 @@ def check_pr_health(
         all_cached_issues: All cached issues for the repo.
     """
     try:
-        github_username = get_github_username()
+        labels_config = load_labels_config(get_labels_config_path(None))
+        ignore = set(labels_config.get("ignore_labels", []))
         pr_issues = [
             issue
-            for issue in _filter_eligible_vscodeclaude_issues(
-                all_cached_issues, github_username
-            )
-            if get_issue_status(issue) == "status-10:pr-created"
+            for issue in all_cached_issues
+            if issue["state"] == "open"
+            and PR_CREATED_LABEL in issue["labels"]
+            and not ignore & set(issue["labels"])
         ]
         if not pr_issues:
             return
-        repo_full_name = get_repo_full_name(repo_config)
-        repo_url = f"https://github.com/{repo_full_name}"
+        repo_url = RepoIdentifier.from_repo_url(repo_config["repo_url"]).https_url
         issue_manager = IssueManager(repo_url=repo_url)
         ci_manager = CIResultsManager(repo_url=repo_url)
         branch_cache = BranchLookupCache.load(IssueBranchManager(repo_url=repo_url))
         pr_cache = PullRequestCache.load(PullRequestManager(repo_url=repo_url))
-        label_names = build_label_lookups(
-            load_labels_config(get_labels_config_path(None))
-        )["id_to_name"]
+        label_names = build_label_lookups(labels_config)["id_to_name"]
         trusted = get_trusted_commenters()
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         raise_if_rate_limited(exc)

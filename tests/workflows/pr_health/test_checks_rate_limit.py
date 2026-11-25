@@ -23,17 +23,6 @@ def _rate_limit() -> GithubException:
     )
 
 
-def _wrapped_rate_limit() -> ValueError:
-    """The ``GET /user`` shape: a ValueError whose ``__cause__`` is the limit."""
-    try:
-        try:
-            raise _rate_limit()
-        except GithubException as e:
-            raise ValueError("could not get user") from e
-    except ValueError as wrapped:
-        return wrapped
-
-
 class TestCheckPrHealthRateLimit:
     """check_pr_health stops on the first rate limit."""
 
@@ -82,12 +71,3 @@ class TestCheckPrHealthRateLimit:
             )
 
         assert branch_cache.lookup.call_count == 1
-
-    def test_username_limit_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _setup(monkeypatch)
-        monkeypatch.setattr(
-            f"{CHECKS}.get_github_username", Mock(side_effect=_wrapped_rate_limit())
-        )
-
-        with pytest.raises(GitHubRateLimitError):
-            check_pr_health("test-repo", REPO_CONFIG, [_make_pr_issue(1)])

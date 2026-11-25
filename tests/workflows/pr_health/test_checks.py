@@ -153,10 +153,6 @@ def _patch_env(
     branch_cache_cls = MagicMock()
     branch_cache_cls.load.return_value = branch_cache
     monkeypatch.setattr(f"{CHECKS}.BranchLookupCache", branch_cache_cls)
-    monkeypatch.setattr(f"{CHECKS}.get_github_username", lambda: "testuser")
-    monkeypatch.setattr(
-        f"{CHECKS}._filter_eligible_vscodeclaude_issues", lambda issues, user: issues
-    )
     monkeypatch.setattr(
         "mcp_coder.workflow_utils.label_transitions.load_labels_config",
         lambda *a, **k: config,
@@ -349,16 +345,13 @@ class TestCheckPrHealth:
     def test_setup_failure_logs_warning_and_does_not_raise(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """A setup failure (username lookup) is swallowed with a warning."""
+        """A setup failure (invalid repo URL) is swallowed with a warning."""
         _setup(monkeypatch)
 
-        def _raise() -> str:
-            raise RuntimeError("no token")
-
-        monkeypatch.setattr(f"{CHECKS}.get_github_username", _raise)
-
         with caplog.at_level(logging.WARNING, logger=CHECKS):
-            _run(_make_pr_issue(987))
+            check_pr_health(
+                "test-repo", {"repo_url": "not-a-url"}, [_make_pr_issue(987)]
+            )
 
         assert any(
             record.levelno == logging.WARNING and "test-repo" in record.getMessage()
