@@ -45,8 +45,11 @@ New class `TestRetryCallSites` in `tests/install/test_install_phases.py`:
 - Patch `mcp_coder.install.ensure_system_uv` → `_STUB_UV` and `shutil.which` → `_STUB_UV`
   (or `None` for the fallback case).
 - Run `install(InstallConfig.from_args(_namespace(target=tmp_path, check=False, …)))`.
-  Every case passes `target=tmp_path`. `local_path` is left unset, so it defaults to the
-  target. The `namespace()` default `target=Path(".")` would point at the repo root,
+  Every case passes `target=tmp_path`. In the git and pypi cases `local_path` is left
+  unset, so it defaults to the target; the two `source="local"` cases pass
+  `local_path=tmp_path` explicitly (as `TestBootstrapSkippedOnlyForLocalSync` does),
+  because `InstallConfig.from_args` raises `ValueError` for `--source local` without
+  `--local-path`. The `namespace()` default `target=Path(".")` would point at the repo root,
   whose pyproject declares real post-install checks and overrides. `check=False` lets
   the version report run (it returns early in `--check`). Nothing real executes: `run`
   is patched, `tmp_path/.venv` does not exist (so `phase_venv` calls `run`), and the
@@ -54,9 +57,9 @@ New class `TestRetryCallSites` in `tests/install/test_install_phases.py`:
 - Parametrize (all with `target=tmp_path`):
   - `source="git"`;
   - `source="pypi"`;
-  - `source="local"`, pyproject in `tmp_path` with `packages` and `packages_no_deps`,
-    `extra_packages="langchain"`;
-  - `source="local"`, `use_sync=True`;
+  - `source="local"`, `local_path=tmp_path`, pyproject in `tmp_path` with `packages` and
+    `packages_no_deps`, `extra_packages="langchain"`;
+  - `source="local"`, `local_path=tmp_path`, `use_sync=True`;
   - `source="git"` with `shutil.which` → `None` (stdlib venv + in-venv pip fallback).
 - Rule, asserted for every recorded call:
 
