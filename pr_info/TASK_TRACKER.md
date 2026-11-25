@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `_pyproject_section` + legacy `implement` readers — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `TestNonTableImplement`, malformed-file and `check_formatter_config` tests + `_pyproject_section`; rewire `has_legacy_format_code_key` and `get_leftover_check_type_hints`
-- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestNonTableImplement`, malformed-file and `check_formatter_config` tests + `_pyproject_section`; rewire `has_legacy_format_code_key` and `get_leftover_check_type_hints`
+- [x] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Install readers and `get_github_install_config` — [step_3.md](./steps/step_3.md)
 

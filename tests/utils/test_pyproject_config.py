@@ -378,6 +378,40 @@ class TestHasLegacyFormatCodeKey:
         assert has_legacy_format_code_key(tmp_path) is False
 
 
+_NON_TABLE_IMPLEMENT = [
+    pytest.param("tool = 1\n", id="tool_int"),
+    pytest.param("[tool]\nmcp-coder = 1\n", id="mcp_coder_int"),
+    pytest.param("[tool.mcp-coder]\nimplement = 1\n", id="implement_int"),
+    pytest.param('[tool.mcp-coder]\nimplement = "format_code"\n', id="implement_str"),
+    pytest.param(
+        '[tool.mcp-coder]\nimplement = ["format_code"]\n', id="implement_list"
+    ),
+]
+
+
+@pytest.mark.parametrize("content", _NON_TABLE_IMPLEMENT)
+class TestNonTableImplement:
+    """A non-table tool / mcp-coder / implement counts as absent, silently."""
+
+    def test_has_legacy_format_code_key_is_false(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, content: str
+    ) -> None:
+        """No crash and no false positive from a string or list implement."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert has_legacy_format_code_key(tmp_path) is False
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+    def test_leftover_check_type_hints_is_none(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, content: str
+    ) -> None:
+        """No crash; the retired key reads as absent."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert get_leftover_check_type_hints(tmp_path) is None
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+
 class TestLoadPyproject:
     """Tests for the shared _load_pyproject loader."""
 
@@ -595,3 +629,8 @@ class TestMalformedTomlRegression:
         """get_leftover_check_type_hints does not raise on malformed TOML."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
         assert get_leftover_check_type_hints(tmp_path) is None
+
+    def test_legacy_format_code_key_returns_false(self, tmp_path: Path) -> None:
+        """has_legacy_format_code_key does not raise on malformed TOML."""
+        (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        assert has_legacy_format_code_key(tmp_path) is False

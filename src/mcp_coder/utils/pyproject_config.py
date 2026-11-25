@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..config.toml_utils import find_mcp_coder_table_lenient, load_toml
+from ..config.toml_utils import (
+    find_mcp_coder_table_lenient,
+    load_toml,
+    mcp_coder_section,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +57,34 @@ def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any
             read or parsed. The message names the file.
     """  # noqa: DOC502 - raised by load_toml, part of this contract
     return load_toml(project_dir / "pyproject.toml", strict=strict)
+
+
+def _pyproject_section(
+    project_dir: Path, table: str, *, strict: bool = False
+) -> dict[str, Any]:
+    """Return [tool.mcp-coder.<table>] of pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+        table: Name of the table below [tool.mcp-coder].
+        strict: Raise on a malformed file or a non-table level instead of
+            returning an empty dict.
+
+    Returns:
+        The table; an empty dict when the file or a level is absent (or,
+        when strict is False, malformed or not a table — without logging).
+
+    Raises:
+        TomlReadError: If strict and the file is malformed or unreadable.
+        ValueError: If strict and 'tool', 'mcp-coder' or *table* is not a table.
+    """  # noqa: DOC502 - raised by _load_pyproject / mcp_coder_section
+    data = _load_pyproject(project_dir, strict=strict)
+    try:
+        return mcp_coder_section(data, str(project_dir / "pyproject.toml"), table)
+    except ValueError:
+        if strict:
+            raise
+        return {}
 
 
 def get_prompts_config(project_dir: Path) -> PromptsConfig:
@@ -136,11 +168,11 @@ def has_legacy_format_code_key(project_dir: Path) -> bool:
         project_dir: Path to directory containing pyproject.toml.
 
     Returns:
-        True if [tool.mcp-coder.implement] format_code is present.
+        True if [tool.mcp-coder.implement] format_code is present. A
+        non-table tool / mcp-coder / implement counts as absent, so a string
+        or list implement is not the legacy key.
     """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
-    return "format_code" in section
+    return "format_code" in _pyproject_section(project_dir, "implement")
 
 
 def get_leftover_check_type_hints(project_dir: Path) -> Any | None:
@@ -151,11 +183,10 @@ def get_leftover_check_type_hints(project_dir: Path) -> Any | None:
 
     Returns:
         The raw TOML value, or None when the key, section or file is absent
-        (or the file is malformed). TOML has no null, so None means absent.
+        (or the file is malformed, or tool / mcp-coder / implement is not a
+        table). TOML has no null, so None means absent.
     """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
-    return section.get("check_type_hints")
+    return _pyproject_section(project_dir, "implement").get("check_type_hints")
 
 
 def _require_spec_list(path: Path, key: str, value: Any) -> list[str]:

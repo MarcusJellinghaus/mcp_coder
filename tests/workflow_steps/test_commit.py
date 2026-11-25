@@ -224,6 +224,44 @@ class TestCheckFormatterConfig:
             assert check_formatter_config(tmp_path, warn_legacy_key=True) is None
         assert LEGACY_WARNING in caplog.text
 
+    @pytest.mark.parametrize(
+        ("content", "fragment"),
+        [
+            pytest.param("tool = 1\n", "'tool'", id="tool_int"),
+            pytest.param("[tool]\nmcp-coder = 1\n", "'mcp-coder'", id="mcp_coder_int"),
+            pytest.param("[tool.mcp-coder]\nimplement = 1\n", None, id="implement_int"),
+            pytest.param(
+                '[tool.mcp-coder]\nimplement = "format_code"\n',
+                None,
+                id="implement_str",
+            ),
+            pytest.param(
+                '[tool.mcp-coder]\nimplement = ["format_code"]\n',
+                None,
+                id="implement_list",
+            ),
+        ],
+    )
+    def test_non_table_shape_does_not_crash(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        content: str,
+        fragment: str | None,
+    ) -> None:
+        """A non-table tool / mcp-coder gives a message; implement is ignored."""
+        _write_pyproject(tmp_path, content)
+
+        with caplog.at_level(logging.WARNING):
+            message = check_formatter_config(tmp_path, warn_legacy_key=True)
+
+        if fragment is None:
+            assert message is None
+        else:
+            assert message is not None
+            assert fragment in message
+        assert LEGACY_WARNING not in caplog.text
+
 
 class TestRunFormatters:
     """Test run_formatters function."""
