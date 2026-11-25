@@ -52,8 +52,9 @@ Sources to check against:
    `mcp-coder.toml` ([Project config](project-config.md))." Delete "read from
    `pyproject.toml` only … `commit = []`".
 4. **Bindings rule on `mcp-coder verify`.** Rewrite:
-   - It calls `verify()` for every action a non-empty binding requests
-     (`format` only while `format_code` is on).
+   - It calls `verify()` for every action a non-empty binding requests and
+     the toolkit declares (`format` only while `format_code` is on). An
+     undeclared requested action gets only an error depth row.
    - It shows an ok row for each declared depth a binding runs (fallback
      included), naming those bindings.
    - It adds a row per requested depth the toolkit doesn't declare: a warning
