@@ -3,10 +3,13 @@
 This module contains:
 - Configuration management functions
 - Issue filtering functions (including cached version via issue_cache)
+- Executor capacity check (find_waiting_build)
 - Workflow dispatch function
 """
 
 import logging
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 
 from ....config.label_config import load_labels_config
 from ....mcp_workspace_github import (
@@ -18,6 +21,7 @@ from ....mcp_workspace_github import (
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.diagnostics import job_url_path
+from ....utils.jenkins_operations.models import BuildInfo
 from ....utils.user_config import get_config_file_path, get_config_values
 from ....workflow_utils.rate_limit import as_rate_limit
 from .command_templates import PRIORITY_ORDER, WORKFLOW_TEMPLATES
@@ -177,6 +181,18 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     return (server_url, username, api_token)
 
 
+def stage_index(issue: IssueData) -> int:
+    """Position of the issue's stage in PRIORITY_ORDER; lower is dispatched first.
+
+    Returns:
+        Index of the first label found in PRIORITY_ORDER, len(PRIORITY_ORDER) if none.
+    """
+    for label in issue["labels"]:
+        if label in PRIORITY_ORDER:
+            return PRIORITY_ORDER.index(label)
+    return len(PRIORITY_ORDER)
+
+
 def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
     """Filter issues for eligibility (same logic as get_eligible_issues).
 
@@ -184,7 +200,7 @@ def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
         issues: List of issues to filter
 
     Returns:
-        List of eligible issues sorted by priority
+        Eligible issues in input order; the coordinator sorts globally.
     """
     # Load label configuration
     from ....config.label_config import get_labels_config_path
@@ -222,21 +238,6 @@ def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
         # Issue is eligible
         eligible_issues.append(issue)
 
-    # Sort by priority
-    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
-
-    def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority).
-
-        Returns:
-            Priority index, where lower means higher priority.
-        """
-        for label in issue["labels"]:
-            if label in priority_map:
-                return priority_map[label]
-        return len(PRIORITY_ORDER)  # Lowest priority
-
-    eligible_issues.sort(key=get_priority)
     return eligible_issues
 
 
@@ -244,17 +245,15 @@ def get_eligible_issues(
     issue_manager: IssueManager,
     log_level: str = "INFO",  # pylint: disable=unused-argument
 ) -> list[IssueData]:
-    """Get issues ready for automation, sorted by priority.
+    """Get issues ready for automation.
 
     Args:
         issue_manager: IssueManager instance for GitHub API calls
         log_level: Logging level for debug output
 
     Returns:
-        List of IssueData sorted by priority:
-        1. status-08:ready-pr (highest priority)
-        2. status-05:plan-ready
-        3. status-02:awaiting-planning (lowest priority)
+        Eligible issues in the order list_issues returned them; the
+        coordinator sorts globally.
 
     """
     # Load label configuration
@@ -297,23 +296,6 @@ def get_eligible_issues(
 
     logger.debug(f"Filtered to {len(eligible_issues)} eligible issues")
 
-    # Sort by priority
-    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
-
-    def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority).
-
-        Returns:
-            Priority index, where lower means higher priority.
-        """
-        for label in issue["labels"]:
-            if label in priority_map:
-                return priority_map[label]
-        # Should not happen if filtering worked correctly
-        return len(PRIORITY_ORDER)  # Lowest priority
-
-    eligible_issues.sort(key=get_priority)
-
     return eligible_issues
 
 
@@ -337,7 +319,8 @@ def get_cached_eligible_issues(
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
 
     Returns:
-        List of eligible issues (filtered by bot_pickup labels, sorted by priority)
+        Eligible issues (filtered by bot_pickup labels) in cache order; the
+        coordinator sorts globally.
     """
     try:
         all_issues = get_all_cached_issues(
@@ -363,6 +346,69 @@ def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:
     return f"{repo_name} - {identifier} - {action}"
 
 
+UNNAMED_WARNING_AFTER = timedelta(minutes=60)
+
+
+def find_waiting_build(
+    jenkins_client: JenkinsClient, job_path: str
+) -> BuildInfo | None:
+    """Return a running build of the executor job that is still waiting for an agent.
+
+    The signal is the display name: the Executor pipeline sets currentBuild.displayName
+    from LABEL right after it gets its agent executor (top-level ``agent`` in the
+    Executor job's pipeline script), so a running build still named ``#<number>`` is
+    waiting. If the pipeline ever renames before agent allocation, this check silently
+    stops blocking. See docs/repository-setup/jenkins.md.
+
+    Args:
+        jenkins_client: Jenkins client used to list the job's running builds.
+        job_path: Full path of the executor job, e.g. "Windows-Agents/Executor".
+
+    Returns:
+        The oldest waiting build, or None when the job has capacity.
+
+    Raises:
+        JenkinsError: If the build list cannot be read.
+    """  # noqa: DOC502 - raised by get_recent_builds, part of this contract
+    # Default limit (100) on purpose: the limit applies before the status
+    # filter, so a small one could miss a long-running unnamed build.
+    builds = jenkins_client.get_recent_builds(path=job_path, statuses=["running"])
+    waiting = [b for b in builds if b.display_name in ("", f"#{b.number}")]
+
+    now = datetime.now(UTC)
+    for build in waiting:
+        age = now - build.timestamp
+        if age > UNNAMED_WARNING_AFTER:
+            logger.warning(
+                "Executor job '%s': build #%d still unnamed after %d min: "
+                "waiting for an agent, or a manual build without LABEL (%s)",
+                job_path,
+                build.number,
+                int(age.total_seconds() // 60),
+                build.url,
+            )
+
+    if not waiting:
+        return None
+
+    oldest = waiting[-1]  # builds are listed newest first
+    logger.info(
+        "Executor job '%s' busy: build #%d is waiting for an agent (%s)",
+        job_path,
+        oldest.number,
+        oldest.url,
+    )
+    return oldest
+
+
+class DispatchResult(Enum):
+    """Outcome of dispatch_workflow."""
+
+    STARTED = "started"
+    NOT_STARTED = "not_started"  # no linked branch, or invalid repo URL
+    STARTED_LABEL_RATE_LIMITED = "started_label_rate_limited"
+
+
 def dispatch_workflow(
     issue: IssueData,
     workflow_name: str,  # pylint: disable=unused-argument
@@ -372,7 +418,7 @@ def dispatch_workflow(
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
     log_level: str,
-) -> bool:
+) -> DispatchResult:
     """Trigger Jenkins job for workflow and update issue label.
 
     Args:
@@ -386,8 +432,10 @@ def dispatch_workflow(
         log_level: Log level to pass to workflow command
 
     Returns:
-        True unless the Jenkins job started but the label swap hit a GitHub
-        rate limit.
+        STARTED when the Jenkins job started and the label was swapped;
+        NOT_STARTED when no job was started (no linked branch, or invalid
+        repo URL); STARTED_LABEL_RATE_LIMITED when the job started but the
+        label swap hit a GitHub rate limit.
 
     Raises:
         ValueError: If linked branch missing for implement/create-pr
@@ -415,7 +463,7 @@ def dispatch_workflow(
             logger.error(
                 f"Invalid GitHub URL in repo config: {repo_config['repo_url']}"
             )
-            return True
+            return DispatchResult.NOT_STARTED
 
         repo_owner, issue_repo_name = repo_id.owner, repo_id.repo_name
 
@@ -433,7 +481,7 @@ def dispatch_workflow(
                 f"  Issue URL: {issue['url']}\n"
                 f"  Requirement: Issue must have linked branch or draft/open PR"
             )
-            return True
+            return DispatchResult.NOT_STARTED
 
         branch_name = resolved_branch
 
@@ -491,7 +539,7 @@ def dispatch_workflow(
             workflow_config["next_label"],
             exc,
         )
-        return False
+        return DispatchResult.STARTED_LABEL_RATE_LIMITED
 
     # Step 8: Log success with issue and Jenkins links
     issue_url = issue["url"]
@@ -500,4 +548,4 @@ def dispatch_workflow(
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
         f"Issue: {issue_url} | {jenkins_link}",
     )
-    return True
+    return DispatchResult.STARTED

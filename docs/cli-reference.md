@@ -375,6 +375,9 @@ mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 - `--dry-run` runs a real Jenkins build of the executor job against `--branch-name`, without touching GitHub issues or labels. It needs `--repo` and `--branch-name`, and is the recommended first-run check for a newly configured repository. `--log-level-coordinator` sets the log level of the `mcp-coder` commands in that test script (default `DEBUG`).
 - `--force-refresh` bypasses the GitHub cache. See `cache_refresh_minutes` in the [Configuration Guide](configuration/config.md).
 - Issues with an untrusted body are skipped (no comment, no label change). See [Issue body trust](repository-setup/github.md#issue-body-trust).
+- The eligible issues of all repositories are dispatched from one list in reverse pipeline order (closest to done first).
+- A build starts only while the executor job has no build waiting for an agent, with `dispatch_delay_seconds` between starts. See [Jenkins Setup → Executor Capacity Gate](repository-setup/jenkins.md#executor-capacity-gate) and the [Configuration Guide](configuration/config.md#coordinator).
+- A wrong `executor_job_path` (missing, unreadable, or a folder) ends the run with one error line, exit 1.
 
 See [Jenkins Setup](repository-setup/jenkins.md) for the required permissions and credentials, and [Coordinator and VSCodeClaude](coordinator-vscodeclaude.md).
 

@@ -3,15 +3,64 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    PRIORITY_ORDER,
+    _filter_eligible_issues,
     get_cached_eligible_issues,
     get_eligible_issues,
 )
+from mcp_coder.cli.commands.coordinator.core import stage_index
 from mcp_coder.mcp_workspace_github import (
     GitHubRateLimitError,
     IssueData,
     RepoIdentifier,
 )
 from tests.github_factories import make_issue_data
+
+
+class TestStageIndex:
+    """stage_index ranks issues in reverse pipeline order."""
+
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [
+            ("status-81:failing-ci", 0),
+            ("status-71:merge-conflict", 1),
+            ("status-08:ready-pr", 2),
+            ("status-17:code-review-bot", 3),
+            ("status-05:plan-ready", 4),
+            ("status-14:plan-review-bot", 5),
+            ("status-02:awaiting-planning", 6),
+        ],
+    )
+    def test_stage_label_maps_to_position(self, label: str, expected: int) -> None:
+        issue = make_issue_data(labels=["enhancement", label])
+        assert stage_index(issue) == expected
+
+    def test_issue_without_stage_label_sorts_last(self) -> None:
+        issue = make_issue_data(labels=["bug", "status-01:created"])
+        assert stage_index(issue) == len(PRIORITY_ORDER)
+
+
+class TestFilterEligibleIssues:
+    """_filter_eligible_issues keeps input order."""
+
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
+    def test_keeps_input_order(self, mock_load_config: MagicMock) -> None:
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+            ],
+            "ignore_labels": [],
+        }
+        issues = [
+            make_issue_data(number=1, labels=["status-02:awaiting-planning"]),
+            make_issue_data(number=2, labels=["status-08:ready-pr"]),
+        ]
+
+        result = _filter_eligible_issues(issues)
+
+        assert [issue["number"] for issue in result] == [1, 2]
 
 
 class TestGetEligibleIssues:
@@ -64,9 +113,8 @@ class TestGetEligibleIssues:
         result = get_eligible_issues(mock_issue_manager)
 
         # Verify - only issues with exactly one bot_pickup label
-        assert len(result) == 2
-        assert result[0]["number"] == 4  # status-08 has highest priority
-        assert result[1]["number"] == 1  # status-02 has lower priority
+        # Input order is kept; the coordinator sorts globally
+        assert [issue["number"] for issue in result] == [1, 4]
 
         # Verify IssueManager.list_issues was called with correct params
         mock_issue_manager.list_issues.assert_called_once_with(

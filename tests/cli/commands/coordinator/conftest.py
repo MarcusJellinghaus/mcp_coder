@@ -34,3 +34,28 @@ def _no_untrusted_launch_keys() -> Iterator[MagicMock]:
         return_value=set(),
     ) as mock_finder:
         yield mock_finder
+
+
+@pytest.fixture(autouse=True)
+def _no_dispatch_sleep() -> Iterator[MagicMock]:
+    """Keep the delay between dispatches from sleeping.
+
+    Yields:
+        The patched ``sleep`` in the coordinator commands module.
+    """
+    with patch("mcp_coder.cli.commands.coordinator.commands.sleep") as mock_sleep:
+        yield mock_sleep
+
+
+@pytest.fixture(autouse=True)
+def _dispatch_delay() -> Iterator[MagicMock]:
+    """Keep the run off the real user config for the dispatch delay.
+
+    Yields:
+        The patched ``get_dispatch_delay_seconds``, returning 15.
+    """
+    with patch(
+        "mcp_coder.cli.commands.coordinator.commands.get_dispatch_delay_seconds",
+        return_value=15,
+    ) as mock_delay:
+        yield mock_delay

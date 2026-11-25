@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+from mcp_coder.cli.commands.coordinator import DispatchResult, execute_coordinator_run
 from mcp_coder.mcp_workspace_github import (
     BodyTrust,
     BodyTrustResult,
@@ -17,6 +17,7 @@ from mcp_coder.mcp_workspace_github import (
 from tests.github_factories import make_issue_data
 
 _COMMANDS = "mcp_coder.cli.commands.coordinator.commands"
+EXECUTOR_JOB_URL = "https://jenkins.example.com/job/MCP_Coder/job/executor-test/"
 
 TRUSTED = BodyTrustResult(status=BodyTrust.TRUSTED, reason="")
 UNTRUSTED = BodyTrustResult(status=BodyTrust.UNTRUSTED, reason="author not trusted")
@@ -70,15 +71,20 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[dict[str, MagicMock]]:
             f"{_COMMANDS}.get_jenkins_credentials",
             return_value=("https://jenkins.example.com", "u", "t"),
         ),
-        patch(f"{_COMMANDS}.JenkinsClient"),
+        patch(f"{_COMMANDS}.JenkinsClient") as jenkins_cls,
         patch(f"{_COMMANDS}.load_repo_config", return_value=repo_config),
         patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
         patch(f"{_COMMANDS}.IssueBranchManager"),
         patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
         patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
-        patch(f"{_COMMANDS}.dispatch_workflow", return_value=True) as dispatch,
+        patch(
+            f"{_COMMANDS}.dispatch_workflow", return_value=DispatchResult.STARTED
+        ) as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
     ):
+        jenkins = jenkins_cls.return_value
+        jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        jenkins.get_recent_builds.return_value = []
         yield {
             "trust": _trusted_issue_bodies,
             "issue_mgr": issue_mgr_cls.return_value,
@@ -206,3 +212,37 @@ class TestCoordinatorTrustGate:
         assert result == 0
         mocks["trust"].assert_called_once_with(mocks["issue_mgr"], fallback_issue)
         mocks["dispatch"].assert_not_called()
+
+
+class TestCoordinatorDispatchResult:
+    """How execute_coordinator_run reacts to each DispatchResult."""
+
+    def test_not_started_still_updates_cache_and_continues(
+        self, mocks: dict[str, MagicMock]
+    ) -> None:
+        mocks["get_cached"].return_value = [_issue(1), _issue(2)]
+        mocks["dispatch"].side_effect = [
+            DispatchResult.NOT_STARTED,
+            DispatchResult.STARTED,
+        ]
+
+        result = execute_coordinator_run(_args())
+
+        assert result == 0
+        assert _dispatched_numbers(mocks["dispatch"]) == [1, 2]
+        cached = [
+            c.kwargs["issue_number"] for c in mocks["update_cache"].call_args_list
+        ]
+        assert cached == [1, 2]
+
+    def test_label_rate_limited_stops_run_with_exit_1(
+        self, mocks: dict[str, MagicMock]
+    ) -> None:
+        mocks["get_cached"].return_value = [_issue(1), _issue(2)]
+        mocks["dispatch"].return_value = DispatchResult.STARTED_LABEL_RATE_LIMITED
+
+        result = execute_coordinator_run(_args())
+
+        assert result == 1
+        assert _dispatched_numbers(mocks["dispatch"]) == [1]
+        mocks["update_cache"].assert_not_called()

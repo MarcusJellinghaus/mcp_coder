@@ -15,6 +15,7 @@ import pytest
 
 from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND,
+    DispatchResult,
     execute_coordinator_run,
     execute_coordinator_test,
     format_job_output,
@@ -25,6 +26,7 @@ from mcp_coder.utils.jenkins_operations.models import JobStatus
 from tests.github_factories import make_issue_data
 
 COMMANDS_LOGGER = "mcp_coder.cli.commands.coordinator.commands"
+EXECUTOR_JOB_URL = "https://jenkins.example.com/job/MCP_Coder/job/executor-test/"
 
 # A realistic step-4 diagnosis: the remedy text is the payload the operator needs,
 # and it must reach the console without a traceback wrapped around it.
@@ -235,6 +237,8 @@ class TestExecuteCoordinatorRun:
         # Setup - Mock Jenkins client
         mock_jenkins = MagicMock()
         mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins.get_recent_builds.return_value = []
 
         # Setup - Mock IssueManager and IssueBranchManager
         mock_issue_mgr = MagicMock()
@@ -261,7 +265,7 @@ class TestExecuteCoordinatorRun:
         ]
 
         # Setup - Mock dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = True
+        mock_dispatch_workflow.return_value = DispatchResult.STARTED
 
         # Execute
         result = execute_coordinator_run(args)
@@ -322,6 +326,8 @@ class TestExecuteCoordinatorRun:
             "jenkins_user",
             "jenkins_token_123",
         )
+        mock_jenkins_class.return_value.get_job_url.return_value = EXECUTOR_JOB_URL
+        mock_jenkins_class.return_value.get_recent_builds.return_value = []
         mock_get_cached_issues.return_value = [
             make_issue_data(
                 number=123,
@@ -425,6 +431,8 @@ class TestExecuteCoordinatorRunRateLimit:
             jenkins = jenkins_cls.return_value
             jenkins.base_url = "https://jenkins.example.com"
             jenkins.get_job_status.return_value = MagicMock(url=None)
+            jenkins.get_job_url.return_value = EXECUTOR_JOB_URL
+            jenkins.get_recent_builds.return_value = []
             branch_mgr_cls.return_value.get_branch_with_pr_fallback.return_value = (
                 "feature/issue-123"
             )
