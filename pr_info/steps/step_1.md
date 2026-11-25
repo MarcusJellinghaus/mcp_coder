@@ -14,6 +14,7 @@ CLAUDE.md), format the code, and produce exactly one commit.
 - `tests/cli/test_gh_parsers.py`
 - `tests/cli/commands/test_define_labels.py`
 - `tests/cli/commands/test_define_labels_summary.py`
+- `tests/cli/commands/test_define_labels_execute.py`
 
 ## WHAT
 
@@ -38,6 +39,9 @@ CLAUDE.md), format the code, and produce exactly one commit.
 
 `tests/cli/commands/test_define_labels_summary.py`:
 - `_make_namespace`: remove the `config` parameter and `config=config`.
+
+`tests/cli/commands/test_define_labels_execute.py`:
+- `_make_namespace`: remove the `"config": None` entry from `defaults`.
 
 ### Implementation
 

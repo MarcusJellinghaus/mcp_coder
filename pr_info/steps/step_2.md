@@ -53,6 +53,17 @@ Tests:
   `test_execute_set_status_no_args_fallback_config`.
 - Leave `test_execute_set_status_no_args_shows_labels` unchanged (its `resolve_project_dir`
   patch still resolves: the main path uses it).
+- Add a test for `build_set_status_epilog`'s fallback (import `build_set_status_epilog` if
+  not yet imported):
+  ```python
+  @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+  def test_build_set_status_epilog_load_failure_returns_neutral_message(
+      mock_load_config: MagicMock,
+  ) -> None:
+      """A labels load failure yields the neutral fallback text, not an exception."""
+      mock_load_config.side_effect = ValueError("broken")
+      assert "Status labels could not be loaded." in build_set_status_epilog()
+  ```
 
 `tests/icoder/test_branch_info_bar.py`: `_BarApp.compose` yields `BranchInfoBar()`. Keep
 `_BarApp(tmp_path)` callers as they are or drop the parameter — whichever leaves no unused
