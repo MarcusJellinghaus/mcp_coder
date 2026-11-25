@@ -162,9 +162,16 @@ Test cases:
     exits 2 → `_run_capturing` returns `(2, None)`; reversed order → `(2, "ENV-PYPI-NETWORK")`.
 11. `test_grandchild_holding_stderr_does_not_block` — patch
     `_env._READER_JOIN_TIMEOUT_SECONDS = 0.2`; child spawns
-    `subprocess.Popen([sys.executable, "-c", "import time; time.sleep(5)"])` (inherits
-    stderr) and exits 0; `time.monotonic()` around `run(cmd, retry_on=…)` < 3 s.
-    Measure with `time.monotonic`, not the patched `_env.time.sleep`.
+    `subprocess.Popen([sys.executable, "-c", "import time; time.sleep(5)"], stderr=sys.stderr)`
+    and exits 0. `stderr=sys.stderr` must be explicit: without any stdio argument,
+    Windows `Popen` (`close_fds=True`) passes no handles, so the grandchild would not
+    hold the pipe and the test would pass vacuously.
+    Record the reader thread: `monkeypatch.setattr(_env.threading, "Thread", Recording)`,
+    where `Recording` subclasses the real `threading.Thread` and appends each instance
+    to a list. Assertions: `time.monotonic()` around `run(cmd, retry_on=…)` < 3 s, and
+    right after `run()` returns, the recorded reader thread `is_alive()` — proof the
+    grandchild still held the pipe (without it the reader hits EOF and ends inside the
+    join). Measure with `time.monotonic`, not the patched `_env.time.sleep`.
 12. `test_relay_write_error_keeps_draining` — `sys.stderr` replaced by an object with
     `.buffer.write` raising `OSError` (no-op `flush()`, `isatty()` False); child writes 1 MiB to
     stderr and exits 0. Run `_run_capturing` in a helper thread, `join(60)`, assert the
