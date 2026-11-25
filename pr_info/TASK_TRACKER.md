@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Shared walk `mcp_coder_section` in `config/toml_utils.py` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `TestMcpCoderSection` tests + `mcp_coder_section`; `find_mcp_coder_table` uses it
-- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestMcpCoderSection` tests + `mcp_coder_section`; `find_mcp_coder_table` uses it
+- [x] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `_pyproject_section` + legacy `implement` readers — [step_2.md](./steps/step_2.md)
 
