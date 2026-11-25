@@ -29,6 +29,7 @@ import logging
 
 from ..utils.log_utils import OUTPUT
 from ._env import (
+    UV_TRANSIENT_SIGNATURES,
     InstallConfig,
     ensure_system_uv,
     exe,
@@ -101,6 +102,7 @@ def install(config: InstallConfig) -> None:
                 *config.extra_packages.split(),
             ],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
 
     phase_report_versions(config, bin_dir, uv_bin, py_v)

@@ -15,6 +15,7 @@ from ._env import (
     MCP_CODER_REPO,
     REPORT_BINARIES,
     REPORT_PACKAGES,
+    UV_TRANSIENT_SIGNATURES,
     InstallConfig,
     exe,
     rmtree_with_retry,
@@ -76,6 +77,7 @@ def phase_bootstrap_pip_uv(config: InstallConfig, py_v: Path) -> None:
         run(
             [uv_bootstrap, "pip", "install", "--python", str(py_v), "pip", "uv"],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
     else:
         run(
@@ -109,13 +111,14 @@ def phase_install_main(config: InstallConfig, uv_bin: str, py_v: Path) -> bool:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + [spec], dry=config.check)
+        run(cmd + [spec], dry=config.check, retry_on=UV_TRANSIENT_SIGNATURES)
         return False
 
     if config.source == "pypi":
         run(
             [uv_bin, "pip", "install", "--python", str(py_v), f"mcp-coder{extras}"],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
         return False
 
@@ -133,13 +136,18 @@ def phase_install_main(config: InstallConfig, uv_bin: str, py_v: Path) -> bool:
                 sync_cmd += ["--extra", extra]
         if config.refresh:
             sync_cmd.append("--refresh")
-        run(sync_cmd, dry=config.check, cwd=config.local_path)
+        run(
+            sync_cmd,
+            dry=config.check,
+            cwd=config.local_path,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
     else:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
         cmd += ["-e", f"{config.local_path}{extras}"]
-        run(cmd, dry=config.check)
+        run(cmd, dry=config.check, retry_on=UV_TRANSIENT_SIGNATURES)
 
     return True
 
@@ -189,12 +197,20 @@ def phase_overrides(
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + overrides.packages, dry=config.check)
+        run(
+            cmd + overrides.packages,
+            dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
     if overrides.packages_no_deps:
         cmd = [uv_bin, "pip", "install", "--no-deps", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + overrides.packages_no_deps, dry=config.check)
+        run(
+            cmd + overrides.packages_no_deps,
+            dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
 
     if is_editable:
         # The override step may have pulled a fresh mcp-coder wheel in
@@ -211,6 +227,7 @@ def phase_overrides(
                 str(py_v),
             ],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
 
 

@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Retry at the uv install/sync call sites — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: add `TestRetryCallSites` to `test_install_phases.py`, then pass `retry_on=UV_TRANSIENT_SIGNATURES` at every `uv pip install` / `uv sync` call in `_phases.py` and `__init__.py`; update `docs/configuration/setup.md` and `docs/cli-reference.md`
-- [ ] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `TestRetryCallSites` to `test_install_phases.py`, then pass `retry_on=UV_TRANSIENT_SIGNATURES` at every `uv pip install` / `uv sync` call in `_phases.py` and `__init__.py`; update `docs/configuration/setup.md` and `docs/cli-reference.md`
+- [x] Quality checks (ruff, pylint, mypy, pytest fast unit tests) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Classifier retry signatures and PIPE-NO-STATUS suppression — [step_4.md](./steps/step_4.md)
 - [ ] Implementation: add tests to `tests/tools/test_jenkins_classify_logs.py`, then add `MC-INSTALL-UV-RETRY` / `MC-INSTALL-UV-RETRY-OK` signatures and `no_status_suppressed_by` to `jenkins_issue_patterns.toml`, honour it in `jenkins_classify_logs.py`; update `tools/jenkins_issue_analysis.md`

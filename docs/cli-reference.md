@@ -164,6 +164,8 @@ Options that need explaining:
 
 After the version report, install runs the `[tool.mcp-coder.install] post_install_checks` declared in the pyproject.toml at `--local-path`. Any failing check fails the install; `--check` only prints them.
 
+uv install/sync commands are retried once, after 10 s, on a transient PyPI network error or a uv-cache "Access is denied" — only when stderr is not a terminal (e.g. Jenkins).
+
 ```bash
 # GitHub HEAD, siblings pinned from a checkout
 mcp-coder install ~/mcp-coder-env --source git --local-path ~/src/mcp_coder

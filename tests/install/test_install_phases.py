@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 
 from mcp_coder.install import InstallConfig, _env, _phases, install
-from mcp_coder.install._env import REPORT_BINARIES, exe
+from mcp_coder.install._env import REPORT_BINARIES, UV_TRANSIENT_SIGNATURES, exe
 from mcp_coder.utils.log_utils import OUTPUT
 
 from .conftest import namespace as _namespace
@@ -325,6 +325,81 @@ class TestBootstrapSkippedOnlyForLocalSync:
             overrides["local_path"] = tmp_path
         install(InstallConfig.from_args(_namespace(**overrides)))
         assert len(calls) == 1
+
+
+def _is_uv_install(cmd: list[str]) -> bool:
+    """True for a system-uv ``pip install`` or ``sync`` command."""
+    return cmd[0] == _STUB_UV and (cmd[1:3] == ["pip", "install"] or cmd[1] == "sync")
+
+
+class TestRetryCallSites:
+    """Exactly the uv install/sync commands opt into the transient-error retry.
+
+    Every other command (venv creation, the in-venv pip fallback, the
+    version report) must keep the plain inherited-stdio path.
+    """
+
+    @pytest.mark.parametrize(
+        ("overrides", "which", "pyproject"),
+        [
+            pytest.param({"source": "git"}, _STUB_UV, False, id="git"),
+            pytest.param({"source": "pypi"}, _STUB_UV, False, id="pypi"),
+            pytest.param(
+                {"source": "local", "extra_packages": "langchain"},
+                _STUB_UV,
+                True,
+                id="local-editable-overrides-extra-packages",
+            ),
+            pytest.param(
+                {"source": "local", "use_sync": True},
+                _STUB_UV,
+                False,
+                id="local-use-sync",
+            ),
+            pytest.param({"source": "git"}, None, False, id="git-no-uv-on-path"),
+        ],
+    )
+    def test_retry_on_only_for_uv_install_and_sync(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        overrides: dict[str, Any],
+        which: str | None,
+        pyproject: bool,
+    ) -> None:
+        calls: list[tuple[list[str], dict[str, Any]]] = []
+
+        def _rec(cmd: list[str], **kwargs: Any) -> int:
+            calls.append((cmd, kwargs))
+            return 0
+
+        monkeypatch.setattr("mcp_coder.install._phases.run", _rec, raising=True)
+        monkeypatch.setattr("mcp_coder.install.run", _rec, raising=True)
+        monkeypatch.setattr(
+            "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
+        )
+        monkeypatch.setattr(shutil, "which", lambda _: which)
+        if pyproject:
+            _write_pyproject(
+                tmp_path,
+                packages=["pkg1 @ git+https://github.com/org/pkg1.git"],
+                packages_no_deps=["pkg3 @ git+https://github.com/org/pkg3.git"],
+            )
+        if overrides["source"] == "local":
+            overrides = {**overrides, "local_path": tmp_path}
+
+        install(
+            InstallConfig.from_args(
+                _namespace(target=tmp_path, check=False, **overrides)
+            )
+        )
+
+        assert any(_is_uv_install(cmd) for cmd, _ in calls), calls
+        assert any(not _is_uv_install(cmd) for cmd, _ in calls), calls
+        for cmd, kwargs in calls:
+            assert (
+                kwargs.get("retry_on") == UV_TRANSIENT_SIGNATURES
+            ) == _is_uv_install(cmd), cmd
 
 
 class TestEnsureSystemUv:
