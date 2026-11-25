@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Install readers and `get_github_install_config` — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: reader, install, project-setup and vscodeclaude policy tests + rewire `get_install_extras`, `get_post_install_checks`, `get_github_install_config`; `InstallConfig.from_args` docstring
-- [ ] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: reader, install, project-setup and vscodeclaude policy tests + rewire `get_install_extras`, `get_post_install_checks`, `get_github_install_config`; `InstallConfig.from_args` docstring
+- [x] Quality checks (pylint, pytest, mypy, ruff) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `verify` key-warning rows + end-to-end `verify` tests — [step_4.md](./steps/step_4.md)
 

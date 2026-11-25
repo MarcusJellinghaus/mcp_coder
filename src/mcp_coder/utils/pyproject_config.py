@@ -226,10 +226,14 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
         ValueError: If either key is declared as something other than a list
             of strings. The installer concatenates these onto a uv argv, so a
             wrong type would otherwise surface as a TypeError mid-install.
-    """  # noqa: DOC502 - raised by _require_spec_list, part of this contract
-    data = _load_pyproject(project_dir)
-    gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
+            Also if 'tool', 'mcp-coder' or 'install-from-github' is not a
+            table; the message names the file and the key. A malformed
+            file gives the defaults instead.
+    """  # noqa: DOC502 - raised by mcp_coder_section / _require_spec_list
     path = project_dir / "pyproject.toml"
+    gh = mcp_coder_section(
+        _load_pyproject(project_dir), str(path), "install-from-github"
+    )
     return GitHubInstallConfig(
         packages=_require_spec_list(path, "packages", gh.get("packages", [])),
         packages_no_deps=_require_spec_list(
@@ -243,21 +247,23 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None
 
     Args:
         project_dir: Path to directory containing pyproject.toml.
-        strict: Propagate the ValueError _load_pyproject raises for a
-            malformed pyproject.toml, and reject a non-string extras value,
-            instead of returning None.
+        strict: Propagate the error for a malformed pyproject.toml or a
+            non-table tool / mcp-coder / install, and reject a non-string
+            extras value, instead of returning None.
 
     Returns:
         The declared extras string, unparsed (e.g. "dev,mlflow"), or None when
-        the file, section or key is absent. An explicit empty string is
-        returned as "" — the caller distinguishes it from "not declared".
+        the file, section or key is absent (or, when strict is False, the
+        file is malformed or a level is not a table). An explicit empty
+        string is returned as "" — the caller distinguishes it from "not
+        declared".
 
     Raises:
         ValueError: If strict is True and extras is declared as something
-            other than a string. The message names the file and the value.
+            other than a string, or 'tool', 'mcp-coder' or 'install' is not
+            a table. The message names the file and the key or value.
     """
-    data = _load_pyproject(project_dir, strict=strict)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    section = _pyproject_section(project_dir, "install", strict=strict)
     extras: Any = section.get("extras")
     if extras is None or isinstance(extras, str):
         return extras
@@ -281,22 +287,23 @@ def get_post_install_checks(
 
     Args:
         project_dir: Path to directory containing pyproject.toml.
-        strict: Propagate the ValueError _load_pyproject raises for a
-            malformed pyproject.toml, and reject a malformed
+        strict: Propagate the error for a malformed pyproject.toml or a
+            non-table tool / mcp-coder / install, and reject a malformed
             post_install_checks value, instead of returning ().
 
     Returns:
         The declared checks as a tuple of argv tuples, in declaration order.
-        () when the file, section or key is absent, the value is [], or the
-        value is malformed and strict is False.
+        () when the file, section or key is absent, the value is [], or —
+        when strict is False — the file or value is malformed or a level is
+        not a table.
 
     Raises:
         ValueError: If strict is True and post_install_checks is not a list
-            of non-empty lists of strings. The message names the file and
-            the value.
+            of non-empty lists of strings, or 'tool', 'mcp-coder' or
+            'install' is not a table. The message names the file and the key
+            or value.
     """
-    data = _load_pyproject(project_dir, strict=strict)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    section = _pyproject_section(project_dir, "install", strict=strict)
     value: Any = section.get("post_install_checks")
     if value is None:
         return ()

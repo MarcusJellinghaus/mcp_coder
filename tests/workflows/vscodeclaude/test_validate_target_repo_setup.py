@@ -134,3 +134,37 @@ class TestBrokenSetupConfig:
 
         with pytest.raises(FileNotFoundError, match=r"\.mcp\.json"):
             validate_target_repo(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("content", "key"),
+    [
+        pytest.param("[tool.mcp-coder]\ninstall = 1\n", "'install'", id="install_int"),
+        pytest.param(
+            "[tool.mcp-coder]\ninstall-from-github = 1\n",
+            "'install-from-github'",
+            id="install_from_github_int",
+        ),
+    ],
+)
+class TestNonTablePolicy:
+    """A non-table install / install-from-github warns once; launch continues."""
+
+    def test_warns_once_naming_the_key(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        content: str,
+        key: str,
+    ) -> None:
+        """The quoted key comes from the ValueError, not the fixed warning text."""
+        _write_mcp_json(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        messages = _warnings(caplog)
+        assert len(messages) == 1
+        assert "cannot be read as target-repo policy" in messages[0]
+        assert key in messages[0]
