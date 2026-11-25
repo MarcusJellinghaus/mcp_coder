@@ -21,6 +21,35 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Remove `gh-tool define-labels --config`
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `get_labels_config_path()` without parameters
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `verify` reports a leftover `labels-config` as retired
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Docs — bundled labels only
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (docs updates)
+- [ ] Quality checks — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review — review the full branch diff against the base branch
+- [ ] PR summary prepared
