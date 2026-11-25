@@ -74,6 +74,10 @@ strict / github non-table → `ValueError("Invalid 'install' in <path>: expected
   `"[tool.mcp-coder]\ninstall-from-github = 1\n"` (`"'install-from-github'"`).
   Keep `--check` and the `ensure_system_uv` stub. Add `caplog`: the logged error
   contains `str(tmp_path / "pyproject.toml")` and the key.
+  Update the test docstring to name both failure points: the `tool = 1`,
+  `mcp-coder = 1` and `install = 1` cases fail in `InstallConfig.from_args`
+  (`get_install_extras(strict=True)`); the `packages` and `install-from-github`
+  cases fail in `phase_overrides`' config read.
 
 `tests/install/test_project_setup.py` (class holding `test_value_error_becomes_setup_error`):
 - `test_non_table_install_becomes_setup_error`: write
