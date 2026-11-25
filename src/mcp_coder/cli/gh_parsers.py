@@ -54,12 +54,7 @@ With --generate-github-actions:
     to {project_dir}/.github/workflows/
 
 With --all:
-  - Run all optional operations (--init --validate --generate-github-actions)
-
-Config resolution:
-  1. --config PATH (explicit, highest priority)
-  2. [tool.mcp-coder] labels-config in pyproject.toml or mcp-coder.toml
-  3. Bundled package defaults""",
+  - Run all optional operations (--init --validate --generate-github-actions)""",
         formatter_class=WideHelpFormatter,
     )
     add_project_dir_arg(
@@ -79,13 +74,6 @@ Config resolution:
         "--validate",
         action="store_true",
         help="Check all open issues for errors and warnings",
-    )
-    define_labels_parser.add_argument(
-        "--config",
-        type=str,
-        default=None,
-        metavar="PATH",
-        help="Path to labels config file (overrides pyproject.toml / mcp-coder.toml and bundled defaults)",
     )
     define_labels_parser.add_argument(
         "--generate-github-actions",

@@ -35,7 +35,6 @@ def _make_namespace(
     init: bool = False,
     validate: bool = False,
     all_ops: bool = False,
-    config: str | None = None,
     generate_github_actions: bool = False,
 ) -> argparse.Namespace:
     """Build an argparse.Namespace with all define-labels flags."""
@@ -45,7 +44,6 @@ def _make_namespace(
         init=init,
         validate=validate,
         all=all_ops,
-        config=config,
         generate_github_actions=generate_github_actions,
     )
 
@@ -600,52 +598,6 @@ class TestFlagGating:
         mock_instance.list_issues.assert_called_once()
         # --all should trigger write_github_actions
         mock_write_actions.assert_called_once()
-
-    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
-    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
-    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
-    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
-    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
-    def test_config_flag_passed_to_discovery(
-        self,
-        mock_resolve_dir: MagicMock,
-        mock_get_config_path: MagicMock,
-        mock_load_config: MagicMock,
-        mock_apply_labels: MagicMock,
-        mock_validate_config: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """--config path is passed as config_override to get_labels_config_path."""
-        project_dir = tmp_path / "project"
-        project_dir.mkdir()
-        mock_resolve_dir.return_value = project_dir
-        mock_get_config_path.return_value = project_dir / "labels.json"
-        mock_load_config.return_value = {
-            "workflow_labels": [
-                {
-                    "internal_id": "created",
-                    "name": "status-01:created",
-                    "color": "10b981",
-                    "description": "Test",
-                    "category": "human_action",
-                    "default": True,
-                }
-            ]
-        }
-        mock_apply_labels.return_value = {
-            "created": [],
-            "updated": [],
-            "deleted": [],
-            "unchanged": ["status-01:created"],
-        }
-
-        config_path = "/custom/labels.json"
-        args = _make_namespace(project_dir=str(project_dir), config=config_path)
-        execute_define_labels(args)
-
-        # Verify config_override was passed
-        call_kwargs = mock_get_config_path.call_args
-        assert call_kwargs[1]["config_override"] == Path(config_path)
 
     @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")

@@ -616,7 +616,6 @@ mcp-coder gh-tool define-labels [OPTIONS]
 - `--validate` checks all open issues for errors (multiple status labels) and warnings (stale bot processes).
 - `--generate-github-actions` writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/`.
 - `--all` enables all three optional operations.
-- `--config PATH` selects the labels config. Resolution order: `--config`, then `[tool.mcp-coder] labels-config` in `pyproject.toml` or `mcp-coder.toml`, then the bundled defaults.
 
 See [Label Setup](getting-started/label-setup.md).
 
