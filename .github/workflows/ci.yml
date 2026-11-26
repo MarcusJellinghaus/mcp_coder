@@ -4,6 +4,9 @@ name: Python CI
 #   Feature push  → first-line checks + tests: fast, catch most errors early.
 #   Pull request  → backup checks + tests: slow, or redundant with earlier gates.
 #   Main push / dispatch → both sets (post-merge safety net).
+#   Dispatch with lowest-deps: true → the same jobs with the libraries at their
+#     pyproject.toml minimums (lowest-direct); the usual install then adds the
+#     tools at current versions without touching those libraries.
 # Every check runs at least once before merge, on push or on PR.
 # Job names are required-check names: don't rename them, and never skip a check with a step-level `if`.
 
@@ -13,6 +16,11 @@ on:
   pull_request:
     branches: [ "**" ]
   workflow_dispatch:
+    inputs:
+      lowest-deps:
+        description: 'Install libraries at their declared minimums (checks the pyproject.toml floors)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -193,8 +201,13 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
+        env:
+          LOWEST_DEPS: ${{ inputs.lowest-deps }}
         run: |
           mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          if [ "$LOWEST_DEPS" = "true" ]; then
+            uv pip install --system --resolution lowest-direct "${SPECS[@]}" ".[langchain,mlflow,python]"
+          fi
           uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
       
       - name: Environment info
@@ -233,8 +246,13 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
+        env:
+          LOWEST_DEPS: ${{ inputs.lowest-deps }}
         run: |
           mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          if [ "$LOWEST_DEPS" = "true" ]; then
+            uv pip install --system --resolution lowest-direct "${SPECS[@]}" ".[langchain,mlflow,python]"
+          fi
           uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
       
       - name: Environment info
@@ -264,8 +282,13 @@ jobs:
           python-version: 3.11
 
       - name: Install dependencies
+        env:
+          LOWEST_DEPS: ${{ inputs.lowest-deps }}
         run: |
           mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          if [ "$LOWEST_DEPS" = "true" ]; then
+            uv pip install --system --resolution lowest-direct "${SPECS[@]}" ".[langchain,mlflow,python]"
+          fi
           uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
 
       - name: Run unit-tests
@@ -299,8 +322,13 @@ jobs:
           python-version: 3.11
 
       - name: Install dependencies
+        env:
+          LOWEST_DEPS: ${{ inputs.lowest-deps }}
         run: |
           mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          if [ "$LOWEST_DEPS" = "true" ]; then
+            uv pip install --system --resolution lowest-direct "${SPECS[@]}" ".[langchain,mlflow,python]"
+          fi
           uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
 
       - name: Run integration-tests
@@ -340,8 +368,13 @@ jobs:
           python-version: 3.11
 
       - name: Install dependencies
+        env:
+          LOWEST_DEPS: ${{ inputs.lowest-deps }}
         run: |
           mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          if [ "$LOWEST_DEPS" = "true" ]; then
+            uv pip install --system --resolution lowest-direct "${SPECS[@]}" ".[langchain,mlflow,python]"
+          fi
           uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
 
       - name: Run LangChain integration tests
