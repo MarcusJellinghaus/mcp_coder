@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Clean-tree check in `commit_changes` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `_tree_is_clean` helper + early return in `commit_changes`, autouse dirty-status fixture in `TestCommitChanges`, new `tests/workflow_steps/test_commit_clean_tree.py` (tests first)
-- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_tree_is_clean` helper + early return in `commit_changes`, autouse dirty-status fixture in `TestCommitChanges`, new `tests/workflow_steps/test_commit_clean_tree.py` (tests first)
+- [x] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Safety net — no "committed successfully: None" — [step_2.md](./steps/step_2.md)
 

@@ -1,6 +1,7 @@
 """Tests for workflow_steps commit/push/run_formatters steps."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -302,6 +303,28 @@ class TestRunFormatters:
 class TestCommitChanges:
     """Test commit_changes function."""
 
+    @pytest.fixture(autouse=True)
+    def _dirty_status(self) -> Iterator[MagicMock]:
+        """Report a dirty tree so these tests exercise the commit path.
+
+        Their project dirs are not git repos; without this the status read
+        fails and every test would take the failure path by accident.
+        """
+        with patch(
+            "mcp_coder.workflow_steps.commit.get_working_tree_status",
+            return_value={
+                "success": True,
+                "error": None,
+                "returncode": 0,
+                "stderr": "",
+                "clean": False,
+                "staged": [],
+                "modified": ["a.py"],
+                "untracked": [],
+            },
+        ) as mock_status:
+            yield mock_status
+
     @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
     def test_commit_changes_uses_file_when_present(
@@ -461,27 +484,6 @@ class TestCommitChanges:
         )
         # Error is logged; git history gets only the static message
         assert "boom" in caplog.text
-
-    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
-    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
-    def test_commit_changes_clean_tree_flows_through_fallback(
-        self, mock_generate_message: MagicMock, mock_commit: MagicMock
-    ) -> None:
-        """Test clean tree: generation fails, commit no-ops with success."""
-        mock_generate_message.return_value = (False, "", "No changes to commit")
-        # Clean tree: commit_all_changes no-ops and reports success
-        mock_commit.return_value = {
-            "success": True,
-            "commit_hash": None,
-            "error": None,
-        }
-
-        result = commit_changes(Path("/test/project"))
-
-        assert result is True
-        mock_commit.assert_called_once_with(
-            FALLBACK_COMMIT_MESSAGE, Path("/test/project")
-        )
 
     @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")

@@ -279,6 +279,10 @@ _.mock_find_open_pr
 # workflow_steps/test_rebase.py - Autouse fixture patching the branch-moved check's git calls
 _.mock_branch_check
 
+# workflow_steps/test_commit.py - Autouse fixture reporting a dirty working tree
+# so TestCommitChanges exercises the commit path, never requested by name
+_._dirty_status
+
 # workflow_steps/test_rebase_branch_moved.py - Only activated via @pytest.mark.usefixtures string
 _.base_is_main
 

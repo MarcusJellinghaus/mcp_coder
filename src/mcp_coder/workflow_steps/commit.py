@@ -9,7 +9,11 @@ import logging
 import re
 from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import commit_all_changes, git_push
+from mcp_coder.mcp_workspace_git import (
+    commit_all_changes,
+    get_working_tree_status,
+    git_push,
+)
 from mcp_coder.utils.pyproject_config import (
     get_format_code,
     has_legacy_format_code_key,
@@ -131,6 +135,32 @@ def run_formatters(project_dir: Path) -> bool:
     return True
 
 
+def _tree_is_clean(project_dir: Path) -> bool:
+    """Return True only if git status succeeded and the tree is clean. Never raises.
+
+    A failed or raising status read counts as dirty, so the caller commits as
+    usual and a real change is never skipped.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if the working tree is clean; False if it is dirty or the status
+        could not be read.
+    """
+    try:
+        status = get_working_tree_status(project_dir)
+        if status["success"]:
+            return status["clean"]
+        detail = status["error"]
+    except Exception as e:  # pylint: disable=broad-exception-caught  # must never raise
+        detail = str(e)
+    logger.warning(
+        f"Could not read working tree status ({detail}); committing as usual"
+    )
+    return False
+
+
 def commit_changes(
     project_dir: Path,
     provider: str = "claude",
@@ -148,10 +178,11 @@ def commit_changes(
         settings_file: Optional Claude settings file; forwarded to message generation
 
     Returns:
-        True if changes were committed successfully or the tree was clean
-        (no-op); False only on git-level failure. LLM message-generation
-        failure is non-fatal: the commit proceeds with
-        ``FALLBACK_COMMIT_MESSAGE``.
+        True if changes were committed successfully or the tree was clean;
+        False only on git-level failure. A clean tree skips message
+        generation and the commit, and returns True. A failed status read
+        counts as dirty. LLM message-generation failure is non-fatal: the
+        commit proceeds with ``FALLBACK_COMMIT_MESSAGE``.
     """
     logger.info("Committing changes...")
     commit_message = ""
@@ -167,6 +198,11 @@ def commit_changes(
                 # Parse the commit message
                 commit_message, _ = parse_llm_commit_response(file_content)
                 logger.info("Using prepared commit message from file")
+
+        # Checked after the message file is deleted: it would read as dirty
+        if _tree_is_clean(project_dir):
+            logger.info("No changes to commit - skipping commit")
+            return True
 
         # Fall back to LLM generation if no prepared message
         if not commit_message:
