@@ -133,7 +133,7 @@ The `.gitignore` step runs in both modes and is idempotent. If the file cannot b
 Also in both modes, init creates or completes the mcp-workspace rules file `.mcp-file-access` and then gitignores `.scratch/`:
 
 - **Rules file:** created with the template rules (`read-only` for `/.vscodeclaude_status.txt`, `/.mcp.json`, `/.claude/settings.json`, `/.claude/settings.local.json`; `read-write /.scratch/`). An existing file gets only the template rules whose pattern it lacks, appended at the end, so they win over earlier rules; init warns when an appended rule changes the level an existing rule gives. An invalid file is left unchanged with a warning. If the file cannot be written, the command fails after the remaining steps.
-- **`.scratch/`:** added to `.gitignore` only when the rules file is valid and keeps `.scratch/` writable for MCP. Skipped when mcp-workspace in the mcp-coder environment does not support `.mcp-file-access` (the rules file is then written without validation).
+- **`.scratch/`:** added to `.gitignore` only when the rules file is valid and keeps `.scratch/` writable for MCP.
 - Report lines: `File access rules: created | N rules added | unchanged | invalid (<problem>)` and `Gitignore: .scratch/ added | present | skipped (<reason>)`.
 
 Commit `.gitignore` and `.mcp-file-access` afterwards.

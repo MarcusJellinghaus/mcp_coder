@@ -21,13 +21,11 @@ from ...llm.mlflow_verify import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...mcp_workspace import (
-    FILE_ACCESS_SUPPORTED,
     FileAccess,
     format_git_section,
     format_github_section,
     format_github_security_section,
     get_file_access,
-    is_path_gitignored,
     validate_access_rules,
 )
 from ...mcp_workspace_git import verify_git
@@ -87,8 +85,7 @@ _SMOKE_TEST_FILE = ".scratch/mcp_coder_verify.md"
 def _smoke_test_skip_reason(project_dir: Path) -> str | None:
     """Tell why mcp-workspace would refuse to edit the smoke-test file.
 
-    Honours ``.mcp-file-access`` when mcp-workspace supports it; otherwise
-    only gitignore counts.
+    Honours ``.mcp-file-access``.
 
     Args:
         project_dir: Path to the project directory.
@@ -96,10 +93,6 @@ def _smoke_test_skip_reason(project_dir: Path) -> str | None:
     Returns:
         The skip text, or None when the file is writable for MCP.
     """
-    if not FILE_ACCESS_SUPPORTED:
-        if is_path_gitignored(_SMOKE_TEST_FILE, project_dir):
-            return f"skipped: {_SMOKE_TEST_FILE} is gitignored"
-        return None
     if validate_access_rules(project_dir):
         return "skipped: invalid .mcp-file-access (see PROJECT)"
     access = get_file_access(_SMOKE_TEST_FILE, project_dir)

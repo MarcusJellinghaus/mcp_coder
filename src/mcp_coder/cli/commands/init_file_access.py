@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ...mcp_workspace import (
-    FILE_ACCESS_SUPPORTED,
     FileAccess,
     get_file_access,
     is_path_gitignored,
@@ -188,8 +187,7 @@ def _append_missing_rules(project_dir: Path, rules_path: Path) -> int:
     ]
     if not missing:
         return 0
-    if FILE_ACCESS_SUPPORTED:
-        _warn_overridden_rules(project_dir, missing)
+    _warn_overridden_rules(project_dir, missing)
     addition = "".join(format_rule(level, pattern) + "\n" for level, pattern in missing)
     # Never glue onto a last line that lacks its newline
     if text and not text.endswith("\n"):
@@ -201,8 +199,7 @@ def _append_missing_rules(project_dir: Path, rules_path: Path) -> int:
 def ensure_file_access_rules(project_dir: Path) -> RulesOutcome:
     """Create the rules file, or append the template rules it lacks.
 
-    An invalid file is left byte-identical. Without ``.mcp-file-access``
-    support in mcp-workspace, rules are written without validation.
+    An invalid file is left byte-identical.
 
     Args:
         project_dir: Target project root.
@@ -210,18 +207,8 @@ def ensure_file_access_rules(project_dir: Path) -> RulesOutcome:
     Returns:
         What happened, for the exit code and the ``.scratch/`` step.
     """
-    supported = FILE_ACCESS_SUPPORTED
-    if supported:
-        problems = validate_access_rules(project_dir)
-        if problems:
-            return _invalid("; ".join(problems))
-    else:
-        logger.warning(
-            "mcp-workspace in this environment does not support %s: rules are "
-            "written without validation and init does not gitignore .scratch/. "
-            "Upgrade mcp-workspace.",
-            FILE_ACCESS_RULES_FILE,
-        )
+    if problems := validate_access_rules(project_dir):
+        return _invalid("; ".join(problems))
 
     rules_path = project_dir / FILE_ACCESS_RULES_FILE
     try:
@@ -246,8 +233,7 @@ def ensure_file_access_rules(project_dir: Path) -> RulesOutcome:
             ok=False, changed=False, skip_reason="rules file not written"
         )
 
-    skip_reason = "" if supported else "no .mcp-file-access support in mcp-workspace"
-    return RulesOutcome(ok=True, changed=changed, skip_reason=skip_reason)
+    return RulesOutcome(ok=True, changed=changed, skip_reason="")
 
 
 def ensure_scratch_gitignored(

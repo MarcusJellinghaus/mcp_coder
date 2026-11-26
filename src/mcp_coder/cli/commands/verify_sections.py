@@ -15,7 +15,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from ...config.toml_utils import MCP_CODER_CONFIG_FILES
-from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
+from ...mcp_workspace import validate_access_rules
 from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
 from ...utils.verify_render import STATUS_SYMBOLS, Row, SectionBuilder, hint_row
@@ -172,13 +172,6 @@ def _file_access_row(
     ok = True
     if not (project_dir / ".mcp-file-access").exists():
         marker, value = symbols["success"], "not present (gitignore defaults)"
-    elif not FILE_ACCESS_SUPPORTED:
-        # The old-version stand-in for validate_access_rules always returns [].
-        marker = symbols["warning"]
-        value = (
-            "not checked (mcp-workspace in this environment"
-            " does not support .mcp-file-access)"
-        )
     elif problems := validate_access_rules(project_dir):
         marker, value = symbols["failure"], f"invalid ({'; '.join(problems)})"
         ok = False

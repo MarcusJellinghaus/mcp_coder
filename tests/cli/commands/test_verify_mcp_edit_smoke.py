@@ -281,27 +281,6 @@ class TestMcpEditSmokeTest:
         assert result.value == "skipped: invalid .mcp-file-access (see PROJECT)"
         mock_prompt_llm.assert_not_called()
 
-    @patch(f"{_VERIFY}.FILE_ACCESS_SUPPORTED", False)
-    @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    def test_smoke_test_without_support_skips_when_gitignored(
-        self,
-        mock_prompt_llm: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """Without rules support only gitignore counts; a rule does not help."""
-        (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
-        (tmp_path / ".mcp-file-access").write_text(
-            "read-write /.scratch/\n", encoding="utf-8"
-        )
-
-        result = _run_mcp_edit_smoke_test(
-            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
-        )
-
-        assert result.marker == "[WARN]"
-        assert "skipped: .scratch/mcp_coder_verify.md is gitignored" in result.value
-        mock_prompt_llm.assert_not_called()
-
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_fail_displays_warning(
         self,
@@ -398,26 +377,6 @@ class TestMcpEditSmokeTest:
         assert "edit not verified (gitignore unreadable)" in result.value
         mock_prompt_llm.assert_not_called()
         assert not (tmp_path / ".scratch").exists()
-
-    @patch(f"{_VERIFY}.FILE_ACCESS_SUPPORTED", False)
-    @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    def test_smoke_test_gitignore_check_error_without_support(
-        self,
-        mock_prompt_llm: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """Without rules support, a gitignore check error becomes a warning row."""
-        with patch(
-            f"{_VERIFY}.is_path_gitignored",
-            side_effect=OSError("gitignore unreadable"),
-        ):
-            result = _run_mcp_edit_smoke_test(
-                tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
-            )
-
-        assert result.marker == "[WARN]"
-        assert "edit not verified (gitignore unreadable)" in result.value
-        mock_prompt_llm.assert_not_called()
 
     @patch(f"{_VERIFY}.get_file_access", side_effect=OSError("gitignore unreadable"))
     @patch(f"{_VERIFY}.verify_config")

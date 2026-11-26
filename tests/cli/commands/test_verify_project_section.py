@@ -68,10 +68,6 @@ _INVALID_WRITABLE = (
     ".mcp-file-access [ERR] invalid (",
     "unknown level 'writable'",
 )
-_NOT_CHECKED = (
-    ".mcp-file-access [WARN] not checked (mcp-workspace in this environment"
-    " does not support .mcp-file-access)"
-)
 
 
 class TestFileAccessRow:
@@ -79,28 +75,18 @@ class TestFileAccessRow:
 
     @pytest.mark.parametrize("with_pyproject", [True, False])
     @pytest.mark.parametrize(
-        ("rules", "supported", "expected", "expected_ok"),
+        ("rules", "expected", "expected_ok"),
         [
-            (None, True, (_NOT_PRESENT,), True),
-            (None, False, (_NOT_PRESENT,), True),
-            ("read-write /.scratch/\n", True, (".mcp-file-access [OK] valid",), True),
-            ("writable /.scratch/\n", True, _INVALID_WRITABLE, False),
+            (None, (_NOT_PRESENT,), True),
+            ("read-write /.scratch/\n", (".mcp-file-access [OK] valid",), True),
+            ("writable /.scratch/\n", _INVALID_WRITABLE, False),
             (
                 "<dir>",
-                True,
                 (".mcp-file-access [ERR] invalid (is a directory)",),
                 False,
             ),
-            ("writable /.scratch/\n", False, (_NOT_CHECKED,), True),
         ],
-        ids=[
-            "absent",
-            "absent-unsupported",
-            "valid",
-            "invalid",
-            "directory",
-            "unsupported",
-        ],
+        ids=["absent", "valid", "invalid", "directory"],
     )
     def test_row(
         self,
@@ -108,7 +94,6 @@ class TestFileAccessRow:
         capsys: pytest.CaptureFixture[str],
         with_pyproject: bool,
         rules: str | None,
-        supported: bool,
         expected: tuple[str, ...],
         expected_ok: bool,
     ) -> None:
@@ -117,13 +102,7 @@ class TestFileAccessRow:
             rules_path.mkdir()
         elif rules is not None:
             rules_path.write_text(rules, encoding="utf-8")
-        with patch(
-            "mcp_coder.cli.commands.verify_sections.FILE_ACCESS_SUPPORTED",
-            supported,
-        ):
-            ok, lines = _run(
-                tmp_path, "[tool.black]\n" if with_pyproject else None, capsys
-            )
+        ok, lines = _run(tmp_path, "[tool.black]\n" if with_pyproject else None, capsys)
 
         project_config = next(
             i
