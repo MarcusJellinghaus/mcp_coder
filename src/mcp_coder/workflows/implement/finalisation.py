@@ -16,7 +16,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
 from mcp_coder.utils.toolkit_runner import bash_grants_of, llm_permissions
-from mcp_coder.workflow_steps.commit import push_changes
+from mcp_coder.workflow_steps.commit import format_best_effort, push_changes
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -122,13 +122,17 @@ def run_finalisation(
 
     logger.debug("Finalisation LLM response received")
 
-    # 4. Check if there are changes to commit
+    # 4. Format before the changes check, so a tree only the formatter
+    # changed is committed too
+    format_best_effort(project_dir, "finalisation commit")
+
+    # 5. Check if there are changes to commit
     status = get_full_status(project_dir)
     if not status["staged"] and not status["modified"] and not status["untracked"]:
         logger.info("No changes after finalisation - nothing to commit")
         return True
 
-    # 5. Get commit message (3-level fallback: file → LLM → default)
+    # 6. Get commit message (3-level fallback: file → LLM → default)
     commit_message = None
     commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
 
@@ -162,14 +166,14 @@ def run_finalisation(
         commit_message = "Finalisation: complete remaining tasks"
         logger.warning("Using default commit message")
 
-    # 6. Stage all changes and commit
+    # 7. Stage all changes and commit
     logger.info("Committing finalisation changes...")
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
         logger.error(f"Failed to commit finalisation changes: {commit_result['error']}")
         return False
 
-    # 7. Push changes
+    # 8. Push changes
     logger.info("Pushing finalisation changes...")
     if not push_changes(project_dir):
         logger.warning("Failed to push finalisation changes")
