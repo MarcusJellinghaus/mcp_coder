@@ -206,6 +206,8 @@ mcp-coder verify [OPTIONS]
 
 The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration (including the `.mcp-file-access` rules file; an invalid file exits 1), `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers, `LLM TEST` (MCP edit smoke test and a test prompt) and MLflow. Exits 1 when a check fails. The smoke test is skipped with a warning when `.mcp-file-access` leaves `.scratch/` hidden or read-only for MCP, or is invalid (the problems are listed in the project section).
 
+It also reports `[tool.mcp-coder]` keys: unknown keys, retired keys and keys in the wrong file. Most appear in the project section; unknown `prompts` keys and `prompts` defined in both files appear in `PROMPTS`. See [Checked by verify](configuration/project-config.md#checked-by-verify).
+
 - `--llm-method METHOD` checks that provider instead of the configured one.
 - `--check-models` lists the models available to the configured LangChain backend (needs network).
 - `--list-mcp-tools` lists the MCP tools, grouped by server.
@@ -270,7 +272,7 @@ mcp-coder implement --mcp-config .mcp.json --settings .claude/settings.local.jso
 
 ### rebase
 
-Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. `review-implementation` and `fix-conflict` run a git-only rebase first and fall back to this LLM rebase on a conflict or failed rebase, passing the detected base explicitly and a pytest marker filter that skips the LLM / Jenkins / install integration tests.
+Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. `review-implementation` and `fix-conflict` run a git-only rebase first and fall back to this LLM rebase on a conflict or failed rebase, passing the detected base explicitly; that automated rebase runs the `rebase_automated` binding, `mcp-coder rebase` the `rebase` binding.
 
 ```bash
 mcp-coder rebase [OPTIONS]
@@ -278,7 +280,7 @@ mcp-coder rebase [OPTIONS]
 
 The base branch is auto-detected. A base named in the issue's `### Base Branch` section is used as-is, but only when the issue body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation)); otherwise detection falls back. A base found from an open PR, git merge-base or the default branch is accepted automatically only when it is `main` or `master`; otherwise pass `--base-branch`. The command fails if the base does not exist on origin.
 
-The regression check after the rebase runs pytest with a 1800 s timeout. The automated LLM rebase runs pytest in the mcp-coder tool environment (`sys.executable`), so the target repo's test dependencies must be installed there.
+The checks before and after the rebase are the binding's requests (by default, an automated rebase tests at `test@unattended`); see [Bindings](configuration/toolkits.md#bindings). Their timeouts, and the interpreter tests run in, come from the toolkit: [mcp-tools-py](configuration/toolkits.md#mcp-tools-py), [command toolkit](configuration/toolkits.md#defaults).
 
 ```bash
 mcp-coder rebase
@@ -462,7 +464,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--output-format FORMAT`: `rendered` (default, human-friendly streaming), `text` (plain streaming), `ndjson` (streaming NDJSON events), `json-raw` (streaming raw events), `json` (blocking, complete response including `session_id`) or `session-id` (blocking, only the session ID). Under `--llm-method langchain` in agent mode, a turn whose history was not recorded reports `"session_id": null`; that id is not resumable, so do not chain it into a later `--session-id`.
 - `--store-response` saves the session to `.mcp-coder/responses/` for later continuation.
 - `--continue-session-from FILE` resumes from a specific stored session file, `--continue-session` from the most recent one (the two are mutually exclusive), and `--session-id ID` from a direct session ID (overrides the file-based options). With `--llm-method langchain` the session ID is taken from the file *name*, so `--continue-session-from` works only for a langchain history file (`~/.mcp_coder/sessions/langchain/<id>.json`). A `--store-response` file (`response_<timestamp>.json`) has no matching history and the command exits 1; use `--continue-session` or `--session-id` instead. With langchain, an unknown session ID is an error, not a new conversation.
-- `--add-system-prompts` injects the system and project prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or the shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
+- `--add-system-prompts` injects the system and project prompts from `[tool.mcp-coder.prompts]` (or the shipped defaults). See [Project config — Prompts](configuration/project-config.md#prompts).
 
 ```bash
 mcp-coder prompt "Analyze this code structure"
