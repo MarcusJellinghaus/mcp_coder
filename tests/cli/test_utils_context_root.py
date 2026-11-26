@@ -132,6 +132,16 @@ class TestContextRootReporting:
 
         assert is_outside_project_dir(hit, project_dir) is expected
 
+    @pytest.mark.parametrize(
+        ("error", "expected"), [(ValueError, True), (OSError, False)]
+    )
+    def test_is_outside_project_dir_policy(
+        self, tmp_path: Path, error: type[Exception], expected: bool
+    ) -> None:
+        """A containment failure is outside; an unresolvable path is never warned about."""
+        with patch("mcp_coder.cli.utils.check_path_within", side_effect=error("x")):
+            assert is_outside_project_dir(tmp_path / "CLAUDE.md", tmp_path) is expected
+
     # --- report_context_root ----------------------------------------------
 
     def test_report_logs_working_directory(

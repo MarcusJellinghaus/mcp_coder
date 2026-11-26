@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: `is_outside_project_dir` delegates to `check_path_within`
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
