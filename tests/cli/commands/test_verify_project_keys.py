@@ -207,6 +207,21 @@ class TestScanProjectKeys:
         assert warnings[0].section == "PROMPTS"
         assert "prompts is defined in both" in warnings[0].message
 
+    def test_labels_config_is_retired_once_per_file(self, tmp_path: Path) -> None:
+        for file_name in ("pyproject.toml", "mcp-coder.toml"):
+            _write(tmp_path, file_name, '[tool.mcp-coder]\nlabels-config = "l.json"\n')
+
+        warnings = scan_project_keys(tmp_path)
+
+        assert warnings == [
+            KeyWarning(
+                "PROJECT",
+                file_name,
+                "[tool.mcp-coder] labels-config is retired and ignored",
+            )
+            for file_name in ("pyproject.toml", "mcp-coder.toml")
+        ]
+
     def test_valid_config_has_no_warnings(self, tmp_path: Path) -> None:
         _write(
             tmp_path,
@@ -224,7 +239,6 @@ class TestScanProjectKeys:
             tmp_path,
             "mcp-coder.toml",
             "[tool.mcp-coder]\n"
-            'labels-config = "labels.json"\n'
             '[tool.mcp-coder.toolkit]\ntoolkit = "command"\n'
             "[tool.mcp-coder.setup]\n",
         )

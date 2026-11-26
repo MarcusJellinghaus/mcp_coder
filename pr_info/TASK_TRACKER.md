@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: `verify` reports a leftover `labels-config` as retired
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Docs — bundled labels only
 See [step_4.md](./steps/step_4.md)
