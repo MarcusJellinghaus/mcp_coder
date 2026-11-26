@@ -651,11 +651,12 @@ modules =
 # Running git through the allowed runner is caught by
 # `tools/check_forbidden_calls.py` (rule `git`).
 #
-# Permanent exceptions (need inherited TTY/stdio and no timeout, which
-# subprocess_runner cannot provide):
+# Permanent exceptions (need inherited TTY/stdio or raw byte pipes and no
+# timeout, which subprocess_runner cannot provide):
 #   - workflows.vscodeclaude.session_setup (+ its flow test): interactive
 #     `claude` / `mcp-coder install` sessions
-#   - install.** : uv/pip with live progress output
+#   - install.** : uv/pip with live progress output (inherited stdio, or a
+#     raw stderr pipe relayed byte for byte when stderr is not a terminal)
 #   - tests.install.** : patch/call subprocess to exercise install._env
 # tools/ is outside root_packages and unchecked: safe_delete_folder.py must
 # run standalone without importing mcp_coder; tach_docs.py is dev-only.

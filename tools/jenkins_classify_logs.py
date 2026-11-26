@@ -36,6 +36,7 @@ class Patterns:
     signatures: list[tuple[str, re.Pattern[str]]]
     pre_workflow: frozenset[str]
     no_status_id: str
+    no_status_suppressed_by: frozenset[str]
     blocked_trigger: str
     blocked_text: re.Pattern[str]
     blocked_reasons: list[tuple[str, re.Pattern[str]]]
@@ -61,6 +62,9 @@ def load_patterns(path: Path) -> Patterns:
         signatures=[(s["id"], re.compile(s["regex"])) for s in signatures],
         pre_workflow=frozenset(s["id"] for s in signatures if s.get("pre_workflow")),
         no_status_id=data["classifier"]["no_status_id"],
+        no_status_suppressed_by=frozenset(
+            data["classifier"]["no_status_suppressed_by"]
+        ),
         blocked_trigger=blocked["trigger"],
         blocked_text=re.compile(blocked["text"]),
         blocked_reasons=[
@@ -83,7 +87,7 @@ def classify(text: str, patterns: Patterns) -> list[str]:
     Returns:
         Matching signature ids in file order, then the blocked reason (when
         the trigger matched) and the no-status id (when a pre-workflow
-        signature matched)
+        signature matched and no suppressing id did)
     """
     ids = [issue_id for issue_id, rx in patterns.signatures if rx.search(text)]
     if patterns.blocked_trigger in ids:
@@ -95,7 +99,8 @@ def classify(text: str, patterns: Patterns) -> list[str]:
                 patterns.blocked_other,
             )
         )
-    if patterns.pre_workflow.intersection(ids):
+    found = set(ids)
+    if patterns.pre_workflow & found and not patterns.no_status_suppressed_by & found:
         ids.append(patterns.no_status_id)
     return ids
 

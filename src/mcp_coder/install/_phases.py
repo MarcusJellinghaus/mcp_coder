@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import sys
 from pathlib import Path
 
+from ..utils.log_utils import OUTPUT
 from ..utils.pyproject_config import get_github_install_config
 from ..utils.subprocess_runner import CommandOptions, execute_subprocess
 from ._env import (
     MCP_CODER_REPO,
     REPORT_BINARIES,
     REPORT_PACKAGES,
+    UV_TRANSIENT_SIGNATURES,
     InstallConfig,
     exe,
     rmtree_with_retry,
     run,
 )
+
+logger = logging.getLogger(__name__)
 
 # Generous on purpose: a check is a smoke test, but a cold first start of a
 # freshly-installed CLI (AV scan, .pyc compilation) can take a while.
@@ -37,7 +42,7 @@ def phase_venv(config: InstallConfig, venv: Path) -> None:
     """
     config.target.mkdir(parents=True, exist_ok=True)
     if config.clean and venv.exists():
-        print(f"--- wiping {venv}")
+        logger.log(OUTPUT, "--- wiping %s", venv)
         if not config.check:
             rmtree_with_retry(venv)
     if venv.exists():
@@ -72,6 +77,7 @@ def phase_bootstrap_pip_uv(config: InstallConfig, py_v: Path) -> None:
         run(
             [uv_bootstrap, "pip", "install", "--python", str(py_v), "pip", "uv"],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
     else:
         run(
@@ -105,13 +111,14 @@ def phase_install_main(config: InstallConfig, uv_bin: str, py_v: Path) -> bool:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + [spec], dry=config.check)
+        run(cmd + [spec], dry=config.check, retry_on=UV_TRANSIENT_SIGNATURES)
         return False
 
     if config.source == "pypi":
         run(
             [uv_bin, "pip", "install", "--python", str(py_v), f"mcp-coder{extras}"],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
         return False
 
@@ -129,13 +136,18 @@ def phase_install_main(config: InstallConfig, uv_bin: str, py_v: Path) -> bool:
                 sync_cmd += ["--extra", extra]
         if config.refresh:
             sync_cmd.append("--refresh")
-        run(sync_cmd, dry=config.check, cwd=config.local_path)
+        run(
+            sync_cmd,
+            dry=config.check,
+            cwd=config.local_path,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
     else:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
         cmd += ["-e", f"{config.local_path}{extras}"]
-        run(cmd, dry=config.check)
+        run(cmd, dry=config.check, retry_on=UV_TRANSIENT_SIGNATURES)
 
     return True
 
@@ -176,19 +188,29 @@ def phase_overrides(
             if not pyproject.exists()
             else f"no [tool.mcp-coder.install-from-github] in {pyproject}"
         )
-        print(
-            f"--- skipping GitHub overrides ({reason}); sibling packages come from PyPI"
+        logger.log(
+            OUTPUT,
+            "--- skipping GitHub overrides (%s); sibling packages come from PyPI",
+            reason,
         )
     if overrides.packages:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + overrides.packages, dry=config.check)
+        run(
+            cmd + overrides.packages,
+            dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
     if overrides.packages_no_deps:
         cmd = [uv_bin, "pip", "install", "--no-deps", "--python", str(py_v)]
         if config.refresh:
             cmd.append("--refresh")
-        run(cmd + overrides.packages_no_deps, dry=config.check)
+        run(
+            cmd + overrides.packages_no_deps,
+            dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
+        )
 
     if is_editable:
         # The override step may have pulled a fresh mcp-coder wheel in
@@ -205,13 +227,14 @@ def phase_overrides(
                 str(py_v),
             ],
             dry=config.check,
+            retry_on=UV_TRANSIENT_SIGNATURES,
         )
 
 
 def phase_report_versions(
     config: InstallConfig, bin_dir: Path, uv_bin: str, py_v: Path
 ) -> None:
-    """Phase 6: print installed versions of CLIs and library-only packages.
+    """Phase 6: report installed versions of CLIs and library-only packages.
 
     Purely informational: a binary the target project never asked for is
     reported as not installed, and a CLI that crashes on ``--version`` is a
@@ -223,16 +246,16 @@ def phase_report_versions(
         uv_bin: Path to the system uv binary.
         py_v: Path to the venv's python executable.
     """
-    print("\n--- installed versions")
+    logger.log(OUTPUT, "--- installed versions")
     if config.check:
-        print("  (skipped in --check mode)")
+        logger.log(OUTPUT, "  (skipped in --check mode)")
         return
     for name in REPORT_BINARIES:
         binp = bin_dir / exe(name)
         if binp.exists():
             run([str(binp), "--version"], check=False)
         else:
-            print(f"  (not installed: {name})")
+            logger.log(OUTPUT, "  (not installed: %s)", name)
     for pkg in REPORT_PACKAGES:
         run([uv_bin, "pip", "show", "--python", str(py_v), pkg], check=False)
 
@@ -286,7 +309,7 @@ def phase_post_install_checks(config: InstallConfig, bin_dir: Path) -> None:
     """
     if not config.post_install_checks:
         return
-    print("\n--- post-install checks")
+    logger.log(OUTPUT, "--- post-install checks")
     if config.check:
         for argv in config.post_install_checks:
             run(list(argv), dry=True, cwd=config.local_path)
@@ -321,7 +344,7 @@ def phase_post_install_checks(config: InstallConfig, bin_dir: Path) -> None:
 
     if failures:
         total = len(config.post_install_checks)
-        print(f"\nERROR: {len(failures)} of {total} post-install checks failed:")
+        logger.error("%d of %d post-install checks failed:", len(failures), total)
         for argv, reason in failures:
-            print(f"  {' '.join(argv)}: {reason}")
+            logger.log(OUTPUT, "  %s: %s", " ".join(argv), reason)
         sys.exit(1)

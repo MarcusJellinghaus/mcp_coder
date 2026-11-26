@@ -17,7 +17,8 @@ Goal: a catalogue of failure types where **none is missing and none is invented*
 ## Patterns file rules
 
 - One id per root cause. Prefixes: `PIPE-` Jenkins pipeline, `ENV-` machine/network/package index, `MC-` mcp-coder code, `PROMPT-` plan or prompt content.
-- `pre_workflow = true` marks failures before the workflow runs. They also get the `PIPE-NO-STATUS-…` id, because nothing sets a `*-failed` label.
+- `pre_workflow = true` marks failures before the workflow runs. They also get the `PIPE-NO-STATUS-…` id, because nothing sets a `*-failed` label — unless an id listed in `[classifier] no_status_suppressed_by` matched (e.g. `MC-INSTALL-UV-RETRY-OK`: uv failed, the install retried and recovered).
+- Recovered builds don't fail: to count them, download logs with `--status success,unstable`.
 - Blocked reasons: first match wins, so put specific ones before broad ones.
 - After a change, diff the `issue_identified` column before and after: only the builds you meant to change may change.
 - Target repos in `unsupported_repos` (AutoRunner) are reported separately. Their failures are not mcp-coder issues.

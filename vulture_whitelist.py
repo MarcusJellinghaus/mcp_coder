@@ -522,6 +522,10 @@ _._windows_platform
 # so the dry-run tests never probe or install into the real environment.
 _._stub_uv_lookup
 
+# tests/install/test_install_phases.py + test_install_post_checks.py - autouse
+# fixture lowering the mcp_coder.install logger to OUTPUT so caplog sees install output.
+_._capture_install_output
+
 # tests/install/test_install_integration.py - autouse fixture skipping the
 # real-uv tests when uv is not on PATH, instead of letting ensure_system_uv()
 # auto-install it.

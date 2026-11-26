@@ -14,6 +14,10 @@ unsupported_repos = ["AutoRunner"]
 # Added when any signature with pre_workflow = true matches: the workflow never
 # ran, so nothing set a *-failed label on the issue.
 no_status_id = "PIPE-NO-STATUS-ON-PRE-WORKFLOW-FAILURE"
+# Ids that cancel the no_status_id: their match means the failure was recovered
+# inside the step (e.g. mcp-coder install retried uv and it succeeded), even though
+# the log still holds the first error that matched a pre_workflow signature.
+no_status_suppressed_by = ["MC-INSTALL-UV-RETRY-OK"]
 
 [versions]
 packages = ["mcp-coder", "mcp-workspace", "mcp-tools-py"]
@@ -48,6 +52,14 @@ regex = 'Scripts\\uv\.exe.: Access is denied'
 id = "ENV-PYPI-NETWORK"
 regex = 'error: Failed to fetch: .https://pypi\.org'
 pre_workflow = true
+
+[[signature]]
+id = "MC-INSTALL-UV-RETRY"
+regex = 'retrying once in'
+
+[[signature]]
+id = "MC-INSTALL-UV-RETRY-OK"
+regex = 'uv retry succeeded'
 
 [[signature]]
 id = "PIPE-UV-SYNC-NON-PROJECT"

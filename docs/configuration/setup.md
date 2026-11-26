@@ -65,6 +65,8 @@ Steps run in order; the first failure stops the run and `setup` exits non-zero.
 - Applies the `[tool.mcp-coder.install-from-github]` overrides (skipped with
   `--skip-overrides`), `[tool.mcp-coder.install]` `extras` and
   `post_install_checks`, all read from `pyproject.toml`. `--refresh` is passed on.
+- uv install/sync commands are retried once, after 10 s, on a transient PyPI network
+  error or a uv-cache "Access is denied" — only when stderr is not a terminal (e.g. Jenkins).
 - Steps after it run with the project venv's bin directory first on `PATH` and
   `VIRTUAL_ENV` set to `<dir>/.venv`; their `argv[0]` is resolved against that
   `PATH`.
