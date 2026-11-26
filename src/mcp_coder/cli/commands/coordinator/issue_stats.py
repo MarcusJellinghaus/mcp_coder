@@ -307,7 +307,7 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
         logger.info(f"Repository URL: {repo_url}")
 
         # Load labels configuration
-        config_path = get_labels_config_path(project_dir)
+        config_path = get_labels_config_path()
         labels_config = load_labels_config(config_path)
         logger.debug(f"Loaded labels config from: {config_path}")
 

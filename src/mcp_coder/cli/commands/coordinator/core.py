@@ -204,7 +204,7 @@ def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
     # Load label configuration
     from ....config.label_config import get_labels_config_path
 
-    labels_config = load_labels_config(get_labels_config_path(None))
+    labels_config = load_labels_config(get_labels_config_path())
 
     # Extract bot_pickup labels and ignore_labels
     bot_pickup_labels = set()
@@ -256,10 +256,9 @@ def get_eligible_issues(
 
     """
     # Load label configuration
-    # Uses bundled package config (coordinator operates without local project context)
     from ....config.label_config import get_labels_config_path
 
-    labels_config = load_labels_config(get_labels_config_path(None))
+    labels_config = load_labels_config(get_labels_config_path())
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
     bot_pickup_labels = set()

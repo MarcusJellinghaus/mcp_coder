@@ -3,36 +3,15 @@
 This module provides functions to load and parse GitHub label configurations
 from JSON files.
 
-Config resolution order:
-1. Explicit ``config_override`` path (highest priority, e.g. ``--config`` flag)
-2. ``[tool.mcp-coder] labels-config`` in ``pyproject.toml``, else
-   ``mcp-coder.toml`` (relative to the project root)
-3. Bundled package defaults (``mcp_coder/config/labels.json``)
+Workflow labels always come from the bundled ``mcp_coder/config/labels.json``:
 
-Usage patterns:
-
-    # With explicit override (CLI --config flag)
-    config_path = get_labels_config_path(project_dir, config_override=Path("custom.json"))
-    labels_config = load_labels_config(config_path)
-
-    # Project with pyproject.toml / mcp-coder.toml config
-    config_path = get_labels_config_path(project_dir)
-    labels_config = load_labels_config(config_path)
-
-    # Without project directory (coordinator / remote mode)
-    config_path = get_labels_config_path(None)  # Uses bundled config
-    labels_config = load_labels_config(config_path)
+    labels_config = load_labels_config(get_labels_config_path())
 """
 
 import json
-import logging
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, TypedDict
-
-from .toml_utils import find_mcp_coder_table_lenient
-
-logger = logging.getLogger(__name__)
 
 
 class LabelLookups(TypedDict):
@@ -133,71 +112,10 @@ def validate_labels_config(labels_config: dict[str, Any]) -> None:
             )
 
 
-def _get_labels_config_from_project(project_dir: Path) -> Path | None:
-    """Read [tool.mcp-coder] labels-config from pyproject.toml, else mcp-coder.toml.
-
-    A malformed file, the key in both files, or a non-string value logs a
-    warning and returns None, so the bundled labels are used.
-
-    Returns:
-        Absolute Path if configured and file exists, None otherwise.
-    """
-    found = find_mcp_coder_table_lenient(project_dir, "labels-config")
-    if found is None:
-        return None
-    source, value = found
-    if not isinstance(value, str):
-        logger.warning(
-            "Invalid [tool.mcp-coder] labels-config in %s: expected a string, "
-            "got %s; using the bundled labels",
-            source,
-            type(value).__name__,
-        )
-        return None
-    resolved = project_dir / value
-    return resolved if resolved.exists() else None
-
-
-def get_labels_config_path(
-    project_dir: Path | None = None,
-    config_override: Path | None = None,
-) -> Path | Traversable:
-    """Get path to labels.json configuration file.
-
-    Resolution order:
-    1. config_override (explicit --config flag, highest priority)
-    2. [tool.mcp-coder] labels-config in pyproject.toml, else mcp-coder.toml
-       (relative to the project root)
-    3. Bundled package defaults (mcp_coder/config/labels.json)
-
-    Args:
-        project_dir: Optional project directory for the pyproject.toml /
-                    mcp-coder.toml lookup.
-                    Pass None to always use bundled config (coordinator pattern).
-        config_override: Optional explicit path to a labels config file.
-                        Raises FileNotFoundError if the file does not exist.
-
-    Returns:
-        Path to labels.json file
-
-    Raises:
-        FileNotFoundError: If config_override is given but the file does not exist.
-    """
+def get_labels_config_path() -> Traversable:
+    """Return the bundled labels.json (mcp_coder/config/labels.json)."""
     from importlib import resources
 
-    # 1. Explicit override takes priority
-    if config_override is not None:
-        if not config_override.exists():
-            raise FileNotFoundError(f"Config override not found: {config_override}")
-        return config_override
-
-    # 2. pyproject.toml / mcp-coder.toml lookup
-    if project_dir is not None:
-        project_path = _get_labels_config_from_project(project_dir)
-        if project_path is not None:
-            return project_path
-
-    # 3. Bundled package defaults
     return resources.files("mcp_coder.config") / "labels.json"
 
 
@@ -205,9 +123,9 @@ def load_labels_config(config_path: Path | Traversable) -> dict[str, Any]:
     """Load label configuration from JSON file.
 
     Args:
-        config_path: Path or Traversable resource pointing to labels.json.
-                     Use a plain Path for local overrides; use the Traversable
-                     returned by get_labels_config_path() for the bundled config.
+        config_path: Path or Traversable resource pointing to labels.json:
+                     a plain Path (e.g. a test fixture) or the Traversable
+                     from get_labels_config_path().
 
     Returns:
         Dict with 'workflow_labels' and 'ignore_labels' keys

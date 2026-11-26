@@ -287,7 +287,7 @@ class TestGeneratedWorkflowsConsistency:
     @pytest.fixture
     def generated(self, tmp_path: Path) -> dict[str, str]:
         """Generate workflows from the repo's labels config into tmp_path."""
-        config = load_labels_config(get_labels_config_path(REPO_ROOT))
+        config = load_labels_config(get_labels_config_path())
         write_github_actions(tmp_path, config)
         workflows_dir = tmp_path / ".github" / "workflows"
         return {

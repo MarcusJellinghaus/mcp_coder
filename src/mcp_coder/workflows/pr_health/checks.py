@@ -369,7 +369,7 @@ def check_pr_health(
         all_cached_issues: All cached issues for the repo.
     """
     try:
-        labels_config = load_labels_config(get_labels_config_path(None))
+        labels_config = load_labels_config(get_labels_config_path())
         ignore = set(labels_config.get("ignore_labels", []))
         pr_issues = [
             issue

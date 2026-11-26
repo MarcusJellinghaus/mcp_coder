@@ -35,7 +35,7 @@ def _load_labels_config() -> dict[str, Any]:
     """
     from ...config.label_config import get_labels_config_path
 
-    result: dict[str, Any] = load_labels_config(get_labels_config_path(None))
+    result: dict[str, Any] = load_labels_config(get_labels_config_path())
     return result
 
 

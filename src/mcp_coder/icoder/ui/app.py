@@ -116,7 +116,7 @@ class ICoderApp(StreamViewApp):
             yield Static("↓0 ↑0 | total: ↓0 ↑0", id="status-tokens")
             yield Static(f"mcp-coder v{version}", id="status-version")
             yield Static(r"\ + Enter = newline", id="status-hint")
-        yield BranchInfoBar(self._project_dir)
+        yield BranchInfoBar()
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""

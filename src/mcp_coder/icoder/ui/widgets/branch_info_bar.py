@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 
 from rich.text import Text
 from textual.app import ComposeResult
@@ -84,14 +83,9 @@ class BranchInfoBar(Vertical):
     class TogglePR(Message):
         """Posted when the user clicks the PR toggle button."""
 
-    def __init__(self, project_dir: Path) -> None:
-        """Initialize with the project directory used to locate ``labels.json``.
-
-        Args:
-            project_dir: Project root, forwarded to ``get_labels_config_path``.
-        """
+    def __init__(self) -> None:
+        """Initialize the bar."""
         super().__init__()
-        self._project_dir = project_dir
         self._label_colors: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
@@ -113,7 +107,7 @@ class BranchInfoBar(Vertical):
     def on_mount(self) -> None:
         """Load workflow label colors from ``labels.json`` once."""
         try:
-            cfg = load_labels_config(get_labels_config_path(self._project_dir))
+            cfg = load_labels_config(get_labels_config_path())
             self._label_colors = {
                 lbl["name"]: lbl["color"]
                 for lbl in cfg.get("workflow_labels", [])

@@ -542,7 +542,7 @@ def execute_define_labels(args: argparse.Namespace) -> int:
 
         # Load labels from JSON config using shared module
         try:
-            config_path = get_labels_config_path(project_dir)
+            config_path = get_labels_config_path()
             labels_config = load_labels_config(config_path)
         except FileNotFoundError as exc:
             raise ValueError(f"Configuration file not found: {exc}") from exc

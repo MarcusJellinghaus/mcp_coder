@@ -51,17 +51,16 @@ def build_set_status_epilog() -> str:
 
     Returns:
         Formatted string with available status labels,
-        or fallback message if config cannot be loaded.
+        or a neutral fallback message if the labels cannot be loaded.
     """
     try:
-        # Use package bundled config (always available)
-        config_path = get_labels_config_path(None)
+        config_path = get_labels_config_path()
         labels_config = load_labels_config(config_path)
         return format_status_labels(labels_config)
     except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Log at debug level to aid troubleshooting (Decision #9)
         logger.debug(f"Failed to build set-status epilog: {e}")
-        return "Run in a project directory to see available status labels."
+        return "Status labels could not be loaded."
 
 
 def validate_status_label(
@@ -240,16 +239,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
 
         # No-args: print available labels and exit
         if args.status_label is None:
-            try:
-                project_dir = resolve_project_dir(args.project_dir)
-                config_path = get_labels_config_path(project_dir)
-            except (ValueError, FileNotFoundError, OSError):
-                config_path = get_labels_config_path(None)
-            try:
-                labels_config = load_labels_config(config_path)
-            except Exception:  # pylint: disable=broad-exception-caught
-                config_path = get_labels_config_path(None)
-                labels_config = load_labels_config(config_path)
+            labels_config = load_labels_config(get_labels_config_path())
             print(format_status_labels(labels_config))
             return 0
 
@@ -272,7 +262,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
                 return 1
 
         # Step 2: Load and validate label
-        config_path = get_labels_config_path(project_dir)
+        config_path = get_labels_config_path()
         labels_config = load_labels_config(config_path)
         status_labels = {lbl["name"] for lbl in labels_config["workflow_labels"]}
         is_valid, error_msg = validate_status_label(args.status_label, labels_config)

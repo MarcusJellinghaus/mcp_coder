@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.set_status import (
+    build_set_status_epilog,
     compute_new_labels,
     execute_set_status,
     format_status_labels,
@@ -264,6 +265,15 @@ class TestComputeNewLabels:
         assert "enhancement" in result
 
 
+@patch("mcp_coder.cli.commands.set_status.load_labels_config")
+def test_build_set_status_epilog_load_failure_returns_neutral_message(
+    mock_load_config: MagicMock,
+) -> None:
+    """A labels load failure yields the neutral fallback text, not an exception."""
+    mock_load_config.side_effect = ValueError("broken")
+    assert "Status labels could not be loaded." in build_set_status_epilog()
+
+
 class TestExecuteSetStatus:
     """Test CLI execute function."""
 
@@ -306,76 +316,6 @@ class TestExecuteSetStatus:
         # Verify no side effects occurred
         mock_is_working_directory_clean.assert_not_called()
         mock_issue_manager_class.assert_not_called()
-
-    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
-    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
-    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
-    def test_execute_set_status_no_args_malformed_config_fallback(
-        self,
-        mock_resolve_dir: MagicMock,
-        mock_get_config_path: MagicMock,
-        mock_load_config: MagicMock,
-        full_labels_config: dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
-        tmp_path: Path,
-    ) -> None:
-        """Test no-args falls back to bundled config when load_labels_config fails."""
-        project_dir = tmp_path / "project"
-        project_dir.mkdir()
-        mock_resolve_dir.return_value = project_dir
-        project_config = project_dir / "config" / "labels.json"
-        bundled_config = Path("/bundled/labels.json")
-        mock_get_config_path.side_effect = [project_config, bundled_config]
-        # First call (project config) fails, second call (bundled) succeeds
-        mock_load_config.side_effect = [ValueError("malformed"), full_labels_config]
-
-        args = argparse.Namespace(
-            status_label=None,
-            issue=None,
-            project_dir=str(project_dir),
-            force=False,
-            from_status=None,
-        )
-
-        result = execute_set_status(args)
-
-        assert result == 0
-        captured = capsys.readouterr()
-        assert "Available status labels" in captured.out
-        # Verify it fell back to bundled config
-        mock_get_config_path.assert_called_with(None)
-
-    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
-    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
-    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
-    def test_execute_set_status_no_args_fallback_config(
-        self,
-        mock_resolve_dir: MagicMock,
-        mock_get_config_path: MagicMock,
-        mock_load_config: MagicMock,
-        full_labels_config: dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Test no-args falls back to bundled config when project dir fails."""
-        mock_resolve_dir.side_effect = ValueError("No project dir")
-        mock_get_config_path.return_value = Path("/fallback/labels.json")
-        mock_load_config.return_value = full_labels_config
-
-        args = argparse.Namespace(
-            status_label=None,
-            issue=None,
-            project_dir=None,
-            force=False,
-            from_status=None,
-        )
-
-        result = execute_set_status(args)
-
-        assert result == 0
-        # Should have called get_labels_config_path with None (fallback)
-        mock_get_config_path.assert_called_with(None)
-        captured = capsys.readouterr()
-        assert "Available status labels" in captured.out
 
     @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
