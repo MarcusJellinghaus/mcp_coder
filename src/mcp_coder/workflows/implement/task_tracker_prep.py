@@ -13,10 +13,11 @@ from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PA
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
-from mcp_coder.mcp_workspace_git import commit_paths, get_full_status
+from mcp_coder.mcp_workspace_git import commit_paths, get_full_status, reset_hard
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.text_io import write_repo_text
+from mcp_coder.workflow_steps.commit import format_best_effort
 from mcp_coder.workflow_utils.task_tracker import (
     TASK_TRACKER_TEMPLATE,
     get_step_progress,
@@ -117,6 +118,7 @@ def prepare_task_tracker(
         settings_file=settings_file,
     )
     done = False
+    formatted: list[str] = []
     try:
         if state is TrackerState.INVALID:
             logger.warning(
@@ -131,9 +133,18 @@ def prepare_task_tracker(
             )
             _populate(ask, project_dir, reason)
 
+        format_best_effort(project_dir, "task tracker commit")
+        # _llm_rounds refused any change other than the tracker and the ignored
+        # build artifacts, so every other changed path now came from the
+        # formatter. .mcp-coder/ holds session files and is never committed.
+        formatted = [
+            f
+            for f in dict.fromkeys(_other_changed_files(project_dir))
+            if not f.startswith(".mcp-coder/")
+        ]
         commit_result = commit_paths(
             "TASK_TRACKER.md with implementation steps and PR tasks updated",
-            [tracker],
+            [tracker, *(project_dir / f for f in formatted)],
             project_dir,
         )
         if not commit_result["success"]:
@@ -155,6 +166,26 @@ def prepare_task_tracker(
         # Never leave a half-edited tracker behind, even on SystemExit
         if not done:
             tracker.write_bytes(original)
+            if formatted:
+                _restore_formatted(project_dir)
+
+
+def _restore_formatted(project_dir: Path) -> None:
+    """Undo the formatter's changes and any half-staged commit; never raises.
+
+    The tree was clean before task tracker preparation, so resetting to HEAD
+    only discards what this step changed. A failed reset leaves the tree dirty.
+
+    Args:
+        project_dir: Path to the project directory
+    """
+    try:
+        result = reset_hard(project_dir, "HEAD")
+    except Exception:  # pylint: disable=broad-exception-caught  # runs in a finally
+        logger.error("git reset --hard HEAD failed", exc_info=True)
+        return
+    if not result["success"]:
+        logger.error("git reset --hard HEAD failed: %s", result["error"])
 
 
 def _ask_llm(
