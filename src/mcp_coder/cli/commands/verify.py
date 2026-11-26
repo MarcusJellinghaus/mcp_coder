@@ -23,12 +23,15 @@ from ...llm.providers.claude.claude_executable_finder import find_claude_executa
 from ...mcp_workspace import (
     FILE_ACCESS_SUPPORTED,
     FileAccess,
+    format_git_section,
+    format_github_section,
+    format_github_security_section,
     get_file_access,
     is_path_gitignored,
     validate_access_rules,
 )
 from ...mcp_workspace_git import verify_git
-from ...mcp_workspace_github import verify_github
+from ...mcp_workspace_github import github_security_rows, verify_github
 from ...prompts.prompt_loader import (
     get_project_prompt_path,
     is_claude_md,
@@ -68,7 +71,6 @@ from .verify_sections import (
     _PROVIDER_ENV_VAR,
     _DropUnexpandedWarnings,
     _print_environment_section,
-    _print_github_security_section,
     _print_langchain_readiness_warning,
     _print_project_section,
     _print_retired_env_var_warning,
@@ -304,12 +306,16 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
 
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
-    out.section("GIT", _format_section(git_result, symbols))
+    out.section("GIT", format_git_section(git_result, symbols))
 
     # 0e. GitHub verification section
     github_result = verify_github(project_dir)
-    out.section("GITHUB", _format_section(github_result, symbols))
-    _print_github_security_section(project_dir, symbols, out)
+    out.section("GITHUB", format_github_section(github_result, symbols))
+    # Exit-neutral: every row carries warning severity
+    out.section(
+        "GITHUB SECURITY",
+        format_github_security_section(github_security_rows(project_dir), symbols),
+    )
 
     # 0f. Jenkins verification sections (both empty when [jenkins] is unset)
     jenkins_result, jenkins_jobs_result = verify_jenkins()

@@ -25,9 +25,9 @@ from mcp_workspace.github_operations import (
     RepoIdentifier,
     get_authenticated_username,
     get_trusted_commenters,
+    github_security_rows,
     is_trusted_author,
     verify_github,
-    verify_github_security,
 )
 
 # Caching: run-scoped issue → branch lookup cache
@@ -84,8 +84,8 @@ __all__: list[str] = [
     "get_authenticated_username",
     # Verification
     "CheckResult",
+    "github_security_rows",
     "verify_github",
-    "verify_github_security",
     # CI results
     "CIResultsManager",
     "CIStatusData",

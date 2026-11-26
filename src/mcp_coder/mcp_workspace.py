@@ -1,5 +1,8 @@
 """Wrapper for mcp-workspace file listing, gitignore and file access utilities.
 
+Also re-exports the GIT / GITHUB / GITHUB SECURITY section formatters that
+``mcp-coder verify`` shares with ``mcp-workspace verify``.
+
 ``FILE_ACCESS_SUPPORTED`` tells whether the installed mcp-workspace knows the
 ``.mcp-file-access`` rules file (since upstream f626cf8). Without it,
 ``FileAccess``, ``get_file_access`` and ``validate_access_rules`` are
@@ -12,6 +15,11 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from mcp_workspace.cli.verify_formatting import (
+    format_git_section,
+    format_github_section,
+    format_github_security_section,
+)
 from mcp_workspace.file_tools.directory_utils import is_path_gitignored
 from mcp_workspace.file_tools.directory_utils import list_files as _list_files
 
@@ -69,6 +77,9 @@ else:
 __all__ = [
     "FILE_ACCESS_SUPPORTED",
     "FileAccess",
+    "format_git_section",
+    "format_github_section",
+    "format_github_security_section",
     "get_file_access",
     "is_path_gitignored",
     "list_files",

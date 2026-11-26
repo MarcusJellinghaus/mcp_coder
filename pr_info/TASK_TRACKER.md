@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: GIT / GITHUB / GITHUB SECURITY sections from mcp-workspace; drop PyYAML from runtime deps
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture, deptry) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture, deptry) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Remove the pre-f626cf8 `.mcp-file-access` fallback
 See [step_3.md](./steps/step_3.md)

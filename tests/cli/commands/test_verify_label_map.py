@@ -20,7 +20,6 @@ def test_fixed_labels_fit_default_width() -> None:
 
 def test_renamed_labels() -> None:
     """Shortened labels replace the ones that overran the default width."""
-    assert _LABEL_MAP["signing_consistency"] == "Signing consistency"
     assert _LABEL_MAP["ollama_tools_capability"] == "Tool-call capability"
     lines, _ = _format_tools_exposed_section(None, STATUS_SYMBOLS)
     assert isinstance(lines[0], Row)

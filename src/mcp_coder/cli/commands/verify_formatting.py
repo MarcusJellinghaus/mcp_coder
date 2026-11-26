@@ -1,8 +1,9 @@
 """Section formatters for the verify command.
 
-Pure leaf module: builds the rows of the Claude, LangChain, MLflow, GitHub, Git,
-Jenkins and MCP sections from domain verify results, plus the label map they
-use. Row/section primitives come from ``mcp_coder.utils.verify_render``; nothing
+Pure leaf module: builds the rows of the Claude, LangChain, MLflow, Jenkins and
+MCP sections from domain verify results, plus the label map they use. The GIT,
+GITHUB and GITHUB SECURITY sections come from mcp-workspace's formatters.
+Row/section primitives come from ``mcp_coder.utils.verify_render``; nothing
 here reaches back into ``verify.py`` (one-directional edge
 ``verify.py -> verify_formatting``).
 """
@@ -66,64 +67,11 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
-    # GitHub section
-    "api_base_url": "API base URL",
-    "network_proxy": "Network / proxy",
-    "token_configured": "Token configured",
-    "authenticated_user": "Authenticated user",
-    "repo_url": "Repo URL",
-    "repo_accessible": "Repo accessible",
-    "branch_protection": "Branch protection",
-    "require_pull_request": "Require pull request",
-    "ci_checks_required": "CI checks required",
-    "strict_mode": "Strict mode",
-    "force_push": "Force push",
-    "branch_deletion": "Branch deletion",
-    "auto_delete_branches": "Auto-delete branches",
-    "perm_contents_read": "Contents: Read",
-    "perm_administration_read": "Administration: Read",
-    "perm_pull_requests_read": "Pull requests: Read",
-    "perm_issues_read": "Issues: Read",
-    "perm_workflows_read": "Actions: Read",
-    "perm_statuses_read": "Commit statuses: Read",
-    # GitHub security section
-    "dependabot_config": "Dependabot config",
-    "dependabot_alerts": "Dependabot alerts",
-    "dependabot_security_updates": "Dependabot security",
-    "secret_scanning": "Secret scanning",
-    "secret_scanning_push_protection": "Secret push protection",
-    "codeql_workflow": "CodeQL workflow",
-    "code_scanning_alerts": "Code scanning alerts",
-    # Git section
-    "git_binary": "Git binary",
-    "git_repo": "Repository",
-    "user_identity": "Git identity",
-    "signing_intent": "Signing enabled",
-    "signing_consistency": "Signing consistency",
-    "signing_format": "Signing format",
-    "signing_key": "Signing key",
-    "signing_binary": "Signing binary",
-    "signing_key_accessible": "Signing key accessible",
-    "agent_reachable": "GPG agent",
-    "allowed_signers": "Allowed signers file",
-    "verify_head": "HEAD signature",
-    "actual_signature": "End-to-end sign test",
     # Jenkins section (JENKINS JOBS keys are repo names and pass through unmapped)
     "server": "Server",
     "authentication": "Authentication",
     "overall_read": "Overall/Read",
 }
-
-
-_BRANCH_PROTECTION_CHILDREN = frozenset(
-    {
-        "require_pull_request",
-        "ci_checks_required",
-        "strict_mode",
-        "force_push",
-        "branch_deletion",
-    }
-)
 
 
 def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Line]:
@@ -137,11 +85,6 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
         The section's lines (without the title header), ready for rendering.
     """
     lines: list[Line] = []
-    bp_ok: bool | None = None  # track branch_protection parent state
-    permissions_header_emitted: bool = False
-    # NOTE: relies on dict insertion order — branch_protection must precede its
-    # children in the result dict. This is guaranteed by verify_github() in
-    # mcp-workspace.
     for key, entry in result.items():
         if key == "overall_ok":
             continue
@@ -150,30 +93,6 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
         label = _LABEL_MAP.get(key, key)
         ok = entry.get("ok")
         value = str(entry.get("value", ""))
-        if key == "branch_protection":
-            bp_ok = ok
-        elif key in _BRANCH_PROTECTION_CHILDREN:
-            if bp_ok is not True:
-                continue  # suppress children when parent failed or is unverifiable
-            if key == "strict_mode":
-                lines.append(Row(label, "", value, 4))
-            else:
-                if ok is True:
-                    symbol = symbols["success"]
-                elif ok is False:
-                    symbol = symbols["failure"]
-                else:
-                    symbol = symbols["warning"]
-                row_value = value
-                error = entry.get("error")
-                if error and ok is not True:
-                    row_value = f"{value} ({error})"
-                lines.append(Row(label, symbol, row_value, 4))
-            continue
-        if key.startswith("perm_") and not permissions_header_emitted:
-            lines.append("")
-            lines.append("  [Permissions]")
-            permissions_header_emitted = True
         if ok is True:
             symbol = symbols["success"]
         elif ok is False:
@@ -182,19 +101,9 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
             symbol = symbols["warning"]
         row_value = value
         error = entry.get("error")
-        if error and (ok is False or (ok is None and key == "branch_protection")):
+        if error and ok is False:
             row_value = f"{value} ({error})"
-        indent = 4 if key.startswith("perm_") else 2
-        lines.append(Row(label, symbol, row_value, indent))
-        if key == "token_configured" and entry.get("token_source"):
-            src = entry["token_source"]
-            suffix = (
-                "GITHUB_TOKEN env var" if src == "env" else "~/.mcp_coder/config.toml"
-            )
-            fingerprint = entry.get("token_fingerprint")
-            if fingerprint:
-                suffix = f"{suffix} ({fingerprint})"
-            lines.append(hint_row(f"from {suffix}"))
+        lines.append(Row(label, symbol, row_value))
         if ok is False and "install_hint" in entry:
             lines.append(hint_row(f"-> {entry['install_hint']}"))
     return lines

@@ -286,9 +286,14 @@ def toolkit_with_ruff() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
-    """Auto-mock verify_github_security to an all-ok default (keeps CLI tests hermetic)."""
+def _mock_github_security_rows() -> Generator[MagicMock, None, None]:
+    """Auto-mock github_security_rows to an all-ok default (keeps CLI tests hermetic)."""
     default = {
+        "dependabot_config": {
+            "ok": True,
+            "value": ".github/dependabot.yml (pip: weekly)",
+            "severity": "warning",
+        },
         "dependabot_alerts": {"ok": True, "value": "enabled", "severity": "warning"},
         "dependabot_security_updates": {
             "ok": True,
@@ -301,6 +306,11 @@ def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
             "value": "enabled",
             "severity": "warning",
         },
+        "codeql_workflow": {
+            "ok": True,
+            "value": "found in codeql.yml",
+            "severity": "warning",
+        },
         "code_scanning_alerts": {
             "ok": True,
             "value": "scope present",
@@ -308,7 +318,7 @@ def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
         },
     }
     with patch(
-        "mcp_coder.cli.commands.verify_sections.verify_github_security",
+        "mcp_coder.cli.commands.verify.github_security_rows",
         return_value=default,
     ) as mock:
         yield mock

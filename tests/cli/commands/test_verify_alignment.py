@@ -70,26 +70,6 @@ class TestPerFormatterAlignment:
             ),
             pytest.param(
                 {
-                    "branch_protection": {"ok": True, "value": "enabled"},
-                    "ci_checks_required": {"ok": True, "value": "yes"},
-                    "strict_mode": {"ok": True, "value": "true"},
-                    "force_push": {"ok": False, "value": "allowed"},
-                    "branch_deletion": {"ok": True, "value": "blocked"},
-                    "overall_ok": False,
-                },
-                id="branch_protection_with_strict_mode_no_marker",
-            ),
-            pytest.param(
-                {
-                    "token_configured": {"ok": True, "value": "configured"},
-                    "perm_contents_read": {"ok": True, "value": "granted"},
-                    "perm_statuses_read": {"ok": False, "value": "missing"},
-                    "overall_ok": False,
-                },
-                id="permissions_group",
-            ),
-            pytest.param(
-                {
                     "mcp_coder": {"ok": True, "value": "job found"},
                     "a-very-long-repository-name-x": {
                         "ok": False,
