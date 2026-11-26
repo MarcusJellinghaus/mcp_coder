@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shim `mcp_coder.utils.fs` + import-linter, CLAUDE.md, architecture doc
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Rename `write_lf_text` → `write_repo_text` (pure refactor)
 See [step_2.md](./steps/step_2.md)
