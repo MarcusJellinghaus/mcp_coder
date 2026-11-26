@@ -17,8 +17,6 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - Code quality CI checks
 - Development convenience scripts
 
-Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command toolkit](../configuration/toolkits.md#command-toolkit)) and a `[tool.mcp-coder.setup]` table ([Project setup](../configuration/setup.md)).
-
 ## Quick Setup Checklist
 
 - [ ] Configure a GitHub token in `~/.mcp_coder/config.toml` ([Configuration Guide](../configuration/config.md)). The token's GitHub user is "you" for `vscodeclaude`: it only opens issues assigned to that user
@@ -35,7 +33,23 @@ Non-Python repos: use a root `mcp-coder.toml`, the `command` toolkit ([Command t
 - [ ] Declare the setup steps in `[tool.mcp-coder.setup]`, or rely on the Python default, and check them with `mcp-coder setup` ([Project setup](../configuration/setup.md))
 - [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
-## Adapting Deployed Files (Non-Python Repos)
+## Non-Python Repos
+
+- **Config.** A root `mcp-coder.toml` with the `command` toolkit ([Command toolkit](../configuration/toolkits.md#command-toolkit)) and `[tool.mcp-coder.setup]` ([Project setup](../configuration/setup.md)). All keys: [Project config](../configuration/project-config.md).
+- **`verify` PROJECT rows** for a repo with only `mcp-coder.toml`, in order:
+  - `Project config`: `[OK] mcp-coder.toml` (`[WARN] none` only without any project config file);
+  - `.mcp-file-access`;
+  - `format_code`;
+  - `Toolkit`, naming its source (e.g. `command (mcp-coder.toml)`), with its action groups;
+  - `Setup`, with a sub-row per unresolved step ([Check the config](../configuration/setup.md#check-the-config));
+  - the key-warning rows, labelled with the file.
+
+  The `legacy format_code` and `check_type_hints` rows don't appear: they read `pyproject.toml` only.
+- **Setup commands** must be lockfile-frozen: [Changed files](../configuration/setup.md#changed-files).
+- **Exit codes.** `npm run` passes a script's exit code on unchanged, also across `&&`. Tools that exit with a count need a range: [`exit_codes`](../configuration/toolkits.md#defaults) and the dependency-cruiser note in [Step fields](../configuration/toolkits.md#step-fields).
+- **JUnit reports:** [npm example](../configuration/toolkits.md#npm).
+
+### Adapting Deployed Files (Non-Python Repos)
 
 `mcp-coder init` deploys generic skills, agents and knowledge base; it adds
 `.claude/knowledge_base/python.md` only with the `mcp-tools-py` toolkit. In any other repo,
@@ -101,7 +115,7 @@ The following files in this repository serve as references/templates for other p
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |
 | `docs/architecture/architecture.md` | G | Yes | No | Write your own — required by `/implementation_review` |
 | `pyproject.toml` | P | No | No | Use as a dependency/config reference, not a copy |
-| `mcp-coder.toml` | G | No | No | Not in this repo; non-Python repos only. Templates: [toolkits.md](../configuration/toolkits.md#npm), [setup.md](../configuration/setup.md#examples) |
+| `mcp-coder.toml` | G | No | No | Not in this repo; any repo may keep `toolkit`, `setup`, `format_code` and `prompts` here (only `install` / `install-from-github` are `pyproject.toml`-only). Templates: [toolkits.md](../configuration/toolkits.md#npm), [setup.md](../configuration/setup.md#examples) |
 | `.python-version` | P | No | No | Pin to your Python version |
 | `.importlinter` | P | No | No | Package names, contract definitions |
 | `tach.toml` | P | No | No | Module boundaries for your package |
@@ -144,7 +158,7 @@ Python repos must **track or ignore `uv.lock`**: `uv sync` creates a missing one
 ```bash
 mcp-coder verify
 ```
-It checks your `config.toml` (including unknown keys), git, GitHub, Jenkins, the Claude CLI, the LLM provider and the MCP servers. For the Jenkins side, `mcp-coder coordinator --dry-run --repo <name> --branch-name main` triggers a real build but changes no issues or labels.
+It checks your `config.toml` (including unknown keys), the project config (`[tool.mcp-coder]` keys, toolkit, setup), git, GitHub, Jenkins, the Claude CLI, the LLM provider and the MCP servers. For the Jenkins side, `mcp-coder coordinator --dry-run --repo <name> --branch-name main` triggers a real build but changes no issues or labels.
 
 **1. Test label creation:**
 ```bash

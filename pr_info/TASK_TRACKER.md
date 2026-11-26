@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Add Non-Python Repos section, fix `repository-setup/README.md` verify text, final sweep
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (`## Non-Python Repos` section, move adapting-deployed-files heading under it, `mcp-coder.toml` row, Testing Your Setup step 0; final anchor and phrase sweep)
-- [ ] Quality checks (full unit pytest, pylint, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (`## Non-Python Repos` section, move adapting-deployed-files heading under it, `mcp-coder.toml` row, Testing Your Setup step 0; final anchor and phrase sweep)
+- [x] Quality checks (full unit pytest, pylint, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
