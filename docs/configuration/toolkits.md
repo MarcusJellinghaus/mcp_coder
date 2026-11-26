@@ -10,7 +10,7 @@ mcp-coder's side of the interface and how to write a toolkit:
 ## Configure a toolkit
 
 Add the `[tool.mcp-coder.toolkit]` table with one `toolkit` line, in
-`pyproject.toml` or, for repos without one, a root `mcp-coder.toml`.
+`pyproject.toml` or a root `mcp-coder.toml` (any repo).
 
 Python:
 
@@ -75,7 +75,7 @@ makes.
 |-------|---------|---------|---------|
 | `implement_task` | `check@quick` | `check`, `test` | implement, after each task |
 | `implement_final` | `check@standard`, `test@quick` | `check`, `test` | implement, after the last task (gate) |
-| `commit` | `format@apply` | `format` (not `format@check`) | formatting before commits: implement, rebase, review, CI fix |
+| `commit` | `format@apply` | `format` (not `format@check`) | formatting before commits: implement, rebase, review, CI fix, and the rescue commit after a check-stage abort |
 | `rebase` | `check@standard`, `test@standard` | `check`, `test` | `mcp-coder rebase`: baseline and after the rebase |
 | `rebase_automated` | `check@standard`, `test@unattended` | `check`, `test` | automated rebases: the review and fix_conflict rebase fallback |
 
@@ -83,17 +83,23 @@ Rules:
 
 - An entry's list replaces its default entirely; `[]` disables the entry.
   Unknown entries are an error. Requests are lowercase `action@depth`.
-- `commit` runs only when `[tool.mcp-coder] format_code` is on (the default).
-  `format_code` is read from `pyproject.toml` only; a repo with only
-  `mcp-coder.toml` turns formatting off with `commit = []`.
+- `commit` runs only when `format_code` is on (the default). `format_code` is
+  read from `pyproject.toml` or `mcp-coder.toml`
+  ([Project config](project-config.md)).
 - Depth fallback: an undeclared `quick` / `standard` / `full` runs the nearest
   lower declared one of these three (logged); anything else undeclared is
   `error`.
-- `mcp-coder verify` calls the toolkit's `verify()` for every action a
-  non-empty binding requests (`format` only while `format_code` is on), and
-  adds one row per requested depth the toolkit doesn't declare: a warning
-  naming the lower depth that runs, else an error (also for an undeclared
-  action). Each row names the requesting bindings.
+- `mcp-coder verify`:
+  - calls the toolkit's `verify()` for every action a non-empty binding
+    requests and the toolkit declares (`format` only while `format_code` is
+    on). An undeclared requested action gets only an error depth row;
+  - shows an ok row for each declared depth a binding runs (fallback
+    included), naming those bindings;
+  - adds a row per requested depth the toolkit doesn't declare: a warning
+    naming the lower depth that runs, else an error;
+  - command toolkit only: warns about a declared depth that is "not requested
+    by any binding", that "no binding can request", or that is "unused while
+    format_code is off".
 - When `verify()` returns for two or more actions, the items they all return
   are shown once, directly under the Toolkit row; any other `check` / `test`
   `error` item is shown as a warning. With only one returning action, every
@@ -103,6 +109,31 @@ Rules:
   warns about a leftover key, and fails on `false` while an implement binding
   still requests `check@*`. To skip the checks, set the bindings, e.g.
   `implement_task = []`, `implement_final = ["test@quick"]`.
+
+### Step-to-request table
+
+| Workflow step | Binding run | Default requests | Bash grant scope |
+|---|---|---|---|
+| Implement, after each task | `implement_task` | `check@quick` | task session: `implement_task` and `implement_final`; fix turns: `implement_task` |
+| Implement, after the last task | `implement_final` | `check@standard`, `test@quick` | fix turns: `implement_final` |
+| Implement finalisation | none | — | `implement_final` |
+| Formatting before commits (only while `format_code` is on): implement after each task and after the final checks, rebase after each regression-fix attempt, review rounds, CI fix, the rescue commit after a check-stage abort | `commit` | `format@apply` | no LLM session |
+| `mcp-coder rebase` | `rebase` | `check@standard`, `test@standard` | regression-fix turns: `rebase`; conflict turns: no Bash grants |
+| Automated rebase | `rebase_automated` | `check@standard`, `test@unattended` | regression-fix turns: `rebase_automated`; conflict turns: no Bash grants |
+| CI fix turn (implement, fix_ci, review rounds, `mcp-coder check branch-status --fix`) | none | — | `implement_final` |
+| Every other session: review's reviewer and supervisor sessions, create_plan, create-pr, review-plan, commit messages, implement's task-tracker prep, the CI analysis turn, the PR-description refresh, verify's LLM test, icoder (including its env setup), prompt | none | — | no toolkit grants |
+
+- No toolkit grants: Bash is off for the session (`build_cli_command` adds it
+  only with grants), so the repo's own Bash rules don't apply either. This
+  applies to mcp-coder's own Claude sessions; vscodeclaude's interactive
+  session runs under the repo's Claude settings.
+- A request that falls back grants the lower depth's steps.
+- The Bash grant scope column applies to the command toolkit; mcp-tools-py
+  passes no per-session `Bash(...)` grants.
+- Every other commit runs without formatting, e.g. finalisation,
+  `mcp-coder commit`, create_plan, create-pr's cleanup commit, review's
+  round-log commit, task-tracker prep, and the git-only rebase step's
+  line-ending renormalize commit.
 
 ## Required MCP servers
 
@@ -188,8 +219,8 @@ Rules:
   `0`. On Windows it stays 256 and falls outside `1-125`, so it is `error`.
   Windows crash codes (`0xC…`) are written in decimal, e.g. `3221225477`.
 - A `format.apply` step's exit code 1 maps to `findings` by default, which fails
-  formatting: implement fails; rebase, review and CI fix carry on. Set
-  `exit_codes` for `apply` to match the formatter.
+  formatting: implement fails; rebase, review, CI fix and the rescue commit
+  carry on. Set `exit_codes` for `apply` to match the formatter.
 
 #### Step fields
 
@@ -244,17 +275,11 @@ the last 200 lines of stdout followed by stderr.
   Extra arguments, added flags or changed spacing are denied, so the prompt
   tells the LLM to run each command unchanged. With `llm_permissions = "none"`
   there are no grants.
-- **Which sessions.** Only Claude sessions that re-run checks get grants, each
-  scoped to its bindings:
-  - implement task: the depths of `implement_task` and `implement_final`;
-  - fix turns: the binding entry being fixed;
-  - finalisation and CI fix: `implement_final`;
-  - rebase fix turns: the active rebase binding at the resolved depth.
-
-  A request that falls back grants the lower depth that runs, and the re-run
-  list in the prompt lists exactly the granted commands. Other sessions keep
-  Bash off. Copilot and Langchain get no grants and log a warning once when
-  grants are dropped.
+- **Which sessions.** The sessions and their grant scopes are in the
+  [Step-to-request table](#step-to-request-table). The re-run list in the
+  prompt lists exactly the granted commands. Other sessions keep Bash off.
+  Copilot and Langchain get no grants and log a warning once when grants are
+  dropped.
 - **Read-only commands.** Once Bash is on, Claude Code auto-approves read-only
   commands (e.g. `ls`, `cat`) without a grant; see
   [Claude Code's docs](https://code.claude.com/docs). Nothing that writes runs
@@ -272,9 +297,12 @@ the last 200 lines of stdout followed by stderr.
   keys, bad defaults, bad `llm_permissions`) and problems in `format` steps,
   including an `argv[0]` that can't be found.
 - `mcp-coder verify` reports the same, and also runs `verify()` for the
-  requested `check` and `test` actions (their errors show as warnings when two
-  or more actions return, see [Bindings](#bindings)) and reports requested
-  depths that aren't declared.
+  requested and declared `check` and `test` actions (their errors show as
+  warnings when two or more actions return). It shows an ok row per declared
+  depth a binding runs, a row per requested depth that isn't declared, and,
+  for the command toolkit, warns about declared depths that are not
+  requested, that no binding can request, or that are unused while
+  `format_code` is off. Details: [Bindings](#bindings).
 - At run time a malformed `check` or `test` step still makes its depth return
   `error`, naming the problem.
 - A global problem fails closed: no grants, and every request returns `error` —
@@ -336,13 +364,20 @@ quick    = [ { argv = ["npm", "run", "typecheck"] },
 standard = [ { argv = ["npm", "run", "check"] } ]
 
 [tool.mcp-coder.toolkit.command.test]
-quick      = [ { argv = ["npm", "test"], parser = "junit", report = "reports/junit.xml" } ]
+quick      = [ { argv = ["npm", "run", "test"], parser = "junit", report = "reports/junit.xml" } ]
 standard   = [ { argv = ["npm", "run", "test"], parser = "junit", report = "reports/junit.xml" } ]
 unattended = [ { argv = ["npm", "run", "test:ci"], parser = "junit", report = "reports/junit.xml" } ]
 ```
 
 Claude sessions get grants such as `Bash(npm run lint)`, `Bash(npm run typecheck)`
-and `Bash(npm test)`.
+and `Bash(npm run test)`.
+
+- Every `parser = "junit"` step (`test` and `test:ci`) must run a reporter that
+  writes `reports/junit.xml`. The toolkit deletes the report before each step
+  and reports a missing one as `error`, so failing tests would show as
+  `error`, not `findings`.
+- Gitignore `reports/`: mcp-coder stages all changes when it commits, and its
+  clean-tree checks ignore only `uv.lock`.
 
 The `test.unattended` depth is what automated rebase requests (binding
 `rebase_automated`: `check@standard`, `test@unattended`). Declare it with tests
@@ -351,9 +386,21 @@ that need no interaction or external services.
 #### Formatting off
 
 To skip formatting before commits, and the format check of the pre-flight at
-workflow entry, empty the `commit` binding and leave out the `format` table:
+workflow entry, either turn `format_code` off (in `pyproject.toml` or
+`mcp-coder.toml`):
+
+```toml
+[tool.mcp-coder]
+format_code = false
+```
+
+or empty the `commit` binding:
 
 ```toml
 [tool.mcp-coder.toolkit.bindings]
 commit = []
 ```
+
+In both cases leave out the `format` table: otherwise, with the command
+toolkit, `mcp-coder verify` warns about the declared `format.apply` ("unused
+while format_code is off" or "not requested by any binding").

@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Add step-to-request table, fix grant/verify/formatting statements
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (`toolkits.md` step-to-request table, stale rules and npm example; `toolkit-interface.md`; `cli-reference.md` rebase and verify; `architecture.md`)
-- [ ] Quality checks (pytest `tests/docs`, pylint, mypy, phrase/anchor search) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (`toolkits.md` step-to-request table, stale rules and npm example; `toolkit-interface.md`; `cli-reference.md` rebase and verify; `architecture.md`)
+- [x] Quality checks (pytest `tests/docs`, pylint, mypy, phrase/anchor search) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Add Non-Python Repos section, fix `repository-setup/README.md` verify text, final sweep
 See [step_3.md](./steps/step_3.md)

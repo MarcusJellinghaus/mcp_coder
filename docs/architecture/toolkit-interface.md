@@ -80,7 +80,7 @@ page covers only how mcp-coder uses the contract.
 |---|---|
 | `format_code` off, or `commit` binding empty | `True`, nothing runs |
 | Every request `ok` or `skipped` | `True` |
-| Any other status | `False`: implement fails; rebase, review and CI fix carry on |
+| Any other status | `False`: implement fails; rebase, review, CI fix and the rescue commit carry on |
 | Config error | raises `FormatterConfigError` |
 
 ### Prompt slots and fragments
@@ -113,11 +113,8 @@ page covers only how mcp-coder uses the contract.
 `cli/utils.py::resolve_claude_settings_path`,
 `llm/providers/claude/claude_code_cli.py`:
 
-| Session | Grants |
-|---|---|
-| Implement task, its fix turns, finalisation, CI fix | Union of all `Bash(...)` grants the toolkit declares |
-| Rebase fix turns | The active rebase binding's grants at the resolved depth |
-| Everything else | None |
+Which session gets which grants:
+[Step-to-request table](../configuration/toolkits.md#step-to-request-table).
 
 - `Bash(...)` grants go to Claude via `--allowedTools`; the Bash tool is
   enabled only when there are grants.
@@ -141,9 +138,8 @@ page covers only how mcp-coder uses the contract.
   `error` items stop the workflow.
 - `mcp-coder verify` (`toolkit_rows`): calls `verify(project_dir, action)` once
   per action a non-empty binding requests and the toolkit declares (`commit`
-  counts only with `format_code` on), then adds a row per requested depth the
-  toolkit doesn't declare. Grouping and severities:
-  [Bindings](../configuration/toolkits.md#bindings).
+  counts only with `format_code` on), then adds the depth rows. Rows, grouping
+  and severities: [Bindings](../configuration/toolkits.md#bindings).
 - `hint` is not shown. The pre-flight ignores warnings.
 
 ### Required MCP servers
