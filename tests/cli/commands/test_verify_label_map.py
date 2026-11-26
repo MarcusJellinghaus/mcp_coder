@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_MAP,
-    _LABEL_WIDTH,
-    STATUS_SYMBOLS,
-    Row,
     _format_tools_exposed_section,
 )
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, Row
+
+# Minimum label width of mcp-coder-utils' renderer
+_LABEL_WIDTH = 22
 
 
 def test_fixed_labels_fit_default_width() -> None:
@@ -19,7 +20,6 @@ def test_fixed_labels_fit_default_width() -> None:
 
 def test_renamed_labels() -> None:
     """Shortened labels replace the ones that overran the default width."""
-    assert _LABEL_MAP["signing_consistency"] == "Signing consistency"
     assert _LABEL_MAP["ollama_tools_capability"] == "Tool-call capability"
     lines, _ = _format_tools_exposed_section(None, STATUS_SYMBOLS)
     assert isinstance(lines[0], Row)

@@ -16,8 +16,8 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
 from mcp_coder.utils.pyproject_config import PromptsConfig
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS
 
 from .conftest import _make_args, _make_verify_mocks
 

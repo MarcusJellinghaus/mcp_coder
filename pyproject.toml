@@ -42,7 +42,6 @@ dependencies = [
     "jsonschema>=4.0.0",
     "packaging>=21.0",
     "rich>=13.0",
-    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -64,6 +63,8 @@ test = [
     "pytest-xdist",
     "pytest-textual-snapshot>=1.0.0",
     "pytest-cov",
+    # test_define_labels_actions.py parses workflow YAML
+    "pyyaml>=6.0",
 ]
 
 # MLflow integration - for conversation logging and analytics

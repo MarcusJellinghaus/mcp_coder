@@ -659,10 +659,7 @@ class TestMcpConfigWarningsDynamicWidth:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A long label widens the section's value column; rows align consistently."""
-        from mcp_coder.cli.commands.verify_formatting import (
-            _LABEL_WIDTH,
-            _MARKER_SLOT_WIDTH,
-        )
+        from .conftest import _LABEL_WIDTH, _MARKER_SLOT_WIDTH
 
         monkeypatch.delenv("VAR_A", raising=False)
         monkeypatch.delenv("VAR_B", raising=False)

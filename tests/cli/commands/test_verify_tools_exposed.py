@@ -1,9 +1,7 @@
 """Tests for the _format_tools_exposed_section helper in verify."""
 
-from mcp_coder.cli.commands.verify_formatting import (
-    STATUS_SYMBOLS,
-    _format_tools_exposed_section,
-)
+from mcp_coder.cli.commands.verify_formatting import _format_tools_exposed_section
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS
 
 from .conftest import _render
 

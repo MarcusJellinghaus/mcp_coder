@@ -6,11 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import _format_row
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_project_section
 from mcp_coder.cli.commands.verify_setup import setup_rows
 from mcp_coder.utils.executable import venv_search_path
+from mcp_coder.utils.verify_render import SectionBuilder
+
+from .conftest import _format_row
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 _MODULE = "mcp_coder.cli.commands.verify_setup"

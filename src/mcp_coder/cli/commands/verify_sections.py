@@ -16,21 +16,13 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from ...config.toml_utils import MCP_CODER_CONFIG_FILES
-from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
-from ...mcp_workspace_github import CheckResult, verify_github_security
+from ...mcp_workspace import _check_reference_projects
 from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
-from .verify_formatting import (
-    STATUS_SYMBOLS,
-    Row,
-    _format_section,
-    _hint,
-)
+from ...utils.toolkit_runner import WORKSPACE_SERVER
+from ...utils.verify_render import STATUS_SYMBOLS, Row, SectionBuilder, hint_row
 from .verify_project_keys import key_warning_rows
-from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
 from .verify_toolkit_rows import check_type_hints_row, toolkit_rows
 
@@ -56,14 +48,85 @@ _RETIRED_ENV_VARS: dict[str, str] = {
 _PROVIDER_ENV_VAR: str = "MCP_CODER_LLM_PROVIDER"
 _PROVIDER_ENV_SOURCE: str = f"env {_PROVIDER_ENV_VAR}"
 
-_CODEQL_ACTION_PREFIX = "github/codeql-action"
-
 
 class _DropUnexpandedWarnings(logging.Filter):
     """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         return "unexpanded variable" not in record.getMessage()
+
+
+def _load_mcp_json(mcp_json_path: str) -> Any:
+    """Parse ``.mcp.json``.
+
+    Raises OSError when the file cannot be read and ``json.JSONDecodeError``
+    (a ``ValueError``) when it is not valid JSON.
+
+    Args:
+        mcp_json_path: Path to ``.mcp.json``.
+
+    Returns:
+        The parsed JSON document (any JSON type).
+    """
+    return json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+
+
+def _reference_project_args(server_args: list[Any]) -> list[str]:
+    """Return the ``--reference-project`` values in argument order.
+
+    Accepts both ``--reference-project X`` and ``--reference-project=X``;
+    non-string items and a trailing flag without a value are dropped.
+    """
+    prefix = "--reference-project="
+    values: list[str] = []
+    it = iter(server_args)
+    for arg in it:
+        if arg == "--reference-project":
+            value = next(it, None)
+            if isinstance(value, str):
+                values.append(value)
+        elif isinstance(arg, str) and arg.startswith(prefix):
+            values.append(arg[len(prefix) :])
+    return values
+
+
+def _lookup_reference_projects(
+    project_dir: Path, mcp_json_path: str | None, env_vars: Mapping[str, str] | None
+) -> tuple[list[tuple[str, Path]], list[tuple[str, str]]]:
+    """Validate the mcp-workspace server's ``--reference-project`` args.
+
+    The server's own ``--project-dir`` arg is ignored; *project_dir* is used
+    for the overlap checks. A missing or malformed ``.mcp.json``, or one
+    without an ``mcp-workspace`` server, yields no references. Raises
+    whatever ``_check_reference_projects`` raises, e.g. ``ValueError`` on an
+    explicit URL that does not match the detected git remote.
+
+    Args:
+        project_dir: Workspace directory.
+        mcp_json_path: Resolved ``.mcp.json`` path, or None.
+        env_vars: Extra variables used to resolve ``${...}`` placeholders.
+
+    Returns:
+        Accepted ``(final name, path)`` in argument order and rejected
+        ``(label, reason)`` pairs. Never returns ``ReferenceProject``: its
+        ``url`` keeps raw credentials.
+    """
+    if mcp_json_path is None:
+        return [], []
+    try:
+        data = _load_mcp_json(mcp_json_path)
+    except (OSError, ValueError):
+        return [], []
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    server = servers.get(WORKSPACE_SERVER) if isinstance(servers, dict) else None
+    server_args = server.get("args") if isinstance(server, dict) else None
+    if not isinstance(server_args, list):
+        return [], []
+    raw = _reference_project_args(server_args)
+    accepted, rejected = _check_reference_projects(
+        [resolve_placeholders(r, env_vars)[0] for r in raw], project_dir
+    )
+    return [(name, ref.path) for name, ref in accepted.items()], rejected
 
 
 def _validate_mcp_config(
@@ -91,7 +154,7 @@ def _validate_mcp_config(
             fail.
     """
     try:
-        data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+        data = _load_mcp_json(mcp_json_path)
     except (OSError, json.JSONDecodeError) as exc:
         return (False, f"invalid JSON ({exc})", [])
     # A valid JSON document whose top level is NOT an object (e.g. [], "foo",
@@ -120,195 +183,6 @@ def _validate_mcp_config(
     if not servers:
         return (None, "config present but no servers defined", warnings)
     return (True, "well-formed", warnings)
-
-
-def _schedule_interval(entry: dict[str, Any]) -> Any:
-    """Return a dependabot entry's ``schedule.interval``, or ``"?"`` if absent."""
-    schedule = entry.get("schedule")
-    if isinstance(schedule, dict):
-        return schedule.get("interval", "?")
-    return "?"
-
-
-def _workflow_uses_codeql(path: Path) -> bool:
-    """Return True if any job step in the workflow uses github/codeql-action.
-
-    Unreadable, unparseable, or oddly shaped files count as False.
-    """
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, yaml.YAMLError):
-        return False
-    jobs = data.get("jobs") if isinstance(data, dict) else None
-    if not isinstance(jobs, dict):
-        return False
-    for job in jobs.values():
-        steps = job.get("steps") if isinstance(job, dict) else None
-        if not isinstance(steps, list):
-            continue
-        for step in steps:
-            uses = step.get("uses") if isinstance(step, dict) else None
-            if isinstance(uses, str) and uses.startswith(_CODEQL_ACTION_PREFIX):
-                return True
-    return False
-
-
-def _check_dependabot_config(project_dir: Path) -> CheckResult:
-    """Check .github/dependabot.yml (or .yaml) for configured ecosystems and schedules.
-
-    Args:
-        project_dir: Path to the project directory.
-
-    Returns:
-        ``CheckResult`` with ``ok=True`` when at least one ecosystem is
-        configured, ``ok=False`` otherwise (missing file, invalid YAML, or no
-        ecosystems). Always uses warning severity — this section is
-        exit-neutral regardless of what any row reports.
-    """
-    path = next(
-        (
-            p
-            for p in (
-                project_dir / ".github" / "dependabot.yml",
-                project_dir / ".github" / "dependabot.yaml",
-            )
-            if p.exists()
-        ),
-        None,
-    )
-    if path is None:
-        return CheckResult(ok=False, value="not present", severity="warning")
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        return CheckResult(ok=False, value=f"invalid YAML ({exc})", severity="warning")
-    except (OSError, UnicodeDecodeError):
-        return CheckResult(ok=False, value="unreadable", severity="warning")
-    updates = data.get("updates") if isinstance(data, dict) else None
-    if not isinstance(updates, list) or not updates:
-        return CheckResult(
-            ok=False, value="no ecosystems configured", severity="warning"
-        )
-    pairs = [
-        (
-            entry.get("package-ecosystem", "?"),
-            _schedule_interval(entry),
-        )
-        for entry in updates
-        if isinstance(entry, dict)
-    ]
-    if not pairs:
-        return CheckResult(
-            ok=False, value="no ecosystems configured", severity="warning"
-        )
-    intervals = {interval for _, interval in pairs}
-    if len(intervals) == 1:
-        ecosystems = ", ".join(eco for eco, _ in pairs)
-        value = f".github/{path.name} ({ecosystems}: {intervals.pop()})"
-    else:
-        parts = ", ".join(f"{eco}: {interval}" for eco, interval in pairs)
-        value = f".github/{path.name} ({parts})"
-    return CheckResult(ok=True, value=value, severity="warning")
-
-
-def _check_codeql_workflow(project_dir: Path) -> CheckResult:
-    """Scan .github/workflows/*.yml|*.yaml for a step using github/codeql-action.
-
-    Args:
-        project_dir: Path to the project directory.
-
-    Returns:
-        ``CheckResult`` with ``ok=True`` when a workflow step's ``uses:``
-        value references ``github/codeql-action``, ``ok=False`` otherwise.
-        Detection is content-based, not filename-based. Always
-        ``severity="warning"``.
-    """
-    workflows_dir = project_dir / ".github" / "workflows"
-    if workflows_dir.is_dir():
-        filenames = sorted(
-            p.name for p in workflows_dir.iterdir() if p.suffix in (".yml", ".yaml")
-        )
-        for filename in filenames:
-            if _workflow_uses_codeql(workflows_dir / filename):
-                return CheckResult(
-                    ok=True, value=f"found in {filename}", severity="warning"
-                )
-    return CheckResult(
-        ok=False,
-        value="no workflow step uses github/codeql-action",
-        severity="warning",
-    )
-
-
-_NOT_ACCESSIBLE: dict[str, Any] = {
-    "ok": None,
-    "value": "not accessible",
-    "severity": "warning",
-}
-
-
-# Known false positive, accepted: the mcp-workspace probe returns normally on a
-# 3xx redirect, so it is reported like a 200 ("scope present").
-def _map_security_row(key: str, row: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Map one probe result to its GITHUB SECURITY row (pass-through + 4 rules).
-
-    Rules: a missing row becomes ``ok=None`` / ``"not accessible"``; an
-    ``ok=None`` ``"not checked"`` value reads ``"not accessible"``; the code
-    scanning 404 (``"scope missing or not configured"``) is demoted from
-    ``ok=False`` to ``ok=None``; an ``ok=None`` row with an ``error`` gets it
-    appended to the value. Anything else passes through unchanged.
-
-    Args:
-        key: Probe result key (e.g. ``"code_scanning_alerts"``).
-        row: The probe's result for ``key``, or None if the key is absent.
-
-    Returns:
-        A plain dict with ``ok``, ``value``, ``severity`` and optionally ``error``.
-    """
-    entry = dict(row) if row is not None else dict(_NOT_ACCESSIBLE)
-    if entry["ok"] is None and entry["value"] == "not checked":
-        entry["value"] = "not accessible"
-    if (
-        key == "code_scanning_alerts"
-        and entry["ok"] is False
-        and entry["value"] == "scope missing or not configured"
-    ):
-        entry["ok"] = None
-    if entry["ok"] is None and entry.get("error"):
-        entry["value"] = f"{entry['value']} ({entry['error']})"
-    return entry
-
-
-def _print_github_security_section(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
-) -> None:
-    """Merge local-file and API-backed security rows, print GITHUB SECURITY.
-
-    The five API-backed rows come from ``verify_github_security``, each
-    mapped through ``_map_security_row``.
-    """
-    api = verify_github_security(project_dir)
-    github_security_result: dict[str, Any] = {
-        "dependabot_config": _check_dependabot_config(project_dir),
-        "dependabot_alerts": _map_security_row(
-            "dependabot_alerts", api.get("dependabot_alerts")
-        ),
-        "dependabot_security_updates": _map_security_row(
-            "dependabot_security_updates", api.get("dependabot_security_updates")
-        ),
-        "secret_scanning": _map_security_row(
-            "secret_scanning", api.get("secret_scanning")
-        ),
-        "secret_scanning_push_protection": _map_security_row(
-            "secret_scanning_push_protection",
-            api.get("secret_scanning_push_protection"),
-        ),
-        "codeql_workflow": _check_codeql_workflow(project_dir),
-        "code_scanning_alerts": _map_security_row(
-            "code_scanning_alerts", api.get("code_scanning_alerts")
-        ),
-    }
-    out.section("GITHUB SECURITY", _format_section(github_security_result, symbols))
 
 
 def _print_environment_section(out: SectionBuilder) -> None:
@@ -358,38 +232,6 @@ def _print_environment_section(out: SectionBuilder) -> None:
     out.close()
 
 
-def _file_access_row(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
-) -> bool:
-    """Add the ``.mcp-file-access`` row (indent 2) to *out*.
-
-    Args:
-        project_dir: Path to the project directory.
-        symbols: Dict with 'success', 'failure', 'warning' keys.
-        out: Builder the row is added to.
-
-    Returns:
-        False if the rules file is invalid (row added as [ERR]).
-    """
-    ok = True
-    if not (project_dir / ".mcp-file-access").exists():
-        marker, value = symbols["success"], "not present (gitignore defaults)"
-    elif not FILE_ACCESS_SUPPORTED:
-        # The old-version stand-in for validate_access_rules always returns [].
-        marker = symbols["warning"]
-        value = (
-            "not checked (mcp-workspace in this environment"
-            " does not support .mcp-file-access)"
-        )
-    elif problems := validate_access_rules(project_dir):
-        marker, value = symbols["failure"], f"invalid ({'; '.join(problems)})"
-        ok = False
-    else:
-        marker, value = symbols["success"], "valid"
-    out.add(Row(".mcp-file-access", marker, value, wrap=True))
-    return ok
-
-
 def _format_code_row(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder, indent: int = 4
 ) -> bool:
@@ -421,7 +263,7 @@ def _format_code_row(
 def _print_project_section(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
-    """Print the PROJECT section: the project config files, ``.mcp-file-access`` and tool config.
+    """Print the PROJECT section: the project config files and tool config.
 
     One flat layout for every repo. Opens and closes the section on *out*.
 
@@ -440,7 +282,6 @@ def _print_project_section(
         out.add(Row("Project config", symbols["success"], ", ".join(found)))
     else:
         out.add(Row("Project config", symbols["warning"], "none"))
-    file_access_ok = _file_access_row(project_dir, symbols, out)
     ok = _format_code_row(project_dir, symbols, out, indent=2)
     ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
     ok = setup_rows(project_dir, symbols, out, indent=2) and ok
@@ -457,7 +298,7 @@ def _print_project_section(
     ok = check_type_hints_row(project_dir, symbols, out) and ok
     out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
     out.close()
-    return ok and file_access_ok
+    return ok
 
 
 def _prompt_source(configured: str | None, default_label: str) -> str:
@@ -538,4 +379,4 @@ def _print_langchain_readiness_warning(
         hint = f"pip install {display} (needed for --llm-method langchain)"
     out.add(Row("Langchain backend", symbols["warning"], msg))
     if hint:
-        out.add(_hint(f"-> {hint}"))
+        out.add(hint_row(f"-> {hint}"))

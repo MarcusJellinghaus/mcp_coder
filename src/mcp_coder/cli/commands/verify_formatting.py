@@ -1,14 +1,16 @@
-"""Formatting primitives for the verify command.
+"""Section formatters for the verify command.
 
-Pure leaf module: the row/section formatters and the constant maps they use.
-Depends only on the standard library and two leaf helpers; nothing here reaches
-back into ``verify.py`` (one-directional edge ``verify.py -> verify_formatting``).
+Pure leaf module: builds the rows of the Claude, LangChain, MLflow, Jenkins and
+MCP sections from domain verify results, plus the label map they use. The GIT,
+GITHUB and GITHUB SECURITY sections come from mcp-workspace's formatters.
+Row/section primitives come from ``mcp_coder.utils.verify_render``; nothing
+here reaches back into ``verify.py`` (one-directional edge
+``verify.py -> verify_formatting``).
 """
 
 import keyword
 import re
-from collections.abc import Iterable
-from typing import Any, NamedTuple, cast
+from typing import Any, cast
 
 from ...llm.providers.claude.claude_mcp_guard import (
     MCP_NEEDS_AUTH_STATUS,
@@ -17,119 +19,7 @@ from ...llm.providers.claude.claude_mcp_guard import (
     find_unavailable_mcp_servers,
 )
 from ...utils.mcp_verification import ClaudeMCPStatus
-
-STATUS_SYMBOLS: dict[str, str] = {
-    "success": "[OK]",
-    "failure": "[ERR]",
-    "warning": "[WARN]",
-}
-
-_MARKER_SLOT_WIDTH: int = max(len(v) for v in STATUS_SYMBOLS.values())
-_LABEL_WIDTH: int = 22  # minimum label width; sections widen automatically
-
-
-class Row(NamedTuple):
-    """One tabular row; label and/or marker may be empty."""
-
-    label: str
-    marker: str
-    value: str
-    indent: int = 2
-    wrap: bool = False
-
-
-Line = Row | str  # str = freeform line (group header, blank, notice), printed as-is
-
-
-def _hint(text: str) -> Row:
-    """Hint/continuation line: starts at the section's value column.
-
-    Args:
-        text: Hint text.
-
-    Returns:
-        A label-less, marker-less ``Row`` that never widens its section.
-    """
-    return Row("", "", text)
-
-
-def _section_label_width(lines: Iterable[Line]) -> int:
-    """Return the label width of a section: the default, widened to fit.
-
-    Each ``Row`` needs ``len(label) + indent - 2`` so that its label fits in
-    the field left over after its extra indent; ``str`` items are ignored.
-
-    Args:
-        lines: The section's lines.
-
-    Returns:
-        ``max(_LABEL_WIDTH, len(label) + indent - 2)`` over the ``Row`` items.
-    """
-    return max(
-        [
-            _LABEL_WIDTH,
-            *(len(r.label) + r.indent - 2 for r in lines if isinstance(r, Row)),
-        ]
-    )
-
-
-def _format_row_prefix(
-    label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH
-) -> str:
-    """Render the column-aligned prefix portion of a tabular row.
-
-    Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
-    starts at the same horizontal position regardless of marker presence.
-    The label field is ``label_width - (indent - 2)``, so the prefix is
-    ``label_width + 10`` long at every indent: rows of one section share
-    their marker and value columns. Callers size ``label_width`` with
-    ``_section_label_width`` so no label exceeds its field.
-
-    Args:
-        label: Row label (may be empty for label-less rows).
-        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
-        indent: Number of leading spaces.
-        label_width: Label width of the section (at indent 2).
-
-    Returns:
-        ``indent + label_field + " " + marker_field + " "`` WITHOUT
-        rstrip — the trailing space and the full marker-slot padding are
-        preserved. Used directly by callers that need the prefix without
-        a value (e.g. ``textwrap.wrap`` continuation indent).
-    """
-    field = label_width - (indent - 2)
-    return f"{' ' * indent}{label.ljust(field)} {marker.ljust(_MARKER_SLOT_WIDTH)} "
-
-
-def _format_row(label: str, marker: str, value: str, *, indent: int) -> str:
-    """Render a tabular row (labeled or label-less) as a one-row section.
-
-    Composed on top of ``_format_row_prefix``; appends the value and
-    rstrips trailing whitespace. Label-less rows pass ``label=""``;
-    the empty label is padded so the value column aligns with
-    neighbouring labeled rows. A label too long for ``_LABEL_WIDTH``
-    widens this row's columns instead of overrunning the marker.
-
-    Args:
-        label: Row label (may be empty for label-less rows).
-        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
-        value: Row value text.
-        indent: Number of leading spaces.
-
-    Returns:
-        Formatted row string with trailing whitespace stripped.
-    """
-    width = _section_label_width([Row(label, marker, value, indent)])
-    return (
-        _format_row_prefix(label, marker, indent=indent, label_width=width) + value
-    ).rstrip()
-
-
-def _pad(title: str) -> str:
-    r"""Return a section header line padded to 75 chars with '='."""
-    prefix = f"=== {title} "
-    return "\n" + prefix + "=" * max(0, 75 - len(prefix))
-
+from ...utils.verify_render import Line, Row, hint_row
 
 _KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -177,64 +67,11 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
-    # GitHub section
-    "api_base_url": "API base URL",
-    "network_proxy": "Network / proxy",
-    "token_configured": "Token configured",
-    "authenticated_user": "Authenticated user",
-    "repo_url": "Repo URL",
-    "repo_accessible": "Repo accessible",
-    "branch_protection": "Branch protection",
-    "require_pull_request": "Require pull request",
-    "ci_checks_required": "CI checks required",
-    "strict_mode": "Strict mode",
-    "force_push": "Force push",
-    "branch_deletion": "Branch deletion",
-    "auto_delete_branches": "Auto-delete branches",
-    "perm_contents_read": "Contents: Read",
-    "perm_administration_read": "Administration: Read",
-    "perm_pull_requests_read": "Pull requests: Read",
-    "perm_issues_read": "Issues: Read",
-    "perm_workflows_read": "Actions: Read",
-    "perm_statuses_read": "Commit statuses: Read",
-    # GitHub security section
-    "dependabot_config": "Dependabot config",
-    "dependabot_alerts": "Dependabot alerts",
-    "dependabot_security_updates": "Dependabot security",
-    "secret_scanning": "Secret scanning",
-    "secret_scanning_push_protection": "Secret push protection",
-    "codeql_workflow": "CodeQL workflow",
-    "code_scanning_alerts": "Code scanning alerts",
-    # Git section
-    "git_binary": "Git binary",
-    "git_repo": "Repository",
-    "user_identity": "Git identity",
-    "signing_intent": "Signing enabled",
-    "signing_consistency": "Signing consistency",
-    "signing_format": "Signing format",
-    "signing_key": "Signing key",
-    "signing_binary": "Signing binary",
-    "signing_key_accessible": "Signing key accessible",
-    "agent_reachable": "GPG agent",
-    "allowed_signers": "Allowed signers file",
-    "verify_head": "HEAD signature",
-    "actual_signature": "End-to-end sign test",
     # Jenkins section (JENKINS JOBS keys are repo names and pass through unmapped)
     "server": "Server",
     "authentication": "Authentication",
     "overall_read": "Overall/Read",
 }
-
-
-_BRANCH_PROTECTION_CHILDREN = frozenset(
-    {
-        "require_pull_request",
-        "ci_checks_required",
-        "strict_mode",
-        "force_push",
-        "branch_deletion",
-    }
-)
 
 
 def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Line]:
@@ -248,11 +85,6 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
         The section's lines (without the title header), ready for rendering.
     """
     lines: list[Line] = []
-    bp_ok: bool | None = None  # track branch_protection parent state
-    permissions_header_emitted: bool = False
-    # NOTE: relies on dict insertion order — branch_protection must precede its
-    # children in the result dict. This is guaranteed by verify_github() in
-    # mcp-workspace.
     for key, entry in result.items():
         if key == "overall_ok":
             continue
@@ -261,30 +93,6 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
         label = _LABEL_MAP.get(key, key)
         ok = entry.get("ok")
         value = str(entry.get("value", ""))
-        if key == "branch_protection":
-            bp_ok = ok
-        elif key in _BRANCH_PROTECTION_CHILDREN:
-            if bp_ok is not True:
-                continue  # suppress children when parent failed or is unverifiable
-            if key == "strict_mode":
-                lines.append(Row(label, "", value, 4))
-            else:
-                if ok is True:
-                    symbol = symbols["success"]
-                elif ok is False:
-                    symbol = symbols["failure"]
-                else:
-                    symbol = symbols["warning"]
-                row_value = value
-                error = entry.get("error")
-                if error and ok is not True:
-                    row_value = f"{value} ({error})"
-                lines.append(Row(label, symbol, row_value, 4))
-            continue
-        if key.startswith("perm_") and not permissions_header_emitted:
-            lines.append("")
-            lines.append("  [Permissions]")
-            permissions_header_emitted = True
         if ok is True:
             symbol = symbols["success"]
         elif ok is False:
@@ -293,21 +101,11 @@ def _format_section(result: dict[str, Any], symbols: dict[str, str]) -> list[Lin
             symbol = symbols["warning"]
         row_value = value
         error = entry.get("error")
-        if error and (ok is False or (ok is None and key == "branch_protection")):
+        if error and ok is False:
             row_value = f"{value} ({error})"
-        indent = 4 if key.startswith("perm_") else 2
-        lines.append(Row(label, symbol, row_value, indent))
-        if key == "token_configured" and entry.get("token_source"):
-            src = entry["token_source"]
-            suffix = (
-                "GITHUB_TOKEN env var" if src == "env" else "~/.mcp_coder/config.toml"
-            )
-            fingerprint = entry.get("token_fingerprint")
-            if fingerprint:
-                suffix = f"{suffix} ({fingerprint})"
-            lines.append(_hint(f"from {suffix}"))
+        lines.append(Row(label, symbol, row_value))
         if ok is False and "install_hint" in entry:
-            lines.append(_hint(f"-> {entry['install_hint']}"))
+            lines.append(hint_row(f"-> {entry['install_hint']}"))
     return lines
 
 
@@ -470,11 +268,11 @@ def _format_tools_exposed_section(
 
     lines: list[Line] = [Row(label, marker, value)]
     if hint is not None:
-        lines.append(_hint(hint))
+        lines.append(hint_row(hint))
     if needs_auth:
         note = (
             "-> unauthenticated account connector(s), "
             f"not part of health assessment: {sorted(needs_auth)}"
         )
-        lines.append(_hint(note))
+        lines.append(hint_row(note))
     return lines, ok

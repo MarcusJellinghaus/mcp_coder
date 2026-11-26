@@ -12,9 +12,8 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_environment_section
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, SectionBuilder
 
 from .conftest import (
     _LC_VERIFY,

@@ -1,10 +1,7 @@
 """Tests for the .mcp-file-access and .scratch/ gitignore steps of init."""
 
 import argparse
-import importlib.util
 import logging
-import sys
-import types
 from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -273,49 +270,12 @@ class TestInitFileAccess:
         assert (project / ".claude" / "skills" / "skills.md").exists()
         mock_config.assert_called_once()
 
-    @patch(f"{_MODULE}.FILE_ACCESS_SUPPORTED", False)
-    def test_without_support_appends_but_never_ignores_scratch(
-        self,
-        project: Path,
-        mock_config: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Without support: rules appended unvalidated, no .scratch/ line."""
-        original = "read-only /docs/\n"
-        (project / ".mcp-file-access").write_text(original, encoding="utf-8")
-
-        with caplog.at_level(OUTPUT):
-            result = self._init(project)
-
-        assert result == 0
-        text = (project / ".mcp-file-access").read_text(encoding="utf-8")
-        assert text.startswith(original)
-        assert len(_rule_lines(text)) == 1 + len(FILE_ACCESS_TEMPLATE_RULES)
-        assert _scratch_lines(project / ".gitignore") == []
-        assert "does not support .mcp-file-access" in caplog.text
-        assert "Gitignore: .scratch/ skipped (no .mcp-file-access support" in (
-            caplog.text
-        )
-
-    @patch(f"{_MODULE}.FILE_ACCESS_SUPPORTED", False)
-    def test_without_support_creates_file(
-        self, project: Path, mock_config: MagicMock
-    ) -> None:
-        """Without support a missing rules file is still created."""
-        assert self._init(project) == 0
-
-        assert (project / ".mcp-file-access").read_text(
-            encoding="utf-8"
-        ) == file_access_template()
-        assert _scratch_lines(project / ".gitignore") == []
-
     def test_result_is_valid_and_scratch_writable(
         self, project: Path, mock_config: MagicMock
     ) -> None:
         """After init the real API finds the rules valid and .scratch/ writable."""
         assert self._init(project) == 0
 
-        assert mcp_workspace.FILE_ACCESS_SUPPORTED is True
         assert validate_access_rules(project) == []
         assert not (project / ".scratch").exists()
         assert get_file_access(".scratch/x", project) == FileAccess.READ_WRITE
@@ -332,36 +292,3 @@ class TestTemplateDrift:
         )
         for level, pattern in FILE_ACCESS_TEMPLATE_RULES:
             assert (level, pattern) in repo_rules, f"{level} {pattern}"
-
-
-class TestShimFallback:
-    """The shim imports without error on mcp-workspace older than f626cf8."""
-
-    def test_stand_ins_without_file_access_support(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        old_directory_utils = types.ModuleType(
-            "mcp_workspace.file_tools.directory_utils"
-        )
-        # Only the names mcp-workspace exported before .mcp-file-access support
-        old_directory_utils.__dict__.update(
-            is_path_gitignored=mcp_workspace.is_path_gitignored,
-            list_files=lambda *_args: [],
-        )
-        monkeypatch.setitem(
-            sys.modules,
-            "mcp_workspace.file_tools.directory_utils",
-            old_directory_utils,
-        )
-        spec = importlib.util.spec_from_file_location(
-            "_mcp_workspace_shim_without_support", mcp_workspace.__file__
-        )
-        assert spec is not None and spec.loader is not None
-        shim = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(shim)
-        (tmp_path / ".gitignore").write_text(".scratch/\n", encoding="utf-8")
-
-        assert shim.FILE_ACCESS_SUPPORTED is False
-        assert shim.validate_access_rules(tmp_path) == []
-        assert shim.get_file_access(".scratch/x", tmp_path) == shim.FileAccess.HIDDEN
-        assert shim.get_file_access("src/a.py", tmp_path) == shim.FileAccess.READ_WRITE

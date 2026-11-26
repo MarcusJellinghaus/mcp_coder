@@ -7,15 +7,14 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
 from mcp_coder.cli.commands.verify_project_keys import (
     KeyWarning,
     key_warning_rows,
     scan_project_keys,
 )
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_project_section
 from mcp_coder.utils.toolkit import VerifyItem
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, SectionBuilder
 
 from .conftest import _make_args, _make_verify_mocks
 

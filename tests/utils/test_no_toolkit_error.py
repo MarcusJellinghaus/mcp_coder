@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_project_section
 from mcp_coder.utils import toolkit_runner
 from mcp_coder.utils.mcp_verification import required_mcp_servers
@@ -15,6 +14,7 @@ from mcp_coder.utils.toolkit_runner import (
     load_toolkit,
     load_toolkit_config,
 )
+from mcp_coder.utils.verify_render import SectionBuilder
 from mcp_coder.workflow_steps.commit import check_formatter_config
 
 pytestmark = pytest.mark.real_toolkit_config

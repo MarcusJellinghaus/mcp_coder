@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_toolkit_rows import _requests, toolkit_rows
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit import (
@@ -18,6 +17,7 @@ from mcp_coder.utils.toolkit import (
     VerifyItem,
 )
 from mcp_coder.utils.toolkit_runner import DEFAULT_BINDINGS, verify_toolkit
+from mcp_coder.utils.verify_render import SectionBuilder
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 _VERIFY_TOOLKIT = "mcp_coder.cli.commands.verify_toolkit_rows.verify_toolkit"

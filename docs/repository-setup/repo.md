@@ -90,4 +90,5 @@ read-write  /.scratch/
   smoke test.
 - **An invalid file** (unknown level, unparsable line, not UTF-8, a directory
   at the path) makes mcp-workspace refuse every MCP write. `mcp-coder verify`
-  shows it as `[ERR]` in the PROJECT `.mcp-file-access` row and exits 1.
+  shows it as `[ERR]` in the FILE ACCESS section (workspace and reference
+  projects) and exits 1.

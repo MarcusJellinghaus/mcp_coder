@@ -23,8 +23,7 @@ from ...utils.toolkit_runner import (
     resolve_depth,
     verify_toolkit,
 )
-from .verify_formatting import Row
-from .verify_render import SectionBuilder
+from ...utils.verify_render import Row, SectionBuilder
 
 # Implement entries the retired key used to filter
 _IMPLEMENT_ENTRIES: tuple[str, ...] = ("implement_task", "implement_final")

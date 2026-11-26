@@ -30,12 +30,12 @@ from mcp_coder.cli.commands.verify_formatting import (
     _format_mcp_section,
     _format_section,
 )
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _print_environment_section,
     _print_project_section,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.verify_render import SectionBuilder
 
 from .conftest import (
     _assert_section_aligned,
@@ -67,26 +67,6 @@ class TestPerFormatterAlignment:
                     "overall_ok": False,
                 },
                 id="mixed_markers_top_level",
-            ),
-            pytest.param(
-                {
-                    "branch_protection": {"ok": True, "value": "enabled"},
-                    "ci_checks_required": {"ok": True, "value": "yes"},
-                    "strict_mode": {"ok": True, "value": "true"},
-                    "force_push": {"ok": False, "value": "allowed"},
-                    "branch_deletion": {"ok": True, "value": "blocked"},
-                    "overall_ok": False,
-                },
-                id="branch_protection_with_strict_mode_no_marker",
-            ),
-            pytest.param(
-                {
-                    "token_configured": {"ok": True, "value": "configured"},
-                    "perm_contents_read": {"ok": True, "value": "granted"},
-                    "perm_statuses_read": {"ok": False, "value": "missing"},
-                    "overall_ok": False,
-                },
-                id="permissions_group",
             ),
             pytest.param(
                 {

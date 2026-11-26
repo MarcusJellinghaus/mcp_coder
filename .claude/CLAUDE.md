@@ -149,13 +149,16 @@ git add / rebase / push --force-with-lease
 
 ## Shared Libraries
 
-This repo uses `mcp-coder-utils` for subprocess execution, logging, and redaction. Three shim modules in `src/mcp_coder/utils/` re-export the upstream API:
+This repo uses `mcp-coder-utils` for subprocess execution, logging, redaction, the toolkit contract, the user app data directory and status-check rendering. Six shim modules in `src/mcp_coder/utils/` re-export the upstream API:
 
 | Shim module | Upstream module | Key imports |
 |-------------|-----------------|-------------|
 | `mcp_coder.utils.subprocess_runner` | `mcp_coder_utils.subprocess_runner` | `execute_command`, `execute_subprocess`, `CommandResult`, `CommandOptions`, `launch_process`, `prepare_env` |
 | `mcp_coder.utils.subprocess_streaming` | `mcp_coder_utils.subprocess_streaming` | `stream_subprocess`, `StreamResult` |
 | `mcp_coder.utils.log_utils` | `mcp_coder_utils.log_utils` + `redaction` | `setup_logging`, `log_function_call`, `OUTPUT`, `REDACTED_VALUE`, `RedactableDict` |
+| `mcp_coder.utils.toolkit` | `mcp_coder_utils.toolkit` | `Toolkit`, `ToolkitInfo`, `ActionRequest`, `ActionResult`, `Finding`, `VerifyItem`, `validate_params` |
+| `mcp_coder.utils.user_app_data` | `mcp_coder_utils.user_app_data` | `get_user_app_data_dir` |
+| `mcp_coder.utils.verify_render` | `mcp_coder_utils.verify_render` | `STATUS_SYMBOLS`, `Row`, `Line`, `SectionBuilder`, `hint_row`, `render_rows` |
 
 **Rules:**
 - Always import through the local shims (`from mcp_coder.utils.<module> import ...`), never from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).
