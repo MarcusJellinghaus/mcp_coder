@@ -290,6 +290,14 @@ _.command_toolkit_only
 # workflows/rebase/test_prompt.py - Only activated via @pytest.mark.usefixtures string
 _.command_toolkit
 
+# icoder/test_snapshots.py - Autouse fixture writing __snapshots__/versions.txt
+# on --snapshot-update, never requested by name
+_._record_rendering_versions
+
+# icoder/test_snapshots.py - syrupy 7 compat: attribute set on
+# pytest-textual-snapshot's SVGImageExtension, read by syrupy
+_.file_extension
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================

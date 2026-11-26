@@ -8,18 +8,26 @@ baselines with:
 
 Baselines are Windows-only to avoid cross-platform rendering drift.
 Verify regenerated SVGs contain no secrets, env vars, or local paths.
+
+Every ``--snapshot-update`` run also rewrites ``__snapshots__/versions.txt``
+with the versions of the packages that render the SVGs. It is not compared;
+it records which library versions produced the committed baselines, so a
+later mismatch can be traced to a dependency upgrade.
 """
 
 from __future__ import annotations
 
+import platform
 import sys
 import time
 from collections.abc import Iterator
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
 import pytest
+from pytest_textual_snapshot import SVGImageExtension
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.commands.display import register_display
@@ -53,6 +61,36 @@ pytestmark = [
     ),
     pytest.mark.textual_integration,
 ]
+
+
+# syrupy 7 reads ``file_extension``; pytest-textual-snapshot 1.0.0 sets only
+# the pre-7 ``_file_extension = "svg"``. Without this, syrupy looks for
+# ``.raw`` baselines, finds none, and every snapshot test fails.
+SVGImageExtension.file_extension = "svg"
+
+_VERSIONS_FILE = Path(__file__).parent / "__snapshots__" / "versions.txt"
+
+# Packages whose output or comparison shapes the SVG baselines.
+_RENDERING_PACKAGES = ("textual", "rich", "pytest-textual-snapshot", "syrupy")
+
+
+def _rendering_versions() -> str:
+    """Return the rendering stack's versions, one ``name==version`` per line."""
+    lines = [
+        "# Written by --snapshot-update in test_snapshots.py; not compared.",
+        f"python=={platform.python_version()}",
+        f"platform=={sys.platform}",
+    ]
+    lines += [f"{name}=={version(name)}" for name in _RENDERING_PACKAGES]
+    return "\n".join(lines) + "\n"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _record_rendering_versions(request: pytest.FixtureRequest) -> None:
+    """On ``--snapshot-update``, record the versions that produced the baselines."""
+    if request.config.getoption("update_snapshots"):
+        _VERSIONS_FILE.parent.mkdir(exist_ok=True)
+        _VERSIONS_FILE.write_text(_rendering_versions(), encoding="utf-8", newline="\n")
 
 
 class _FixedDatetime(datetime):
