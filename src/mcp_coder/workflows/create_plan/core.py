@@ -24,6 +24,7 @@ from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.prompt_slots import fill_prompt, resolve_prompt_slots
+from mcp_coder.workflow_steps.commit import check_formatter_config, format_best_effort
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
@@ -564,6 +565,26 @@ def run_create_plan_workflow(
             )
             return 1
 
+        # After manage_branch: the plan branch may start from a base with a
+        # different formatter config. Before create_pr_info_structure: a
+        # failure here leaves no pr_info/ behind.
+        formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
+        if formatter_err:
+            failure = WorkflowFailure(
+                category=FAILURE_LABELS["prereq"],
+                stage="Prerequisites (formatter config)",
+                message=formatter_err,
+                elapsed_time=time.time() - start_time,
+            )
+            _handle_workflow_failure(
+                failure,
+                project_dir,
+                update_issue_labels,
+                post_issue_comments,
+                issue_number=issue_number,
+            )
+            return 1
+
         # Step 3: Check pr_info/ doesn't exist and create structure
         logger.info("Step 3/7: Setting up pr_info/ directory structure...")
         if not check_pr_info_not_exists(project_dir):
@@ -657,6 +678,7 @@ def run_create_plan_workflow(
         # Commit changes
         logger.info("Committing generated plan...")
         commit_message = f"Initial plan generated for issue #{issue_number}"
+        format_best_effort(project_dir, "plan commit")
         commit_result = commit_all_changes(commit_message, project_dir)
         if not commit_result["success"]:
             commit_error = commit_result.get("error") or "unknown error"
