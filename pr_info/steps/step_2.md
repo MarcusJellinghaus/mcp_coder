@@ -10,6 +10,10 @@
 
 - `src/mcp_coder/workflows/review/review_log.py`: `write_round_log`
 - `tests/workflows/review/test_review_log.py`
+- `tests/workflows/review/test_core_failure_detail.py`: lines ~106 and ~171,
+  replace `"**Changes**:\ngeneral\n"` with `"**Changes**:\n\ngeneral\n"`
+- `tests/workflows/review/test_core_gates.py`: lines ~128 and ~146, change
+  `lines.index("**Changes**:") + 1` to `lines.index("**Changes**:") + 2`
 
 ## WHAT
 
@@ -93,8 +97,11 @@ Returns the log `Path` (unchanged).
   - each line in `{"**Findings**:", "**Decisions**:", "**Changes**:"}` is
     followed by an empty line;
   - `**Escalate reason**: x` stays inline.
-- The existing tests must keep passing, including the `**Escalate reason**:`
-  assertion.
+- The existing `test_review_log.py` tests must keep passing unchanged,
+  including the `**Escalate reason**:` assertion.
+- Update the four assertions listed under WHERE in
+  `test_core_failure_detail.py` and `test_core_gates.py` to the new
+  `**Changes**:\n\n<body>` layout. Do not keep the old layout to save them.
 
 ## Commit
 
