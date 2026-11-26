@@ -167,9 +167,9 @@ coverage==7.17.3 \
     --hash=sha256:ff273110e4e1505ef7a642523ba43f58eb6770ae9e8f869d72efea816cb4bc2c \
     --hash=sha256:ff5069e99039739c2fade5dd12cf8df7dc1b1217a0b915110605e0bbdddf1187
     # via -r coverage.in
-diff-cover==11.0.2 \
-    --hash=sha256:27dc1101dea8bd8b69095dd09a79dea370c2d65a9145fcf48d1ae71f3aab25e6 \
-    --hash=sha256:8e7b9cc0c5fd4cfa28c46e028a64afd0091af150bb4a460d890817271dc69902
+diff-cover==11.0.4 \
+    --hash=sha256:41555d73bc237dc35e42927feb70729dc2fb0a6d2ece8c14cfb10d5f4a48b551 \
+    --hash=sha256:595b03ab755c49bce82c0dd9572e3d3466dd25e32bf19856e8d101991a536921
     # via -r coverage.in
 jinja2==3.1.6 \
     --hash=sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d \
