@@ -108,6 +108,27 @@ Pure function (new class `TestMissingSessionLogLines`, no mocks):
 7. Write failure: monkeypatch `mcp_coder.cli.commands.init.write_lf_text` to
    raise `PermissionError` → exit 1, warning `Failed to add session log entries`,
    `create_default_config` still called.
+8. Hint from this block alone: pre-create `.mcp-file-access` with
+   `file_access_template()` (from `init_file_access`) and a `.gitignore` with
+   `GITIGNORE_ENTRY` (from `workflows/vscodeclaude/templates.py`) plus
+   `.scratch/\n`, no session-log lines → OUTPUT log has
+   `Gitignore: /.mcp-coder/*, /logs/ added`, `Gitignore: 0 entries added`,
+   `File access rules: unchanged`, `Gitignore: .scratch/ present` and
+   `Commit .gitignore and .mcp-file-access`; exit 0.
+9. Independent of `.mcp-file-access` skip reasons: pre-create an invalid
+   `.mcp-file-access` (e.g. `bogus /x\n`) → OUTPUT log has
+   `Gitignore: .scratch/ skipped (rules file invalid)`, and `.gitignore` still
+   contains `/.mcp-coder/*` and `/logs/` as lines.
+
+Writer directly (`_write_session_log_entries(tmp_path)`, no `execute_init`, so
+no other writer touches the file first):
+
+10. BOM, CRLF, no trailing newline: `.gitignore` bytes
+    `b"\xef\xbb\xbf.mcp-coder/\r\n*.pyc"` → returns `(True, True)`; the file
+    bytes start with the original bytes unchanged, followed exactly by
+    `b"\n\n# mcp-coder session logs\n/logs/\n"` (so `.mcp-coder/` is detected
+    despite the BOM, `/.mcp-coder/*` is not added, the appended part has no
+    `\r\n`, and the block starts on its own line, not joined to `*.pyc`).
 
 Extend existing tests:
 
