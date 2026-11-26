@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Documentation — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: update `docs/repository-setup/repo.md`, `docs/cli-reference.md`, `docs/repository-setup/README.md`
-- [ ] Quality checks (pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `docs/repository-setup/repo.md`, `docs/cli-reference.md`, `docs/repository-setup/README.md`
+- [x] Quality checks (pytest) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

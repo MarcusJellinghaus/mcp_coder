@@ -118,7 +118,7 @@ Full setup checklist: [Repository Setup](repository-setup/README.md).
 
 ### init
 
-Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, add the VSCodeClaude entries to the project's `.gitignore`, and set up the `.mcp-file-access` rules file with `.scratch/` gitignored.
+Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, add the VSCodeClaude entries to the project's `.gitignore`, gitignore its session logs (`/.mcp-coder/*`, `/logs/`), and set up the `.mcp-file-access` rules file with `.scratch/` gitignored.
 
 ```bash
 mcp-coder init [--project-dir PATH] [--just-skills]
@@ -128,7 +128,7 @@ mcp-coder init [--project-dir PATH] [--just-skills]
 
 **Toolkit:** before deploying, init reads `[tool.mcp-coder.toolkit]`. With `mcp-tools-py` everything is deployed. With any other toolkit, `knowledge_base/python.md` is skipped and a reminder to adapt the generic files is printed ([Adapting Deployed Files](repository-setup/README.md#adapting-deployed-files-non-python-repos)). A missing or invalid table is logged as a warning with the config error, then handled as for another toolkit; the toolkit never makes init fail.
 
-The `.gitignore` step runs in both modes and is idempotent. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails.
+The `.gitignore` step runs in both modes and is idempotent. It adds the VSCodeClaude entries, then the session-log lines in a `# mcp-coder session logs` block, each time only those missing. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails. Report line for the session logs: `Gitignore: /.mcp-coder/*, /logs/ added | present` (`added` lists only the lines added).
 
 Also in both modes, init creates or completes the mcp-workspace rules file `.mcp-file-access` and then gitignores `.scratch/`:
 
