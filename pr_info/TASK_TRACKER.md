@@ -21,6 +21,49 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shim `mcp_coder.utils.fs` + import-linter, CLAUDE.md, architecture doc
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Rename `write_lf_text` → `write_repo_text` (pure refactor)
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `write_repo_text` follows the aligned line-ending policy
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `update_gitignore` writes via `write_repo_text`
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `persist.py` chooses its newline via `dominant_newline`
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: `is_outside_project_dir` delegates to `check_path_within`
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the plan and fix any findings
+- [ ] PR summary prepared (include the behaviour changes listed in summary.md)
