@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `project-config.md`, move prompts docs, fix `config.md`, index and root README
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (check #1466 precondition; create `docs/configuration/project-config.md`; move prompts text out of `python.md`; update `config.md`, `docs/README.md`, root `README.md`, prompt links in `cli-reference.md` and `toolkit-interface.md`)
+- [ ] Quality checks (pytest `tests/docs`, pylint, mypy, anchor search) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add step-to-request table, fix grant/verify/formatting statements
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (`toolkits.md` step-to-request table, stale rules and npm example; `toolkit-interface.md`; `cli-reference.md` rebase and verify; `architecture.md`)
+- [ ] Quality checks (pytest `tests/docs`, pylint, mypy, phrase/anchor search) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Add Non-Python Repos section, fix `repository-setup/README.md` verify text, final sweep
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (`## Non-Python Repos` section, move adapting-deployed-files heading under it, `mcp-coder.toml` row, Testing Your Setup step 0; final anchor and phrase sweep)
+- [ ] Quality checks (full unit pytest, pylint, mypy) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `pr_info/steps/summary.md`
+- [ ] PR summary prepared
