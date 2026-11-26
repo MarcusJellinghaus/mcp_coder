@@ -67,6 +67,36 @@ def load_toml(path: Path, *, strict: bool = False) -> dict[str, Any]:
         return {}
 
 
+def mcp_coder_section(
+    data: dict[str, Any], label: str, table: str | None = None
+) -> dict[str, Any]:
+    """Return [tool.mcp-coder] (or [tool.mcp-coder.<table>]) of parsed TOML data.
+
+    Args:
+        data: Parsed TOML data.
+        label: Names the file in error messages.
+        table: Optional table name below [tool.mcp-coder].
+
+    Returns:
+        The innermost table; an empty dict when a level is missing.
+
+    Raises:
+        ValueError: If 'tool', 'mcp-coder' or *table* is present but not a
+            table. Plain ValueError, not TomlReadError: the file itself parsed.
+    """
+    keys = ("tool", "mcp-coder") + ((table,) if table else ())
+    section = data
+    for key in keys:
+        value = section.get(key, {})
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"Invalid {key!r} in {label}: expected a table, "
+                f"got {type(value).__name__}: {value!r}"
+            )
+        section = value
+    return section
+
+
 def find_mcp_coder_table(project_dir: Path, table: str) -> tuple[str, Any] | None:
     """Return (file name, raw value) of [tool.mcp-coder.<table>], or None.
 
@@ -87,14 +117,9 @@ def find_mcp_coder_table(project_dir: Path, table: str) -> tuple[str, Any] | Non
     """
     found: dict[str, Any] = {}
     for file_name in MCP_CODER_CONFIG_FILES:
-        data: Any = load_toml(project_dir / file_name, strict=True)
-        for key in ("tool", "mcp-coder"):
-            data = data.get(key, {})
-            if not isinstance(data, dict):
-                raise ValueError(
-                    f"Invalid {key!r} in {file_name}: expected a table, "
-                    f"got {type(data).__name__}: {data!r}"
-                )
+        data = mcp_coder_section(
+            load_toml(project_dir / file_name, strict=True), file_name
+        )
         value = data.get(table)
         if value is not None:
             found[file_name] = value

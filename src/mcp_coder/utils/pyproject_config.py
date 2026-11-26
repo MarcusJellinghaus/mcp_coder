@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..config.toml_utils import find_mcp_coder_table_lenient, load_toml
+from ..config.toml_utils import (
+    find_mcp_coder_table_lenient,
+    load_toml,
+    mcp_coder_section,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +57,34 @@ def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any
             read or parsed. The message names the file.
     """  # noqa: DOC502 - raised by load_toml, part of this contract
     return load_toml(project_dir / "pyproject.toml", strict=strict)
+
+
+def _pyproject_section(
+    project_dir: Path, table: str, *, strict: bool = False
+) -> dict[str, Any]:
+    """Return [tool.mcp-coder.<table>] of pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+        table: Name of the table below [tool.mcp-coder].
+        strict: Raise on a malformed file or a non-table level instead of
+            returning an empty dict.
+
+    Returns:
+        The table; an empty dict when the file or a level is absent (or,
+        when strict is False, malformed or not a table — without logging).
+
+    Raises:
+        TomlReadError: If strict and the file is malformed or unreadable.
+        ValueError: If strict and 'tool', 'mcp-coder' or *table* is not a table.
+    """  # noqa: DOC502 - raised by _load_pyproject / mcp_coder_section
+    data = _load_pyproject(project_dir, strict=strict)
+    try:
+        return mcp_coder_section(data, str(project_dir / "pyproject.toml"), table)
+    except ValueError:
+        if strict:
+            raise
+        return {}
 
 
 def get_prompts_config(project_dir: Path) -> PromptsConfig:
@@ -136,11 +168,11 @@ def has_legacy_format_code_key(project_dir: Path) -> bool:
         project_dir: Path to directory containing pyproject.toml.
 
     Returns:
-        True if [tool.mcp-coder.implement] format_code is present.
+        True if [tool.mcp-coder.implement] format_code is present. A
+        non-table tool / mcp-coder / implement counts as absent, so a string
+        or list implement is not the legacy key.
     """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
-    return "format_code" in section
+    return "format_code" in _pyproject_section(project_dir, "implement")
 
 
 def get_leftover_check_type_hints(project_dir: Path) -> Any | None:
@@ -151,11 +183,10 @@ def get_leftover_check_type_hints(project_dir: Path) -> Any | None:
 
     Returns:
         The raw TOML value, or None when the key, section or file is absent
-        (or the file is malformed). TOML has no null, so None means absent.
+        (or the file is malformed, or tool / mcp-coder / implement is not a
+        table). TOML has no null, so None means absent.
     """
-    data = _load_pyproject(project_dir)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
-    return section.get("check_type_hints")
+    return _pyproject_section(project_dir, "implement").get("check_type_hints")
 
 
 def _require_spec_list(path: Path, key: str, value: Any) -> list[str]:
@@ -195,10 +226,14 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
         ValueError: If either key is declared as something other than a list
             of strings. The installer concatenates these onto a uv argv, so a
             wrong type would otherwise surface as a TypeError mid-install.
-    """  # noqa: DOC502 - raised by _require_spec_list, part of this contract
-    data = _load_pyproject(project_dir)
-    gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
+            Also if 'tool', 'mcp-coder' or 'install-from-github' is not a
+            table; the message names the file and the key. A malformed
+            file gives the defaults instead.
+    """  # noqa: DOC502 - raised by mcp_coder_section / _require_spec_list
     path = project_dir / "pyproject.toml"
+    gh = mcp_coder_section(
+        _load_pyproject(project_dir), str(path), "install-from-github"
+    )
     return GitHubInstallConfig(
         packages=_require_spec_list(path, "packages", gh.get("packages", [])),
         packages_no_deps=_require_spec_list(
@@ -212,21 +247,23 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None
 
     Args:
         project_dir: Path to directory containing pyproject.toml.
-        strict: Propagate the ValueError _load_pyproject raises for a
-            malformed pyproject.toml, and reject a non-string extras value,
-            instead of returning None.
+        strict: Propagate the error for a malformed pyproject.toml or a
+            non-table tool / mcp-coder / install, and reject a non-string
+            extras value, instead of returning None.
 
     Returns:
         The declared extras string, unparsed (e.g. "dev,mlflow"), or None when
-        the file, section or key is absent. An explicit empty string is
-        returned as "" — the caller distinguishes it from "not declared".
+        the file, section or key is absent (or, when strict is False, the
+        file is malformed or a level is not a table). An explicit empty
+        string is returned as "" — the caller distinguishes it from "not
+        declared".
 
     Raises:
         ValueError: If strict is True and extras is declared as something
-            other than a string. The message names the file and the value.
+            other than a string, or 'tool', 'mcp-coder' or 'install' is not
+            a table. The message names the file and the key or value.
     """
-    data = _load_pyproject(project_dir, strict=strict)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    section = _pyproject_section(project_dir, "install", strict=strict)
     extras: Any = section.get("extras")
     if extras is None or isinstance(extras, str):
         return extras
@@ -250,22 +287,23 @@ def get_post_install_checks(
 
     Args:
         project_dir: Path to directory containing pyproject.toml.
-        strict: Propagate the ValueError _load_pyproject raises for a
-            malformed pyproject.toml, and reject a malformed
+        strict: Propagate the error for a malformed pyproject.toml or a
+            non-table tool / mcp-coder / install, and reject a malformed
             post_install_checks value, instead of returning ().
 
     Returns:
         The declared checks as a tuple of argv tuples, in declaration order.
-        () when the file, section or key is absent, the value is [], or the
-        value is malformed and strict is False.
+        () when the file, section or key is absent, the value is [], or —
+        when strict is False — the file or value is malformed or a level is
+        not a table.
 
     Raises:
         ValueError: If strict is True and post_install_checks is not a list
-            of non-empty lists of strings. The message names the file and
-            the value.
+            of non-empty lists of strings, or 'tool', 'mcp-coder' or
+            'install' is not a table. The message names the file and the key
+            or value.
     """
-    data = _load_pyproject(project_dir, strict=strict)
-    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    section = _pyproject_section(project_dir, "install", strict=strict)
     value: Any = section.get("post_install_checks")
     if value is None:
         return ()

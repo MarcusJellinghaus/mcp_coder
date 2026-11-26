@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.config.toml_utils import TomlReadError
 from mcp_coder.utils.pyproject_config import (
     FormatCodeSetting,
     _load_pyproject,
@@ -378,6 +379,40 @@ class TestHasLegacyFormatCodeKey:
         assert has_legacy_format_code_key(tmp_path) is False
 
 
+_NON_TABLE_IMPLEMENT = [
+    pytest.param("tool = 1\n", id="tool_int"),
+    pytest.param("[tool]\nmcp-coder = 1\n", id="mcp_coder_int"),
+    pytest.param("[tool.mcp-coder]\nimplement = 1\n", id="implement_int"),
+    pytest.param('[tool.mcp-coder]\nimplement = "format_code"\n', id="implement_str"),
+    pytest.param(
+        '[tool.mcp-coder]\nimplement = ["format_code"]\n', id="implement_list"
+    ),
+]
+
+
+@pytest.mark.parametrize("content", _NON_TABLE_IMPLEMENT)
+class TestNonTableImplement:
+    """A non-table tool / mcp-coder / implement counts as absent, silently."""
+
+    def test_has_legacy_format_code_key_is_false(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, content: str
+    ) -> None:
+        """No crash and no false positive from a string or list implement."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert has_legacy_format_code_key(tmp_path) is False
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+    def test_leftover_check_type_hints_is_none(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, content: str
+    ) -> None:
+        """No crash; the retired key reads as absent."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert get_leftover_check_type_hints(tmp_path) is None
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+
 class TestLoadPyproject:
     """Tests for the shared _load_pyproject loader."""
 
@@ -595,3 +630,111 @@ class TestMalformedTomlRegression:
         """get_leftover_check_type_hints does not raise on malformed TOML."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
         assert get_leftover_check_type_hints(tmp_path) is None
+
+    def test_legacy_format_code_key_returns_false(self, tmp_path: Path) -> None:
+        """has_legacy_format_code_key does not raise on malformed TOML."""
+        (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        assert has_legacy_format_code_key(tmp_path) is False
+
+    def test_post_install_checks_returns_empty_lax(self, tmp_path: Path) -> None:
+        """get_post_install_checks does not raise on malformed TOML when lax."""
+        (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        assert get_post_install_checks(tmp_path) == ()
+
+    def test_post_install_checks_raises_toml_read_error_strict(
+        self, tmp_path: Path
+    ) -> None:
+        """Strict get_post_install_checks raises TomlReadError on malformed TOML."""
+        (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        with pytest.raises(TomlReadError):
+            get_post_install_checks(tmp_path, strict=True)
+
+    def test_install_extras_raises_toml_read_error_strict(self, tmp_path: Path) -> None:
+        """Strict get_install_extras raises TomlReadError on malformed TOML."""
+        (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
+        with pytest.raises(TomlReadError):
+            get_install_extras(tmp_path, strict=True)
+
+
+_NON_TABLE_INSTALL = [
+    pytest.param("tool = 1\n", "'tool'", id="tool_int"),
+    pytest.param("[tool]\nmcp-coder = 1\n", "'mcp-coder'", id="mcp_coder_int"),
+    pytest.param("[tool.mcp-coder]\ninstall = 1\n", "'install'", id="install_int"),
+]
+
+
+@pytest.mark.parametrize(("content", "key"), _NON_TABLE_INSTALL)
+class TestNonTableInstall:
+    """A non-table tool / mcp-coder / install: absent when lax, error when strict."""
+
+    def test_install_extras_lax_is_none(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        content: str,
+        key: str,  # pylint: disable=unused-argument
+    ) -> None:
+        """Lax callers read no extras, without a warning."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert get_install_extras(tmp_path) is None
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+    def test_post_install_checks_lax_is_empty(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        content: str,
+        key: str,  # pylint: disable=unused-argument
+    ) -> None:
+        """Lax callers read no checks, without a warning."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            assert get_post_install_checks(tmp_path) == ()
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+    def test_install_extras_strict_raises(
+        self, tmp_path: Path, content: str, key: str
+    ) -> None:
+        """Strict get_install_extras names the file and the non-table key."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with pytest.raises(ValueError) as exc_info:
+            get_install_extras(tmp_path, strict=True)
+        message = str(exc_info.value)
+        assert str(tmp_path / "pyproject.toml") in message
+        assert key in message
+
+    def test_post_install_checks_strict_raises(
+        self, tmp_path: Path, content: str, key: str
+    ) -> None:
+        """Strict get_post_install_checks names the file and the non-table key."""
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+        with pytest.raises(ValueError) as exc_info:
+            get_post_install_checks(tmp_path, strict=True)
+        message = str(exc_info.value)
+        assert str(tmp_path / "pyproject.toml") in message
+        assert key in message
+
+
+_NON_TABLE_GITHUB = [
+    pytest.param("tool = 1\n", "'tool'", id="tool_int"),
+    pytest.param("[tool]\nmcp-coder = 1\n", "'mcp-coder'", id="mcp_coder_int"),
+    pytest.param(
+        "[tool.mcp-coder]\ninstall-from-github = 1\n",
+        "'install-from-github'",
+        id="install_from_github_int",
+    ),
+]
+
+
+@pytest.mark.parametrize(("content", "key"), _NON_TABLE_GITHUB)
+def test_github_install_config_non_table_raises(
+    tmp_path: Path, content: str, key: str
+) -> None:
+    """A non-table level raises a ValueError naming the file and the key."""
+    (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+    with pytest.raises(ValueError) as exc_info:
+        get_github_install_config(tmp_path)
+    message = str(exc_info.value)
+    assert str(tmp_path / "pyproject.toml") in message
+    assert key in message

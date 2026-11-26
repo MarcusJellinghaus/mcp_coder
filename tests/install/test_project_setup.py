@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.install import InstallConfig
 from mcp_coder.install.project_setup import SetupError, run_setup
 from mcp_coder.utils.mcp_verification import get_bin_dir
 from mcp_coder.utils.setup_config import DEFAULT_STEP_TIMEOUT, SetupConfig, SetupStep
@@ -219,6 +220,26 @@ class TestPythonBuiltin:
         with pytest.raises(SetupError, match="bad pyproject"):
             _run(tmp_path)
         mocks.install.assert_not_called()
+
+    def test_non_table_install_becomes_setup_error(
+        self, mocks: Mocks, tmp_path: Path
+    ) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder]\ninstall = 1\n", encoding="utf-8"
+        )
+        mocks.set_steps(_PYTHON)
+        mocks.install_config.from_args.side_effect = InstallConfig.from_args
+        with pytest.raises(SetupError, match="'install'"):
+            _run(tmp_path)
+        mocks.install.assert_not_called()
+
+    def test_install_value_error_becomes_setup_error(
+        self, mocks: Mocks, tmp_path: Path
+    ) -> None:
+        mocks.set_steps(_PYTHON)
+        mocks.install.side_effect = ValueError("bad overrides")
+        with pytest.raises(SetupError, match="bad overrides"):
+            _run(tmp_path)
 
     def test_later_steps_get_venv(
         self, mocks: Mocks, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

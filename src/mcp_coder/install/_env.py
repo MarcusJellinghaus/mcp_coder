@@ -84,8 +84,9 @@ class InstallConfig:
             ValueError: If ``--source local`` was passed without
                 ``--local-path``, if ``--use-sync`` was combined with a
                 target that differs from ``--local-path``, if the target
-                project's pyproject.toml exists but cannot be parsed, or if
-                its ``post_install_checks`` value is malformed.
+                project's pyproject.toml exists but cannot be parsed, if
+                its ``tool``, ``mcp-coder`` or ``install`` is not a table,
+                or if its ``post_install_checks`` value is malformed.
         """
         if args.source == "local" and args.local_path is None:
             raise ValueError("--source local requires --local-path")

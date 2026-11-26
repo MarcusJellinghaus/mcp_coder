@@ -2,16 +2,69 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from mcp_coder.config.toml_utils import find_mcp_coder_table_lenient
+from mcp_coder.config.toml_utils import (
+    TomlReadError,
+    find_mcp_coder_table_lenient,
+    mcp_coder_section,
+)
 
 _LOGGER = "mcp_coder.config.toml_utils"
 
 
 def _write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
+
+
+class TestMcpCoderSection:
+    """mcp_coder_section walks tool -> mcp-coder (-> table) with type checks."""
+
+    @pytest.mark.parametrize(
+        ("data", "table"),
+        [
+            ({}, None),
+            ({}, "install"),
+            ({"tool": {}}, None),
+            ({"tool": {"other": 1}}, "install"),
+            ({"tool": {"mcp-coder": {}}}, "install"),
+            ({"tool": {"mcp-coder": {"extras": "dev"}}}, "install"),
+        ],
+    )
+    def test_missing_level_is_empty(
+        self, data: dict[str, Any], table: str | None
+    ) -> None:
+        assert mcp_coder_section(data, "pyproject.toml", table) == {}
+
+    def test_returns_mcp_coder_table_without_table_arg(self) -> None:
+        data = {"tool": {"mcp-coder": {"format_code": False}}}
+        assert mcp_coder_section(data, "pyproject.toml") == {"format_code": False}
+
+    def test_returns_valid_table(self) -> None:
+        data = {"tool": {"mcp-coder": {"install": {"extras": "dev"}}}}
+        assert mcp_coder_section(data, "pyproject.toml", "install") == {"extras": "dev"}
+
+    @pytest.mark.parametrize(
+        ("data", "table", "key"),
+        [
+            ({"tool": 1}, None, "tool"),
+            ({"tool": {"mcp-coder": 1}}, None, "mcp-coder"),
+            ({"tool": {"mcp-coder": {"install": "x"}}}, "install", "install"),
+        ],
+    )
+    def test_non_table_level_raises_value_error(
+        self, data: dict[str, Any], table: str | None, key: str
+    ) -> None:
+        label = "/some/dir/pyproject.toml"
+        with pytest.raises(ValueError) as exc_info:
+            mcp_coder_section(data, label, table)
+        assert not isinstance(exc_info.value, TomlReadError)
+        message = str(exc_info.value)
+        assert label in message
+        assert f"'{key}'" in message
+        assert "expected a table" in message
 
 
 class TestFindMcpCoderTableLenient:

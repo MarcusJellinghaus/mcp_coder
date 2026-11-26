@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from mcp_coder.cli.commands.install import execute_install
 from mcp_coder.cli.main import create_parser, main
@@ -119,16 +122,42 @@ class TestExecuteInstall:
         )
         assert execute_install(args) == 1
 
-    def test_invalid_target_pyproject_returns_one(self, tmp_path: Path) -> None:
-        """A pyproject.toml rejected inside a phase is exit 1, not a crash.
+    @pytest.mark.parametrize(
+        ("content", "key"),
+        [
+            pytest.param(
+                '[tool.mcp-coder.install-from-github]\npackages = "pkg-a"\n',
+                "packages",
+                id="packages_str",
+            ),
+            pytest.param("tool = 1\n", "'tool'", id="tool_int"),
+            pytest.param("[tool]\nmcp-coder = 1\n", "'mcp-coder'", id="mcp_coder_int"),
+            pytest.param(
+                "[tool.mcp-coder]\ninstall = 1\n", "'install'", id="install_int"
+            ),
+            pytest.param(
+                "[tool.mcp-coder]\ninstall-from-github = 1\n",
+                "'install-from-github'",
+                id="install_from_github_int",
+            ),
+        ],
+    )
+    def test_invalid_target_pyproject_returns_one(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        content: str,
+        key: str,
+    ) -> None:
+        """A rejected pyproject.toml is exit 1 with a logged error, not a crash.
 
         Runs with ``--check`` and a stubbed uv lookup, so no subprocess is
-        spawned: the failure comes from ``phase_overrides``' config read.
+        spawned. The ``tool = 1``, ``mcp-coder = 1`` and ``install = 1`` cases
+        fail in ``InstallConfig.from_args`` (``get_install_extras(strict=True)``);
+        the ``packages`` and ``install-from-github`` cases fail in
+        ``phase_overrides``' config read.
         """
-        (tmp_path / "pyproject.toml").write_text(
-            '[tool.mcp-coder.install-from-github]\npackages = "pkg-a"\n',
-            encoding="utf-8",
-        )
+        (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
         args = create_parser().parse_args(
             [
                 "install",
@@ -141,5 +170,13 @@ class TestExecuteInstall:
             ]
         )
 
-        with patch("mcp_coder.install.ensure_system_uv", return_value="/stub/bin/uv"):
+        with (
+            patch("mcp_coder.install.ensure_system_uv", return_value="/stub/bin/uv"),
+            caplog.at_level(logging.ERROR),
+        ):
             assert execute_install(args) == 1
+        errors = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
+        assert any(
+            str(tmp_path / "pyproject.toml") in message and key in message
+            for message in errors
+        ), errors

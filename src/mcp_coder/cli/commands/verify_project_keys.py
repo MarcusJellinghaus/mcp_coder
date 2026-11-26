@@ -52,14 +52,12 @@ def _with_hint(message: str, section: str, key: str, known: list[str]) -> str:
 def _classify(file_name: str, key: str, value: Any) -> list[KeyWarning]:
     """Return the warnings for one key of [tool.mcp-coder] in *file_name*."""
     if key == "implement":
-        if file_name != "pyproject.toml":
+        if file_name != "pyproject.toml" or not isinstance(value, dict):
             return [
                 KeyWarning(
                     "PROJECT", file_name, f"[{_TOP}.implement] is retired and ignored"
                 )
             ]
-        if not isinstance(value, dict):
-            return []
         return [
             KeyWarning(
                 "PROJECT", file_name, f"[{_TOP}.implement] {k} is retired and ignored"
@@ -75,6 +73,8 @@ def _classify(file_name: str, key: str, value: Any) -> list[KeyWarning]:
                 f"[{_TOP}.{key}] is Python-only; ignored in {file_name}",
             )
         ]
+    if key in _PYTHON_ONLY and not isinstance(value, dict):
+        return [KeyWarning("PROJECT", file_name, f"[{_TOP}.{key}] is not a table")]
     if key not in _SCHEMA:
         message = _with_hint(
             f"unknown key [{_TOP}] {key}", _TOP, key, [*_SCHEMA, "implement"]
