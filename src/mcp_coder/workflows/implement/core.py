@@ -12,7 +12,11 @@ from pathlib import Path
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMAuthError, LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
+from mcp_coder.mcp_workspace_git import (
+    get_current_branch_name,
+    get_full_status,
+    get_latest_commit_sha,
+)
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
@@ -366,6 +370,8 @@ def run_implement_workflow(
                     provider=provider,
                     mcp_config=mcp_config,
                     settings_file=settings_file,
+                    # Wait for the run of the commit just pushed, not the newest run.
+                    expected_sha=get_latest_commit_sha(project_dir),
                 )
             except (LLMAuthError, LLMTimeoutError, McpServersUnavailableError) as exc:
                 # Fallback keeps mypy happy; the reason is non-None for these types.

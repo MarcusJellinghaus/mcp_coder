@@ -257,6 +257,10 @@ _._stub_branch_head
 # tests/workflows/implement/conftest.py - Autouse fixture stubbing the per-task checks
 _._stub_task_checks
 
+# tests/workflows/implement/conftest.py - Autouse fixture stubbing core's
+# get_latest_commit_sha so step 5.6 never reads real git
+_._stub_head_sha
+
 # tests/workflows/implement/test_core_workflow.py - Autouse fixture stubbing the final check
 _._stub_final_check
 
