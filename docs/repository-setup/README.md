@@ -48,6 +48,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - **Setup commands** must be lockfile-frozen: [Changed files](../configuration/setup.md#changed-files).
 - **Exit codes.** `npm run` passes a script's exit code on unchanged, also across `&&`. Tools that exit with a count need a range: [`exit_codes`](../configuration/toolkits.md#defaults) and the dependency-cruiser note in [Step fields](../configuration/toolkits.md#step-fields).
 - **JUnit reports:** [npm example](../configuration/toolkits.md#npm).
+- **Deployed skills:** adapt them to your stack: [Adapting Deployed Files](#adapting-deployed-files-non-python-repos).
 
 ### Adapting Deployed Files (Non-Python Repos)
 
