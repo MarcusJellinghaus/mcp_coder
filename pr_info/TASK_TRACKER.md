@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: blank lines in `TASK_TRACKER_TEMPLATE`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Linux create-plan and review-plan templates run `mcp-coder setup`
 See [step_4.md](./steps/step_4.md)
