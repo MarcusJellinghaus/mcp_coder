@@ -20,7 +20,6 @@ def _make_namespace(
     init: bool = False,
     validate: bool = False,
     all_ops: bool = False,
-    config: str | None = None,
     generate_github_actions: bool = False,
 ) -> argparse.Namespace:
     """Build an argparse.Namespace with all define-labels flags."""
@@ -30,7 +29,6 @@ def _make_namespace(
         init=init,
         validate=validate,
         all=all_ops,
-        config=config,
         generate_github_actions=generate_github_actions,
     )
 

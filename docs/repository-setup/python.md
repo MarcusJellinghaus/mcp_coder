@@ -24,13 +24,12 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
 | `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__mcp-tools-py__run_pylint_check`, pylint CLI | Pylint config |
 | `[tool.ruff]` / `[tool.ruff.lint]` | `tools/ruff_check.sh` / `.bat`, `mcp__mcp-tools-py__run_format_code` | Ruff lint + format config |
-| `[tool.mcp-coder] labels-config` | mcp-coder (`gh-tool define-labels` and other label commands) | Path to a custom `labels.json`, relative to the project root. Without it, the bundled labels are used. See [Label Setup](../getting-started/label-setup.md) |
 | `[tool.mcp-coder.install]` | mcp-coder install process (`pyproject_config.py`) | `extras`, `post_install_checks` |
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
 | `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
 | [`[tool.mcp-coder.toolkit]`](../configuration/toolkits.md) | mcp-coder (`utils/toolkit_runner.py`) | Toolkit selection (`toolkit`, required — `"mcp-tools-py"` for Python), workflow `bindings` and action `params`. In `pyproject.toml`, else a root `mcp-coder.toml` |
 
-**mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads the `[tool.mcp-coder]` rows above (`format_code`, the leftover `implement` key, `install`, `install-from-github`, `prompts`). Label configuration (`labels-config`) is read by [`config/label_config.py`](../../src/mcp_coder/config/label_config.py).
+**mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads the `[tool.mcp-coder]` rows above (`format_code`, the leftover `implement` key, `install`, `install-from-github`, `prompts`).
 
 **Formatting requires a declared formatter.** mcp-coder formats through mcp-tools-py's resolution, the same one the `run_format_code` MCP tool uses: `[tool.mcp-tools-py] formatter`, else `[tool.ruff.format]` vs `[tool.black]`. A `pyproject.toml` that declares a formatter is required — with none, or with both tables and no `formatter` key, every formatting entry point fails before any LLM call. Set `[tool.mcp-coder] format_code = false` to skip formatting instead. `mcp-coder verify` shows the toolkit's `formatter` item and its other tool items under the Toolkit row. The old `[tool.mcp-coder.implement] format_code` key is no longer read; `verify` flags it as `[ERR]`.
 

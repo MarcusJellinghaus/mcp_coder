@@ -51,7 +51,7 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
 
 ## 4. Solution Strategy
 
-- **Label-driven state machine.** The issue's `status-NN:*` label is the only workflow state. It selects the workflow to run; the workflow moves the label on success or failure, so no local state decides what happens next. Labels are defined in `src/mcp_coder/config/labels.json` (overridable per repo) and synced with `mcp-coder gh-tool define-labels`. That file also marks which labels are promotable by `/approve` and which are failures. Three families:
+- **Label-driven state machine.** The issue's `status-NN:*` label is the only workflow state. It selects the workflow to run; the workflow moves the label on success or failure, so no local state decides what happens next. Labels are defined in `src/mcp_coder/config/labels.json` and synced with `mcp-coder gh-tool define-labels`. That file also marks which labels are promotable by `/approve` and which are failures. Three families:
   - **Main flow (01-10):** created → planning → implementing → PR created, with in-progress labels (03, 06, 09) and `f` failure variants.
   - **Optional bot review (14, 17):** used only when automated review is enabled.
   - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every run while the executor job has capacity and routes conflicts, failing CI, code-scanning alerts and review comments back to a workflow or a human.

@@ -32,76 +32,9 @@ For the permissions the token needs, see [GitHub Token Configuration](../reposit
 
 ## Label Configuration
 
-The `gh-tool define-labels` command uses a three-level configuration resolution to determine which labels to create.
-
-### Configuration Priority
-
-1. **Explicit CLI flag** (highest priority):
-   ```bash
-   mcp-coder gh-tool define-labels --config path/to/labels.json
-   ```
-
-2. **pyproject.toml setting**:
-   ```toml
-   [tool.mcp-coder]
-   labels-config = "config/labels.json"
-   ```
-   Path is relative to the project root.
-
-3. **Bundled package defaults** (fallback):
-   ```
-   mcp_coder/config/labels.json
-   ```
-   Used when no custom config is specified. Provides sensible defaults.
-
-### Configuration File Format
-
-The `labels.json` file contains an array of label definitions:
-
-```json
-[
-  {
-    "name": "status-01:created",
-    "color": "d4c5f9",
-    "description": "Issue created, awaiting triage"
-  },
-  {
-    "name": "status-02:awaiting-planning",
-    "color": "c5def5",
-    "description": "Ready for planning phase"
-  }
-]
-```
-
-Each label requires:
-- `name`: The label name (string)
-- `color`: Hex color code without the `#` prefix (string)
-- `description`: Brief description of the label's purpose (string)
-
-Optional metadata fields:
-- `default`: Set to `true` on exactly one label — this label is assigned to new issues without a status label (e.g., `status-01:created`)
-- `promotable`: Set to `true` on labels eligible for `/approve` promotion. The promotion target is the next label in the `workflow_labels` list.
-- `failure`: Set to `true` on failure-state labels. A `promotable` label cannot promote into a `failure` label.
-
-### Customizing Labels
-
-To use custom labels for your project:
-
-1. Copy the bundled config as a starting point:
-   ```bash
-   python -c "from mcp_coder.utils.github_operations.label_config import get_labels_config_path; print(get_labels_config_path(None))"
-   ```
-
-2. Save your custom `labels.json` and point to it via `pyproject.toml`:
-   ```toml
-   [tool.mcp-coder]
-   labels-config = "config/labels.json"
-   ```
-
-3. Preview changes before applying:
-   ```bash
-   mcp-coder gh-tool define-labels --dry-run
-   ```
+The workflow labels come from the bundled `labels.json` that ships with mcp-coder. For the
+fields of a label (`default`, `promotable`, `failure`, categories, timeouts), see
+[`labels_schema.md`](../../src/mcp_coder/config/labels_schema.md).
 
 ## Using the define-labels Command
 
@@ -123,7 +56,6 @@ mcp-coder gh-tool define-labels
 | `--dry-run` | Preview changes without applying them |
 | `--init` | Assign the default label to open issues without a status label |
 | `--validate` | Check all open issues for errors and warnings |
-| `--config PATH` | Path to labels config file (overrides pyproject.toml / mcp-coder.toml and bundled defaults) |
 | `--generate-github-actions` | Write `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` |
 | `--all` | Enable all optional operations (`--init --validate --generate-github-actions`) |
 
@@ -138,9 +70,6 @@ mcp-coder gh-tool define-labels --init
 
 # Validate issues for errors/warnings
 mcp-coder gh-tool define-labels --validate
-
-# Use a custom config file
-mcp-coder gh-tool define-labels --config config/labels.json
 
 # Generate GitHub Actions workflow files from config
 mcp-coder gh-tool define-labels --generate-github-actions
@@ -163,11 +92,11 @@ The command shows:
 
 To automate label management, set up these GitHub Actions in your repository.
 
-> **Tip:** You can generate these workflow files automatically from your label config:
+> **Tip:** You can generate these workflow files automatically from the bundled labels:
 > ```bash
 > mcp-coder gh-tool define-labels --generate-github-actions
 > ```
-> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on the `default` and `promotable` fields in your labels config.
+> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on the `default` and `promotable` fields in the bundled labels.
 
 > Existing repositories: re-run `mcp-coder gh-tool define-labels --generate-github-actions` to pick up the `/approve` trust gate, `permissions: {}` and the pinned action.
 
@@ -332,7 +261,7 @@ After a PR is created (`status-10:pr-created`), the Jenkins coordinator checks i
 | `status-99:merged` | PR squash-merged by `auto_merge` (display-only) |
 | `status-99f:merge-failed` | `auto_merge` could not merge (refused, error, failed rebase, failed alert check) — needs a human via `/check_branch_status` |
 
-Successful automated fixes return the issue to `status-10:pr-created`, or — with [`auto_merge`](../configuration/config.md#auto-merge) on — to `status-99` / `status-99f`. A custom `labels-config` must add `merged` and `merge_failed` and re-run `define-labels`; otherwise the label write fails after a successful merge. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
+Successful automated fixes return the issue to `status-10:pr-created`, or — with [`auto_merge`](../configuration/config.md#auto-merge) on — to `status-99` / `status-99f`. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
 
 ### Optional Automated Review Labels
 

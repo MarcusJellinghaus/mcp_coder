@@ -14,14 +14,13 @@ from .verify_formatting import Row
 
 _TOP = "tool.mcp-coder"
 # Settings read from either file; defining one in both files gives the default
-_SETTINGS = ("format_code", "labels-config", "prompts")
+_SETTINGS = ("format_code", "prompts")
 _PYTHON_ONLY = frozenset({"install", "install-from-github"})
 # Legacy implement keys that have their own PROJECT rows
 _LEGACY_IMPLEMENT_KEYS = frozenset({"format_code", "check_type_hints"})
 # key -> known inner keys; None = scalar, or validated elsewhere (toolkit, setup)
 _SCHEMA: dict[str, frozenset[str] | None] = {
     "format_code": None,
-    "labels-config": None,
     "toolkit": None,
     "setup": None,
     "prompts": frozenset(
@@ -30,9 +29,7 @@ _SCHEMA: dict[str, frozenset[str] | None] = {
     "install": frozenset({"extras", "post_install_checks"}),
     "install-from-github": frozenset({"packages", "packages-no-deps"}),
 }
-_UNPARSEABLE = (
-    "cannot be parsed; format_code, labels-config and prompts use their defaults"
-)
+_UNPARSEABLE = "cannot be parsed; format_code and prompts use their defaults"
 
 
 class KeyWarning(NamedTuple):
@@ -64,6 +61,12 @@ def _classify(file_name: str, key: str, value: Any) -> list[KeyWarning]:
             )
             for k in value
             if k not in _LEGACY_IMPLEMENT_KEYS
+        ]
+    if key == "labels-config":
+        return [
+            KeyWarning(
+                "PROJECT", file_name, f"[{_TOP}] labels-config is retired and ignored"
+            )
         ]
     if key in _PYTHON_ONLY and file_name != "pyproject.toml":
         return [

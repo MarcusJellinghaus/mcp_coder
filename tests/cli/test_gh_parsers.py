@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+import pytest
+
 from mcp_coder.cli.main import create_parser
 
 
@@ -18,7 +20,6 @@ class TestDefineLabelsParser:
         args = self._parse("gh-tool", "define-labels")
         assert args.init is False
         assert args.validate is False
-        assert args.config is None
         assert args.generate_github_actions is False
         assert args.all is False
 
@@ -32,12 +33,11 @@ class TestDefineLabelsParser:
         args = self._parse("gh-tool", "define-labels", "--validate")
         assert args.validate is True
 
-    def test_config_flag(self) -> None:
-        """--config path/to/config.json sets args.config."""
-        args = self._parse(
-            "gh-tool", "define-labels", "--config", "path/to/config.json"
-        )
-        assert args.config == "path/to/config.json"
+    def test_config_flag_is_rejected(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """--config is not a define-labels flag."""
+        with pytest.raises(SystemExit):
+            self._parse("gh-tool", "define-labels", "--config", "x")
+        assert "unrecognized arguments" in capsys.readouterr().err
 
     def test_generate_github_actions_flag(self) -> None:
         """--generate-github-actions sets args.generate_github_actions=True."""
@@ -56,13 +56,10 @@ class TestDefineLabelsParser:
             "define-labels",
             "--init",
             "--validate",
-            "--config",
-            "my.json",
             "--generate-github-actions",
             "--all",
         )
         assert args.init is True
         assert args.validate is True
-        assert args.config == "my.json"
         assert args.generate_github_actions is True
         assert args.all is True

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 from textual.app import App, ComposeResult
@@ -43,17 +42,13 @@ def _make_info(
 class _BarApp(App[None]):
     """Minimal host app for BranchInfoBar."""
 
-    def __init__(self, project_dir: Path) -> None:
-        super().__init__()
-        self._project_dir = project_dir
-
     def compose(self) -> ComposeResult:
         """Yield the bar.
 
         Yields:
             BranchInfoBar instance.
         """
-        yield BranchInfoBar(self._project_dir)
+        yield BranchInfoBar()
 
 
 def _zone_texts(bar: BranchInfoBar) -> dict[str, str]:
@@ -89,9 +84,9 @@ def test_format_cache_age_minutes_only() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_renders_placeholder_when_view_none(tmp_path: Path) -> None:
+async def test_renders_placeholder_when_view_none() -> None:
     """update_state(None) renders an ellipsis placeholder."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -104,9 +99,9 @@ async def test_renders_placeholder_when_view_none(tmp_path: Path) -> None:
         assert zones["age"] == "…"
 
 
-async def test_renders_no_git_state(tmp_path: Path) -> None:
+async def test_renders_no_git_state() -> None:
     """A view whose info is_git_repo=False shows '(no git)' + dashes."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -124,9 +119,9 @@ async def test_renders_no_git_state(tmp_path: Path) -> None:
         assert zones["age"] == "—"
 
 
-async def test_renders_no_issue_branch(tmp_path: Path) -> None:
+async def test_renders_no_issue_branch() -> None:
     """Branch without an issue suffix renders '(no issue)'."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -143,9 +138,9 @@ async def test_renders_no_issue_branch(tmp_path: Path) -> None:
         assert zones["pr"] == "—"
 
 
-async def test_renders_full_state_with_status_pill(tmp_path: Path) -> None:
+async def test_renders_full_state_with_status_pill() -> None:
     """A complete view renders branch, issue, PR, and age zones."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -172,9 +167,9 @@ async def test_renders_full_state_with_status_pill(tmp_path: Path) -> None:
         assert "ago)" in zones["age"]
 
 
-async def test_pr_zone_dash_when_toggle_off(tmp_path: Path) -> None:
+async def test_pr_zone_dash_when_toggle_off() -> None:
     """pr_enabled=False renders '—' regardless of pr_number."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -188,9 +183,9 @@ async def test_pr_zone_dash_when_toggle_off(tmp_path: Path) -> None:
         assert _zone_texts(bar)["pr"] == "—"
 
 
-async def test_loading_field_shows_ellipsis(tmp_path: Path) -> None:
+async def test_loading_field_shows_ellipsis() -> None:
     """loading={'issue'|'pr'} renders the matching zone as '…'."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -219,9 +214,9 @@ async def test_loading_field_shows_ellipsis(tmp_path: Path) -> None:
         assert _zone_texts(bar)["pr"] == "…"
 
 
-async def test_failed_field_shows_question(tmp_path: Path) -> None:
+async def test_failed_field_shows_question() -> None:
     """failed={'pr'} renders the PR zone as '?'."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -236,9 +231,9 @@ async def test_failed_field_shows_question(tmp_path: Path) -> None:
         assert _zone_texts(bar)["pr"] == "?"
 
 
-async def test_unknown_status_label_renders_with_default_color(tmp_path: Path) -> None:
+async def test_unknown_status_label_renders_with_default_color() -> None:
     """A status label not present in labels.json renders without crashing."""
-    app = _BarApp(tmp_path)
+    app = _BarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         bar = app.query_one(BranchInfoBar)
@@ -257,7 +252,7 @@ async def test_unknown_status_label_renders_with_default_color(tmp_path: Path) -
         assert "status-99:unknown-label" in _zone_texts(bar)["issue"]
 
 
-async def test_button_press_posts_messages(tmp_path: Path) -> None:
+async def test_button_press_posts_messages() -> None:
     """Each control button posts the matching widget message."""
     captured: list[type] = []
 
@@ -273,7 +268,7 @@ async def test_button_press_posts_messages(tmp_path: Path) -> None:
         def on_branch_info_bar_toggle_pr(self, _: BranchInfoBar.TogglePR) -> None:
             captured.append(BranchInfoBar.TogglePR)
 
-    app = _CapturingBarApp(tmp_path)
+    app = _CapturingBarApp()
     async with app.run_test() as pilot:
         await pilot.pause()
         await pilot.click("#branch-refresh-issue")

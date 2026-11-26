@@ -118,7 +118,7 @@ def update_workflow_label(
                 return False
 
         # Step 4: Load label config and build lookups
-        config_path = get_labels_config_path(issue_manager.project_dir)
+        config_path = get_labels_config_path()
         label_config = load_labels_config(config_path)
         label_lookups = build_label_lookups(label_config)
 

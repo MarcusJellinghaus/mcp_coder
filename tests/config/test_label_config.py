@@ -2,15 +2,13 @@
 
 # ruff: noqa: S324
 
+import inspect
 import json
-import logging
-from importlib.resources.abc import Traversable
 from pathlib import Path
 
 import pytest
 
 from mcp_coder.config.label_config import (
-    _get_labels_config_from_project,
     build_label_lookups,
     get_labels_config_path,
     load_labels_config,
@@ -20,7 +18,7 @@ from mcp_coder.config.label_config import (
 
 def test_load_bundled_labels_config() -> None:
     """Regression test: bundled labels.json is loadable via importlib.resources."""
-    bundled_ref = get_labels_config_path(None)
+    bundled_ref = get_labels_config_path()
     config = load_labels_config(bundled_ref)
 
     assert isinstance(config["workflow_labels"], list)
@@ -95,7 +93,7 @@ def test_bundled_labels_schema_validation() -> None:
     Catches JSON syntax errors, missing required fields, deprecated fields,
     invalid categories, and vscodeclaude sub-object inconsistencies.
     """
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
 
     assert isinstance(config["workflow_labels"], list)
     assert len(config["workflow_labels"]) > 0
@@ -164,7 +162,7 @@ def test_bundled_labels_schema_validation() -> None:
 
 def test_pr_review_comments_label_definition() -> None:
     """status-91:pr-review-comments exists with the expected shape."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         entry
         for entry in config["workflow_labels"]
@@ -180,7 +178,7 @@ def test_pr_review_comments_label_definition() -> None:
 
 def test_pr_review_comments_description_mentions_alerts() -> None:
     """The status-91 description covers code-scanning alerts within the limit."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     validate_labels_config(config)
     label = next(
         entry
@@ -206,7 +204,7 @@ ERROR_STATUS_IDS = [
 @pytest.mark.parametrize("internal_id", ERROR_STATUS_IDS)
 def test_error_statuses_have_vscodeclaude_commands(internal_id: str) -> None:
     """Error statuses must have commands so a Claude session launches."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         entry
         for entry in config["workflow_labels"]
@@ -221,7 +219,7 @@ def test_error_statuses_have_vscodeclaude_commands(internal_id: str) -> None:
 
 def test_pr_created_has_no_commands() -> None:
     """status-10:pr-created intentionally has no commands."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         entry
         for entry in config["workflow_labels"]
@@ -278,7 +276,7 @@ REVIEW_FAILURE_IDS = [
 @pytest.mark.parametrize("internal_id,name,category", REVIEW_LABELS)
 def test_review_labels_present(internal_id: str, name: str, category: str) -> None:
     """Each of the 15 review labels exists with the expected name and category."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         (
             entry
@@ -294,7 +292,7 @@ def test_review_labels_present(internal_id: str, name: str, category: str) -> No
 
 def test_review_labels_mapped_by_lookups() -> None:
     """build_label_lookups maps every new review label id to its name."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     lookups = build_label_lookups(config)
     for internal_id, name, _category in REVIEW_LABELS:
         assert lookups["id_to_name"][internal_id] == name
@@ -304,7 +302,7 @@ def test_review_labels_mapped_by_lookups() -> None:
 
 def test_review_bot_busy_labels_have_stale_timeout() -> None:
     """The two bot_busy review labels carry a positive stale_timeout_minutes."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     for internal_id in ("plan_reviewing", "code_reviewing"):
         label = next(
             entry
@@ -318,7 +316,7 @@ def test_review_bot_busy_labels_have_stale_timeout() -> None:
 @pytest.mark.parametrize("internal_id", REVIEW_FAILURE_IDS)
 def test_review_failure_labels_shape(internal_id: str) -> None:
     """Review failure labels are failure:true and launch /check_branch_status."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         entry
         for entry in config["workflow_labels"]
@@ -331,7 +329,7 @@ def test_review_failure_labels_shape(internal_id: str) -> None:
 
 def test_open_tasks_label_recovery_command() -> None:
     """code_review_open_tasks is a failure label recovered via /implementation_finalise."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     label = next(
         entry
         for entry in config["workflow_labels"]
@@ -343,7 +341,7 @@ def test_open_tasks_label_recovery_command() -> None:
 
 def test_review_labels_config_validates() -> None:
     """Bundled config with review labels still passes validate_labels_config."""
-    config = load_labels_config(get_labels_config_path(None))
+    config = load_labels_config(get_labels_config_path())
     validate_labels_config(config)  # Should not raise
 
 
@@ -366,7 +364,7 @@ class TestValidateLabelsConfig:
 
     def test_valid_config_passes(self) -> None:
         """Bundled config should pass validation."""
-        config = load_labels_config(get_labels_config_path(None))
+        config = load_labels_config(get_labels_config_path())
         validate_labels_config(config)  # Should not raise
 
     def test_missing_default_raises(self) -> None:
@@ -540,209 +538,6 @@ class TestValidateLabelsConfig:
         validate_labels_config(config)  # Should not raise
 
 
-class TestConfigDiscovery:
-    """Tests for get_labels_config_path() config discovery."""
-
-    def test_config_override_takes_priority(self, tmp_path: Path) -> None:
-        """Explicit config_override is returned even when pyproject.toml exists."""
-        # Create a config override file
-        override = tmp_path / "custom_labels.json"
-        override.write_text('{"workflow_labels": []}', encoding="utf-8")
-
-        # Create pyproject.toml that also points to a config
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.mcp-coder]\nlabels-config = "other.json"\n',
-            encoding="utf-8",
-        )
-        other = tmp_path / "other.json"
-        other.write_text('{"workflow_labels": []}', encoding="utf-8")
-
-        result = get_labels_config_path(project_dir=tmp_path, config_override=override)
-        assert result == override
-
-    def test_config_override_missing_raises(self, tmp_path: Path) -> None:
-        """Non-existent config_override raises FileNotFoundError."""
-        missing = tmp_path / "nonexistent.json"
-        with pytest.raises(FileNotFoundError):
-            get_labels_config_path(config_override=missing)
-
-    def test_pyproject_toml_labels_config(self, tmp_path: Path) -> None:
-        """labels-config in pyproject.toml is used when no override given."""
-        labels_file = tmp_path / "my_labels.json"
-        labels_file.write_text('{"workflow_labels": []}', encoding="utf-8")
-
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
-            encoding="utf-8",
-        )
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        assert result == labels_file
-
-    def test_pyproject_toml_missing_key_falls_to_bundled(self, tmp_path: Path) -> None:
-        """pyproject.toml without labels-config key falls back to bundled."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            "[tool.mcp-coder]\n# no labels-config key\n",
-            encoding="utf-8",
-        )
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        assert isinstance(result, Traversable)
-
-    def test_no_project_dir_returns_bundled(self) -> None:
-        """project_dir=None returns bundled config."""
-        result = get_labels_config_path(project_dir=None)
-        assert isinstance(result, Traversable)
-
-    def test_pyproject_toml_nonexistent_path_falls_to_bundled(
-        self, tmp_path: Path
-    ) -> None:
-        """labels-config pointing to non-existent file falls back to bundled."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.mcp-coder]\nlabels-config = "does_not_exist.json"\n',
-            encoding="utf-8",
-        )
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        assert isinstance(result, Traversable)
-
-    def test_old_workflows_config_not_used(self, tmp_path: Path) -> None:
-        """workflows/config/labels.json is NOT used even if it exists (breaking change)."""
-        old_dir = tmp_path / "workflows" / "config"
-        old_dir.mkdir(parents=True)
-        old_config = old_dir / "labels.json"
-        old_config.write_text('{"workflow_labels": []}', encoding="utf-8")
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        # Should NOT return the old path — should return bundled
-        assert result != old_config
-        assert isinstance(result, Traversable)
-
-    def test_malformed_pyproject_toml_falls_back(self, tmp_path: Path) -> None:
-        """Invalid TOML content in pyproject.toml causes graceful fallback to bundled config."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("this is {{{ not valid TOML", encoding="utf-8")
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        assert isinstance(result, Traversable)
-
-    def test_mcp_coder_toml_labels_config(self, tmp_path: Path) -> None:
-        """labels-config in mcp-coder.toml is used when pyproject.toml lacks it."""
-        labels_file = tmp_path / "my_labels.json"
-        labels_file.write_text('{"workflow_labels": []}', encoding="utf-8")
-        (tmp_path / "mcp-coder.toml").write_text(
-            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
-            encoding="utf-8",
-        )
-
-        result = get_labels_config_path(project_dir=tmp_path)
-        assert result == labels_file
-
-    def test_both_files_define_labels_config_falls_back(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """labels-config in both files falls back to bundled with a warning."""
-        (tmp_path / "my_labels.json").write_text(
-            '{"workflow_labels": []}', encoding="utf-8"
-        )
-        for file_name in ("pyproject.toml", "mcp-coder.toml"):
-            (tmp_path / file_name).write_text(
-                '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
-                encoding="utf-8",
-            )
-
-        with caplog.at_level(logging.WARNING):
-            result = get_labels_config_path(project_dir=tmp_path)
-
-        assert isinstance(result, Traversable)
-        assert "labels-config" in caplog.text
-
-    def test_malformed_mcp_coder_toml_falls_back(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Malformed mcp-coder.toml falls back to bundled even if pyproject.toml is valid."""
-        (tmp_path / "my_labels.json").write_text(
-            '{"workflow_labels": []}', encoding="utf-8"
-        )
-        (tmp_path / "pyproject.toml").write_text(
-            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
-            encoding="utf-8",
-        )
-        (tmp_path / "mcp-coder.toml").write_text(
-            "this is {{{ not valid TOML", encoding="utf-8"
-        )
-
-        with caplog.at_level(logging.WARNING):
-            result = get_labels_config_path(project_dir=tmp_path)
-
-        assert isinstance(result, Traversable)
-        assert "mcp-coder.toml" in caplog.text
-
-    def test_non_string_labels_config_falls_back(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """A non-string labels-config falls back to bundled with a warning."""
-        (tmp_path / "mcp-coder.toml").write_text(
-            "[tool.mcp-coder]\nlabels-config = 5\n", encoding="utf-8"
-        )
-
-        with caplog.at_level(logging.WARNING):
-            assert _get_labels_config_from_project(tmp_path) is None
-            result = get_labels_config_path(project_dir=tmp_path)
-
-        assert isinstance(result, Traversable)
-        assert "mcp-coder.toml" in caplog.text
-
-
-class TestGetLabelsConfigFromProject:
-    """Tests for _get_labels_config_from_project() helper."""
-
-    def test_no_pyproject_returns_none(self, tmp_path: Path) -> None:
-        """No pyproject.toml file returns None."""
-        result = _get_labels_config_from_project(tmp_path)
-        assert result is None
-
-    def test_valid_config_returns_path(self, tmp_path: Path) -> None:
-        """Valid labels-config key returns resolved path."""
-        labels = tmp_path / "labels.json"
-        labels.write_text("{}", encoding="utf-8")
-
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.mcp-coder]\nlabels-config = "labels.json"\n',
-            encoding="utf-8",
-        )
-
-        result = _get_labels_config_from_project(tmp_path)
-        assert result == labels
-
-    def test_missing_tool_section_returns_none(self, tmp_path: Path) -> None:
-        """pyproject.toml without [tool] section returns None."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("[project]\nname = 'foo'\n", encoding="utf-8")
-
-        result = _get_labels_config_from_project(tmp_path)
-        assert result is None
-
-    def test_malformed_toml_returns_none(self, tmp_path: Path) -> None:
-        """Malformed TOML returns None gracefully."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("{{{ bad toml", encoding="utf-8")
-
-        result = _get_labels_config_from_project(tmp_path)
-        assert result is None
-
-    def test_file_not_found_returns_none(self, tmp_path: Path) -> None:
-        """labels-config pointing to missing file returns None."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.mcp-coder]\nlabels-config = "missing.json"\n',
-            encoding="utf-8",
-        )
-
-        result = _get_labels_config_from_project(tmp_path)
-        assert result is None
+def test_get_labels_config_path_takes_no_parameters() -> None:
+    """The bundled labels are the only source; no per-repo lookup exists."""
+    assert not inspect.signature(get_labels_config_path).parameters

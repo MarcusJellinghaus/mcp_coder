@@ -24,7 +24,6 @@ def _make_namespace(**kwargs: object) -> argparse.Namespace:
         "init": False,
         "validate": False,
         "all": False,
-        "config": None,
         "generate_github_actions": False,
     }
     defaults.update(kwargs)

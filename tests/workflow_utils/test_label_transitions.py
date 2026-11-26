@@ -535,9 +535,8 @@ class TestLabelTransitions:
     ) -> None:
         """Tests repo_url-mode manager (project_dir=None) with validated_issue_number.
 
-        Branch detection/linkage is skipped via validated_issue_number, so the
-        only remaining project_dir dependency is loading the label config —
-        which must fall back to the bundled config when project_dir is None.
+        Branch detection/linkage is skipped via validated_issue_number; labels
+        always come from the bundled config.
         """
         with (
             patch(
