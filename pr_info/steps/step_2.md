@@ -42,7 +42,9 @@ from mcp_workspace.cli.verify_formatting import (
 
 `src/mcp_coder/mcp_workspace_github.py` — add `github_security_rows` to the
 `mcp_workspace.github_operations` import and `__all__` (Verification group).
-`verify_github_security` stays exported.
+Remove `verify_github_security` from the import and from `__all__`: its only `src` caller
+(`verify_sections._print_github_security_section`) is deleted in this step and the conftest
+patch moves to `github_security_rows`.
 
 ### `verify.py`
 
@@ -105,6 +107,9 @@ if it mentions security.
 - Search `tests/` for `_print_github_security_section`, `_map_security_row`,
   `_check_dependabot_config`, `_check_codeql_workflow`, `verify_sections.verify_github_security`,
   `_BRANCH_PROTECTION_CHILDREN` and fix any remaining reference.
+- Search `src/` and `tests/` for `verify_github_security` (imports and patch-target strings,
+  e.g. `mcp_workspace_github.verify_github_security`): nothing may still point to the removed
+  shim name.
 
 ## ALGORITHM
 
