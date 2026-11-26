@@ -17,8 +17,16 @@
 - The tests that need the real `workflow_steps.ci.run_formatters`
   (`tests/workflow_steps/test_ci_fix_loop.py`, `tests/workflows/fix_ci/test_core.py`,
   `tests/cli/commands/test_check_branch_status_auto_fixes.py`, i.e. the users of
-  `tests/ci_fix_drive.py`) get the marker. So does any other test that fails
-  because the fixture now replaces a formatter it relied on.
+  `tests/ci_fix_drive.py`) get the marker. So does
+  `tests/workflows/implement/test_core.py::test_format_code_false_skips_formatter`:
+  it patches `commit.run_binding` and asserts it is not called, which would
+  pass vacuously with `implement.core.run_formatters` mocked. So does any other
+  test that fails because the fixture now replaces a formatter it relied on.
+- Rule: any test that patches `commit.run_binding`, `load_toolkit` or
+  `get_format_code` but calls through a workflow module needs
+  `real_formatters`, or must restore the real function itself, as
+  `test_core_formatter_preflight.py` and `rebase/test_workflow_regression.py`
+  already do (`monkeypatch.setattr(<module>, "run_formatters", commit.run_formatters)`).
 
 ## WHAT
 

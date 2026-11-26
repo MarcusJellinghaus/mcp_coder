@@ -96,6 +96,7 @@ reformatted log as an "applied" fix.
 | `workflows/implement/test_task_tracker_format.py` (new) | format + commit set + restore |
 | `workflows/implement/test_finalisation_format.py` (new) | format before commit |
 | `workflows/review/test_handoff.py` | flush format tests |
+| `workflows/review/test_core_flush_format.py` (new) | core-level flush format checks |
 | `workflows/review/test_core_formatter_preflight.py` | restore `handoff.format_best_effort` |
 | `workflows/review/test_core_dismiss_format.py` (new) | pre-gate flush |
 | `workflows/review/test_round_applied.py` (new) | `round_applied` unit + git test |
