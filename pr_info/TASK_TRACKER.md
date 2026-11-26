@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Rename `write_lf_text` → `write_repo_text` (pure refactor)
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `write_repo_text` follows the aligned line-ending policy
 See [step_3.md](./steps/step_3.md)

@@ -221,7 +221,7 @@ def test_unwritable_schema_does_not_abort_load(
     def _raise(*_args: object, **_kwargs: object) -> None:
         raise OSError("read-only")
 
-    monkeypatch.setattr("mcp_coder.icoder.permissions.loader.write_lf_text", _raise)
+    monkeypatch.setattr("mcp_coder.icoder.permissions.loader.write_repo_text", _raise)
 
     with caplog.at_level(logging.WARNING, logger="mcp_coder.icoder.permissions"):
         config = load_permission_config(tmp_path)

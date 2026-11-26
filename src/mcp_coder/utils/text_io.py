@@ -3,7 +3,7 @@
 from pathlib import Path
 
 
-def write_lf_text(path: Path, text: str, *, append: bool = False) -> None:
+def write_repo_text(path: Path, text: str, *, append: bool = False) -> None:
     r"""Write text to path with LF-only line endings, never CRLF.
 
     Normalizes embedded "\\r\\n" to "\\n"; a lone "\\r" is left untouched.

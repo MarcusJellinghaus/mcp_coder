@@ -257,7 +257,7 @@ class TestInitFileAccess:
         def _raise(*_args: object, **_kwargs: object) -> None:
             raise PermissionError("read-only")
 
-        monkeypatch.setattr(f"{_MODULE}.write_lf_text", _raise)
+        monkeypatch.setattr(f"{_MODULE}.write_repo_text", _raise)
 
         with caplog.at_level(logging.WARNING):
             result = self._init(project)
