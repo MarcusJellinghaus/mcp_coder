@@ -102,6 +102,10 @@ if it mentions security.
   `TestGitHubLabelMappings`, `TestGitLabelMappings`, `TestAutoDeleteBranches`,
   `TestApiBaseUrlRendering`, `TestTokenFingerprintSuffix`, `TestPermissionProbes`; keep
   `TestFormatSection`.
+- `test_verify_alignment.py::TestPerFormatterAlignment::test_format_section`: remove the
+  `branch_protection_with_strict_mode_no_marker` and `permissions_group` params (that
+  behaviour is now tested upstream; ported tests are deleted, not kept twice). The other
+  params stay.
 - `test_verify_label_map.py::test_renamed_labels`: drop the `signing_consistency` assert.
 - Delete `test_verify_sections_security.py` and `test_verify_github_security_probe.py`.
 - Search `tests/` for `_print_github_security_section`, `_map_security_row`,

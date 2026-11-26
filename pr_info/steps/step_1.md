@@ -81,11 +81,9 @@ from mcp_coder.utils import verify_render as shim
 
 @pytest.mark.parametrize("name", upstream.__all__)
 def test_shim_reexports_upstream_object(name): assert getattr(shim, name) is getattr(upstream, name)
-
-def test_format_section_builds_shim_rows():
-    lines = _format_section({"cli_found": {"ok": True, "value": "YES"}}, shim.STATUS_SYMBOLS)
-    assert isinstance(lines[0], shim.Row)
 ```
+
+(The identity test also proves the shim's `Row` is upstream's `Row`.)
 
 (`tests` may import `mcp_coder_utils`; the isolation contract covers `mcp_coder` only.)
 
