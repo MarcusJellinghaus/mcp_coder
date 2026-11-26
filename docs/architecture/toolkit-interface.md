@@ -105,7 +105,7 @@ page covers only how mcp-coder uses the contract.
 - An exception in `prompt_fragments()` yields the defaults; in the fix loop it
   yields `cap` (`get_fragment` returns `""`).
 - Custom prompts and their slots:
-  [Prompt Configuration](../repository-setup/python.md#prompt-configuration).
+  [Project config — Prompts](../configuration/project-config.md#prompts).
 
 ### LLM permissions
 

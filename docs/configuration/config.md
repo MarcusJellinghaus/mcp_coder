@@ -11,25 +11,25 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 | **LLM Provider** | `[llm]` section in `config.toml` |
 | **MCP Config** | `[mcp]` section in `config.toml` |
 | **MLflow Logging** | `[mlflow]` section in `config.toml`, see [MLflow integration](mlflow-integration.md) |
-| **Check your config** | `mcp-coder verify` reports unknown keys, with a "did you mean" hint (e.g. `provider` instead of `default_provider`) |
+| **Check your config** | `mcp-coder verify` reports unknown keys, with a "did you mean" hint (e.g. `provider` instead of `default_provider`); also unknown `[tool.mcp-coder]` keys, see [Project config](project-config.md) |
 | **Repository Setup** | [Repository Setup Guide](../repository-setup/README.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
 ## Configuration Systems
 
-MCP Coder uses two separate configuration files for different purposes:
+MCP Coder reads two configuration systems:
 
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`), toolkit selection ([`[tool.mcp-coder.toolkit]`](toolkits.md): `toolkit`, `bindings`, `params`; read from `pyproject.toml`, else `mcp-coder.toml`, by `utils/toolkit_runner.py`), project setup steps ([`[tool.mcp-coder.setup]`](setup.md); same lookup, by `utils/setup_config.py`) |
+| `pyproject.toml` / `mcp-coder.toml` | Per-project | — | `[tool.mcp-coder]` keys: see [Project config](project-config.md) |
 
 With the Python toolkit (`mcp-tools-py`), the formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections). Other toolkits format through their own `format` action ([toolkits](toolkits.md)).
 
-**Priority:** Environment variables > config file values (for both systems).
+**Priority:** Environment variables > `config.toml` values. The project config reads no environment variables.
 
 `config.toml` lives in the user's home directory and is never committed to git.
-`pyproject.toml` lives in the project root and is committed to git.
+The project config files live in the repo root and are committed to git.
 
 ## Configuration File Locations
 
@@ -502,7 +502,7 @@ model    = "llama3:latest"
 > normalizes this automatically — set either `base_url` in
 > config.toml (URL or `host:port`) or `OLLAMA_HOST` env var.
 
-#### Environment Variable Overrides
+#### LLM environment variables
 
 Environment variables take **highest priority** over config file values.
 

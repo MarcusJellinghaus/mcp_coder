@@ -462,7 +462,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--output-format FORMAT`: `rendered` (default, human-friendly streaming), `text` (plain streaming), `ndjson` (streaming NDJSON events), `json-raw` (streaming raw events), `json` (blocking, complete response including `session_id`) or `session-id` (blocking, only the session ID). Under `--llm-method langchain` in agent mode, a turn whose history was not recorded reports `"session_id": null`; that id is not resumable, so do not chain it into a later `--session-id`.
 - `--store-response` saves the session to `.mcp-coder/responses/` for later continuation.
 - `--continue-session-from FILE` resumes from a specific stored session file, `--continue-session` from the most recent one (the two are mutually exclusive), and `--session-id ID` from a direct session ID (overrides the file-based options). With `--llm-method langchain` the session ID is taken from the file *name*, so `--continue-session-from` works only for a langchain history file (`~/.mcp_coder/sessions/langchain/<id>.json`). A `--store-response` file (`response_<timestamp>.json`) has no matching history and the command exits 1; use `--continue-session` or `--session-id` instead. With langchain, an unknown session ID is an error, not a new conversation.
-- `--add-system-prompts` injects the system and project prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or the shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
+- `--add-system-prompts` injects the system and project prompts from `[tool.mcp-coder.prompts]` (or the shipped defaults). See [Project config — Prompts](configuration/project-config.md#prompts).
 
 ```bash
 mcp-coder prompt "Analyze this code structure"

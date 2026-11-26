@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add `project-config.md`, move prompts docs, fix `config.md`, index and root README
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (check #1466 precondition; create `docs/configuration/project-config.md`; move prompts text out of `python.md`; update `config.md`, `docs/README.md`, root `README.md`, prompt links in `cli-reference.md` and `toolkit-interface.md`)
-- [ ] Quality checks (pytest `tests/docs`, pylint, mypy, anchor search) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (check #1466 precondition; create `docs/configuration/project-config.md`; move prompts text out of `python.md`; update `config.md`, `docs/README.md`, root `README.md`, prompt links in `cli-reference.md` and `toolkit-interface.md`)
+- [x] Quality checks (pytest `tests/docs`, pylint, mypy, anchor search) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add step-to-request table, fix grant/verify/formatting statements
 See [step_2.md](./steps/step_2.md)

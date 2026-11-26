@@ -21,6 +21,7 @@ Complete documentation for MCP Coder.
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
 - **[Toolkits](configuration/toolkits.md)** - Select and configure the toolkit that formats, checks and tests a repo; bindings; the mcp-tools-py and command toolkits
 - **[Project Setup](configuration/setup.md)** - Declare a repo's setup steps in `[tool.mcp-coder.setup]`; `mcp-coder setup` runs them on every OS
+- **[Project Config](configuration/project-config.md)** - Every `[tool.mcp-coder]` key: file, default, reader, and what happens on a problem
 - **[Claude Code Configuration](configuration/claude-code.md)** - Installing Claude Code and the Windows launcher
 - **[Copilot CLI Setup](repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration

@@ -71,7 +71,7 @@ The `python` extra brings the Python toolkit (`mcp-tools-py`); repos on another 
 
 ### Set up a repository (once)
 
-The full checklist, with every config key, is in [Repository Setup](docs/repository-setup/README.md). In short:
+The checklist is in [Repository Setup](docs/repository-setup/README.md); every project config key is in [Project config](docs/configuration/project-config.md). In short:
 
 1. Put a GitHub token in `~/.mcp_coder/config.toml` ([Configuration](docs/configuration/config.md)).
 2. Create the status labels with `mcp-coder gh-tool define-labels`, and the GitHub Actions that label new issues and handle `/approve` with `--generate-github-actions` ([Label Setup](docs/getting-started/label-setup.md)).
