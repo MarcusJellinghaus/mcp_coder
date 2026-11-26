@@ -1,0 +1,7 @@
+# Written by --snapshot-update in test_snapshots.py; not compared.
+python==3.11.9
+platform==win32
+textual==8.2.8
+rich==15.0.0
+pytest-textual-snapshot==1.0.0
+syrupy==7.0.3
