@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Docs — bundled labels only
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (docs updates)
-- [ ] Quality checks — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs updates)
+- [x] Quality checks — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

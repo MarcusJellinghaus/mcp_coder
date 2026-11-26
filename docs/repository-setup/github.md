@@ -199,24 +199,11 @@ mcp-coder gh-tool define-labels            # Create/update labels
 - Go to your repository → Issues → Labels
 - Confirm status labels are created with correct colors
 
-### Customizing Labels
+### Label Source
 
 **Default label source:** `mcp_coder/config/labels.json`, deployed with the package.
 
-**Custom labels:** Point to a custom `labels.json` via `pyproject.toml`:
-
-```toml
-[tool.mcp-coder]
-labels-config = "config/labels.json"
-```
-
-Alternatively, pass `--config PATH` on the command line. See [`labels_schema.md`](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/src/mcp_coder/config/labels_schema.md) for the schema.
-
-**Test custom config:**
-
-```bash
-mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
-```
+See [`labels_schema.md`](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/src/mcp_coder/config/labels_schema.md) for the schema.
 
 ### Issue Validation and Initialization
 
@@ -250,7 +237,7 @@ mcp-coder gh-tool define-labels --all
 
 ### Stale Timeout Configuration
 
-Bot-busy labels can have configurable timeout thresholds in `labels.json`:
+Bot-busy labels in the bundled `labels.json` have timeout thresholds:
 
 ```json
 {
@@ -439,7 +426,7 @@ Trust results are never cached.
 > ```bash
 > mcp-coder gh-tool define-labels --generate-github-actions
 > ```
-> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on your label config.
+> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on the bundled labels.
 
 > Existing repositories: re-run `mcp-coder gh-tool define-labels --generate-github-actions` to pick up the `/approve` trust gate, `permissions: {}` and the pinned action.
 
