@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Pass HEAD as `expected_sha` at implement step 5.6 — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: import `get_latest_commit_sha` in `core.py`, add autouse `_stub_head_sha` fixture in `tests/workflows/implement/conftest.py`, add parametrized `test_ci_check_receives_head_sha_as_expected_sha` (confirm red), then pass `expected_sha=get_latest_commit_sha(project_dir)` at step 5.6
+- [ ] Quality checks: format code, pylint, mypy, fast pytest (`-n auto`) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary prepared
