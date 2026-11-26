@@ -29,7 +29,7 @@
 
 1. `mcp__mcp-tools-py__rename_symbol(file="src/mcp_coder/utils/text_io.py", symbol_name="write_lf_text", new_name="write_repo_text")`.
 2. `rename_symbol` does not rewrite string literals, so fix the two patch targets above by hand.
-3. `search_files(pattern="write_lf_text")` over the whole repo must return no hits (src, tests, docs, `vulture_whitelist.py`). Fix any remaining hit.
+3. `search_files(pattern="write_lf_text")` must return no hits outside `pr_info/` (check `src/`, `tests/`, `docs/`, `vulture_whitelist.py`). Fix any remaining hit there. The `pr_info/` plan files mention the old name on purpose; leave them unchanged.
 4. Confirm that the import lines in the 8 source files now read `write_repo_text`.
 
 ## ALGORITHM
