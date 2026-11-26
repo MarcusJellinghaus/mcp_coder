@@ -432,10 +432,7 @@ def update_gitignore(folder_path: Path) -> list[str]:
     if existing_content and not existing_content.endswith("\n"):
         addition = "\n" + addition
 
-    # newline="" disables text-mode translation: the literal "\n" above is what
-    # reaches the file, so a LF .gitignore stays LF on Windows.
-    with gitignore_path.open("a", encoding="utf-8", newline="") as f:
-        f.write(addition)
+    write_repo_text(gitignore_path, addition, append=True)
 
     return missing
 
