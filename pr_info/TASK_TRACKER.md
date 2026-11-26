@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Session-log `.gitignore` writer in `init` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests in `tests/cli/commands/test_init_gitignore.py` first, then `_spellings`, `_missing_session_log_lines`, `_write_session_log_entries` and `execute_init` wiring in `src/mcp_coder/cli/commands/init.py`
+- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Documentation — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: update `docs/repository-setup/repo.md`, `docs/cli-reference.md`, `docs/repository-setup/README.md`
+- [ ] Quality checks (pytest) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch
+- [ ] PR summary prepared
