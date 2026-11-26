@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Session-log `.gitignore` writer in `init` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `tests/cli/commands/test_init_gitignore.py` first, then `_spellings`, `_missing_session_log_lines`, `_write_session_log_entries` and `execute_init` wiring in `src/mcp_coder/cli/commands/init.py`
-- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `tests/cli/commands/test_init_gitignore.py` first, then `_spellings`, `_missing_session_log_lines`, `_write_session_log_entries` and `execute_init` wiring in `src/mcp_coder/cli/commands/init.py`
+- [x] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Documentation — [step_2.md](./steps/step_2.md)
 

@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from ...utils.log_utils import OUTPUT
+from ...utils.text_io import write_lf_text
 from ...utils.toolkit_runner import PYTHON_TOOLKIT, load_toolkit_config
 from ...utils.user_config import create_default_config, get_config_file_path
 from ...workflows.vscodeclaude.workspace import update_gitignore
@@ -167,6 +168,89 @@ def _write_gitignore_entries(project_dir: Path) -> bool:
     return True
 
 
+SESSION_LOGS_GITIGNORE_HEADER = "# mcp-coder session logs\n"
+
+
+def _spellings(name: str) -> frozenset[str]:
+    """Exact .gitignore lines that ignore the whole folder *name*.
+
+    Returns:
+        The eight combinations of an optional leading ``/`` and a trailing
+        ``""``, ``/``, ``/*`` or ``/**``.
+    """
+    return frozenset(
+        f"{lead}{name}{tail}" for lead in ("", "/") for tail in ("", "/", "/*", "/**")
+    )
+
+
+# Line written by init -> lines that count as already present
+SESSION_LOG_LINES: dict[str, frozenset[str]] = {
+    "/.mcp-coder/*": _spellings(".mcp-coder"),
+    "/logs/": _spellings("logs"),
+}
+
+
+def _missing_session_log_lines(text: str) -> list[str]:
+    """Find the session-log lines a .gitignore text lacks.
+
+    A narrower line such as ``logs/claude-sessions/`` does not count, since
+    it leaves the rest of the folder committable.
+
+    Args:
+        text: Decoded .gitignore content.
+
+    Returns:
+        The missing lines among ``SESSION_LOG_LINES``, in its order.
+    """
+    present = {line.strip() for line in text.splitlines()}
+    return [
+        line for line, spellings in SESSION_LOG_LINES.items() if not spellings & present
+    ]
+
+
+def _write_session_log_entries(project_dir: Path) -> tuple[bool, bool]:
+    """Gitignore the folders mcp-coder writes session logs to.
+
+    Separate from ``update_gitignore``: the VSCodeClaude session launch
+    re-appends that block in every session folder. An undecodable .gitignore
+    is read before any write, so it is left untouched.
+
+    Args:
+        project_dir: Target project root.
+
+    Returns:
+        ``(ok, changed)``: ok is False when the .gitignore could not be read
+        or written; changed is True when lines were appended.
+    """
+    gitignore = project_dir / ".gitignore"
+    try:
+        existing = (
+            gitignore.read_text(encoding="utf-8-sig") if gitignore.exists() else ""
+        )
+        missing = _missing_session_log_lines(existing)
+        if not missing:
+            logger.log(OUTPUT, "Gitignore: %s present", ", ".join(SESSION_LOG_LINES))
+            return True, False
+        addition = SESSION_LOGS_GITIGNORE_HEADER + "".join(
+            f"{line}\n" for line in missing
+        )
+        if existing:
+            addition = "\n" + addition  # blank line before the new block
+            if not existing.endswith("\n"):
+                addition = "\n" + addition
+        write_lf_text(gitignore, addition, append=True)
+    except (OSError, ValueError) as e:  # UnicodeDecodeError is a ValueError
+        logger.warning(
+            "Failed to add session log entries to .gitignore in %s: %s",
+            project_dir,
+            e,
+        )
+        return False, False
+
+    logger.log(OUTPUT, "Gitignore: %s added", ", ".join(missing))
+    return True, True
+
+
 def execute_init(args: argparse.Namespace) -> int:
     """Execute init command to create default configuration and deploy skills.
 
@@ -200,18 +284,20 @@ def execute_init(args: argparse.Namespace) -> int:
             for line in _GENERIC_REMINDER:
                 logger.log(OUTPUT, line)
 
-    # 3. Gitignore entries (both modes: project-scoped, like the .claude/ deploy)
+    # 3. Gitignore entries: VSCodeClaude session files, then the session-log
+    # folders (both modes: project-scoped, like the .claude/ deploy)
     gitignore_ok = _write_gitignore_entries(project_dir)
+    logs_ok, logs_added = _write_session_log_entries(project_dir)
 
     # 4. .mcp-file-access rules, then .scratch/ gitignored (both modes)
     rules = ensure_file_access_rules(project_dir)
     scratch_ok, scratch_added = ensure_scratch_gitignored(project_dir, rules)
-    if rules.changed or scratch_added:
+    if rules.changed or scratch_added or logs_added:
         logger.log(
             OUTPUT,
             "Commit .gitignore and .mcp-file-access so every clone gets them.",
         )
-    files_ok = gitignore_ok and rules.ok and scratch_ok
+    files_ok = gitignore_ok and logs_ok and rules.ok and scratch_ok
 
     # 5. Config creation (skip if --just-skills)
     if not args.just_skills:
