@@ -19,6 +19,16 @@ def _stub_branch_head() -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def _stub_head_sha() -> Iterator[None]:
+    """Keep implement's step 5.6 HEAD read away from real git."""
+    with patch(
+        "mcp_coder.workflows.implement.core.get_latest_commit_sha",
+        return_value=None,
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _stub_task_checks(request: pytest.FixtureRequest) -> Iterator[None]:
     """Keep process_single_task away from the real check loop and toolkit.
 

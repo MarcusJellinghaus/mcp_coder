@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.workflows.implement.check_loop import CheckOutcome
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
@@ -81,6 +83,64 @@ class TestRunImplementWorkflow:
         assert "format_code" not in first_call_kwargs
         assert "check_type_hints" not in first_call_kwargs
         assert mock_log_progress.call_count >= 2  # Initial + final progress
+
+    @pytest.mark.parametrize("sha", ["PUSHEDSHA", None])
+    @patch("mcp_coder.workflows.implement.core.get_latest_commit_sha")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.check_and_fix",
+        return_value=CheckOutcome("clean"),
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_ci_check_receives_head_sha_as_expected_sha(
+        self,
+        mock_check_git: MagicMock,
+        mock_check_branch: MagicMock,
+        mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        _mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        _mock_get_branch: MagicMock,
+        _mock_prepare_env: MagicMock,
+        _mock_check_and_fix: MagicMock,
+        _mock_run_formatters: MagicMock,
+        _mock_get_status: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        mock_check_ci: MagicMock,
+        mock_sha: MagicMock,
+        sha: str | None,
+    ) -> None:
+        """Step 5.6 passes local HEAD as expected_sha; None when HEAD is unknown."""
+        mock_check_git.return_value = True
+        mock_check_branch.return_value = True
+        mock_check_prereq.return_value = True
+        mock_prepare_tracker.return_value = True
+        mock_process_task.return_value = TaskOutcome(False, "no_tasks")
+        mock_sha.return_value = sha
+
+        result = run_implement_workflow(Path("/test/project"), "claude")
+
+        assert result == 0
+        mock_check_ci.assert_called_once()
+        assert mock_check_ci.call_args.kwargs["expected_sha"] == sha
 
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
     def test_run_implement_workflow_git_not_clean(
