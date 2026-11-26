@@ -10,7 +10,7 @@ from typing import Any, NamedTuple
 
 from ...config.toml_utils import MCP_CODER_CONFIG_FILES, TomlReadError, load_toml
 from ...utils.config_hints import unknown_key_hint
-from .verify_formatting import Row
+from ...utils.verify_render import Row
 
 _TOP = "tool.mcp-coder"
 # Settings read from either file; defining one in both files gives the default

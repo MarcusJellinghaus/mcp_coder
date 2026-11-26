@@ -30,12 +30,12 @@ from mcp_coder.cli.commands.verify_formatting import (
     _format_mcp_section,
     _format_section,
 )
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _print_environment_section,
     _print_project_section,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.verify_render import SectionBuilder
 
 from .conftest import (
     _assert_section_aligned,

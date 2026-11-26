@@ -11,14 +11,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import (
     _check_codeql_workflow,
     _check_dependabot_config,
     _map_security_row,
     _print_github_security_section,
 )
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, SectionBuilder
 
 
 def _write_dependabot(project_dir: Path, content: str) -> None:

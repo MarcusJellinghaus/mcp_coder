@@ -4,12 +4,14 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import (
-    _format_row,
-    _format_section,
-)
+from mcp_coder.cli.commands.verify_formatting import _format_section
 
-from .conftest import _assert_section_aligned, _expected_value_column, _render
+from .conftest import (
+    _assert_section_aligned,
+    _expected_value_column,
+    _format_row,
+    _render,
+)
 
 
 def _has_row(output: str, label: str, marker: str, value: str) -> bool:

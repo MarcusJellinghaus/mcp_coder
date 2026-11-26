@@ -11,13 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import (
-    _LABEL_WIDTH,
-    _MARKER_SLOT_WIDTH,
-    _format_row,
-    _looks_like_key,
-)
-from mcp_coder.cli.commands.verify_render import SectionBuilder
+from mcp_coder.cli.commands.verify_formatting import _looks_like_key
 from mcp_coder.cli.commands.verify_sections import (
     _print_environment_section,
     _print_project_section,
@@ -25,9 +19,13 @@ from mcp_coder.cli.commands.verify_sections import (
 )
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig
+from mcp_coder.utils.verify_render import SectionBuilder
 from tests.cli.commands.conftest import (
+    _LABEL_WIDTH,
+    _MARKER_SLOT_WIDTH,
     _assert_value_at_column,
     _expected_value_column,
+    _format_row,
 )
 
 

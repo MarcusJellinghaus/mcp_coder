@@ -9,15 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import _format_row
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_project_section
 from mcp_coder.cli.commands.verify_toolkit_rows import toolkit_rows
 from mcp_coder.toolkits.command import CommandToolkit
 from mcp_coder.utils.toolkit import VerifyItem
 from mcp_coder.utils.toolkit_runner import verify_toolkit
+from mcp_coder.utils.verify_render import SectionBuilder
 from tests.cli.commands.conftest import (
     _assert_section_aligned,
+    _format_row,
     _make_args,
     _make_verify_mocks,
 )

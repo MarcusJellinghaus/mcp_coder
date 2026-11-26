@@ -20,9 +20,10 @@ import pytest
 from requests import Session
 
 from mcp_coder.cli.commands.verify import execute_verify
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS, _format_section
+from mcp_coder.cli.commands.verify_formatting import _format_section
 from mcp_coder.cli.commands.verify_jenkins import verify_jenkins
 from mcp_coder.utils.jenkins_operations.diagnostics import ProbeResult
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS
 
 from .conftest import (
     _LC_VERIFY,

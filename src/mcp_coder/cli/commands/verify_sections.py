@@ -23,14 +23,9 @@ from ...mcp_workspace import FILE_ACCESS_SUPPORTED, validate_access_rules
 from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
-from .verify_formatting import (
-    STATUS_SYMBOLS,
-    Row,
-    _format_section,
-    _hint,
-)
+from ...utils.verify_render import STATUS_SYMBOLS, Row, SectionBuilder, hint_row
+from .verify_formatting import _format_section
 from .verify_project_keys import key_warning_rows
-from .verify_render import SectionBuilder
 from .verify_setup import setup_rows
 from .verify_toolkit_rows import check_type_hints_row, toolkit_rows
 
@@ -538,4 +533,4 @@ def _print_langchain_readiness_warning(
         hint = f"pip install {display} (needed for --llm-method langchain)"
     out.add(Row("Langchain backend", symbols["warning"], msg))
     if hint:
-        out.add(_hint(f"-> {hint}"))
+        out.add(hint_row(f"-> {hint}"))

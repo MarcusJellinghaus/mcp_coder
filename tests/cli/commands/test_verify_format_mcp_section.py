@@ -3,12 +3,12 @@
 from typing import Any
 
 from mcp_coder.cli.commands.verify_formatting import (
-    STATUS_SYMBOLS,
     _format_claude_mcp_section,
     _format_mcp_section,
     _format_tools_exposed_section,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS
 
 from .conftest import _assert_value_at_column, _expected_value_column, _render
 

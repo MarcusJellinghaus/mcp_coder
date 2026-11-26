@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_toolkit_rows import check_type_hints_row
+from mcp_coder.utils.verify_render import SectionBuilder
 
 _SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 

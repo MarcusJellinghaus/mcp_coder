@@ -42,6 +42,7 @@ from ...utils.mcp_verification import (
 )
 from ...utils.text_io import write_lf_text
 from ...utils.user_config import verify_config
+from ...utils.verify_render import STATUS_SYMBOLS, Line, Row, SectionBuilder
 from ..utils import (
     find_context_claude_md,
     is_outside_project_dir,
@@ -50,9 +51,6 @@ from ..utils import (
     resolve_mcp_config_path,
 )
 from .verify_formatting import (
-    STATUS_SYMBOLS,
-    Line,
-    Row,
     _format_claude_mcp_section,
     _format_mcp_section,
     _format_section,
@@ -61,7 +59,6 @@ from .verify_formatting import (
 )
 from .verify_jenkins import verify_jenkins
 from .verify_project_keys import key_warning_rows
-from .verify_render import SectionBuilder
 
 # Bound as module globals on purpose: ``execute_verify`` resolves these names
 # here, so tests keep patching them at ``mcp_coder.cli.commands.verify.<name>``

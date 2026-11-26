@@ -9,18 +9,27 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import (
-    _LABEL_WIDTH,
-    _MARKER_SLOT_WIDTH,
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+from mcp_coder.utils.toolkit import VerifyItem
+from mcp_coder.utils.verify_render import (
     STATUS_SYMBOLS,
     Line,
     Row,
+    SectionBuilder,
+    render_rows,
 )
-from mcp_coder.cli.commands.verify_render import SectionBuilder, _render_rows
-from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-from mcp_coder.utils.toolkit import VerifyItem
+
+# The layout of mcp-coder-utils' renderer: minimum label width 22, marker slot
+# 6, so the value column of a default-width section is 32.
+_LABEL_WIDTH = 22
+_MARKER_SLOT_WIDTH = 6
 
 _SMOKE_ROW = Row("MCP edit smoke test", "[OK]", "edit verified")
+
+
+def _format_row(label: str, marker: str, value: str, *, indent: int = 2) -> str:
+    """One row rendered on its own, as the renderer prints it."""
+    return render_rows([Row(label, marker, value, indent)])[0]
 
 
 def _expected_value_column(*, label_width: int = _LABEL_WIDTH) -> int:
@@ -51,7 +60,7 @@ def _assert_value_at_column(line: str, expected_col: int) -> None:
 
 def _render(lines: Sequence[Line]) -> str:
     """Render a section's lines to text (test helper)."""
-    return "\n".join(_render_rows(lines))
+    return "\n".join(render_rows(lines))
 
 
 _MARKER_RE = re.compile("|".join(re.escape(s) for s in STATUS_SYMBOLS.values()))

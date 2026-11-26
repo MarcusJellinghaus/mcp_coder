@@ -122,7 +122,8 @@ forbidden_modules =
 # -----------------------------------------------------------------------------
 # Contract: MCP Coder Utils Isolation
 # -----------------------------------------------------------------------------
-# The 'mcp_coder_utils' package should only be imported by the 3 shim files.
+# The 'mcp_coder_utils' package should only be imported by the shim files listed
+# in `ignore_imports` (6 today).
 # All other modules must use the local shims as an abstraction layer.
 # -----------------------------------------------------------------------------
 [importlinter:contract:mcp_coder_utils_isolation]
@@ -138,6 +139,7 @@ ignore_imports =
     mcp_coder.utils.toolkit -> mcp_coder_utils
     mcp_coder.utils.log_utils -> mcp_coder_utils
     mcp_coder.utils.user_app_data -> mcp_coder_utils
+    mcp_coder.utils.verify_render -> mcp_coder_utils
 
 # -----------------------------------------------------------------------------
 # Contract: Toolkits Isolation

@@ -10,8 +10,7 @@ from pathlib import Path
 
 from ...utils.executable import resolve_executable, venv_python, venv_search_path
 from ...utils.setup_config import load_setup_config
-from .verify_formatting import Row
-from .verify_render import SectionBuilder
+from ...utils.verify_render import Row, SectionBuilder
 
 # Problem status mapped to the symbols-dict key it prints with
 _STATUS_SYMBOL: dict[str, str] = {

@@ -10,10 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
-from mcp_coder.cli.commands.verify_render import SectionBuilder
 from mcp_coder.cli.commands.verify_sections import _print_github_security_section
 from mcp_coder.mcp_workspace_github import GithubException, verify_github_security
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, SectionBuilder
 
 _SECTIONS = "mcp_coder.cli.commands.verify_sections"
 _PROBES = "mcp_workspace.github_operations._security_probes"

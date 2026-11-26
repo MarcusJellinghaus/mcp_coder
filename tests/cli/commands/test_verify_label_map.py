@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_MAP,
-    _LABEL_WIDTH,
-    STATUS_SYMBOLS,
-    Row,
     _format_tools_exposed_section,
 )
+from mcp_coder.utils.verify_render import STATUS_SYMBOLS, Row
+
+# Minimum label width of mcp-coder-utils' renderer
+_LABEL_WIDTH = 22
 
 
 def test_fixed_labels_fit_default_width() -> None:
