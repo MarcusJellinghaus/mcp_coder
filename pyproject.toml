@@ -228,6 +228,11 @@ module = ["pytest.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+# Test-only plugin; the CI mypy job installs .[typecheck], which lacks it
+module = ["pytest_textual_snapshot"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["tests.*"]
 # Disable unreachable warnings for test files due to mypy false positives with assertions
 # Disable union-attr for test files where mocked attributes are intentionally set
