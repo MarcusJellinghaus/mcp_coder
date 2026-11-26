@@ -1,14 +1,20 @@
-"""LF-only text writes for files that may end up in a git commit."""
+"""Text writes into the target repo under its line-ending policy."""
 
 from pathlib import Path
 
+from .fs import dominant_newline, write_text
+
 
 def write_repo_text(path: Path, text: str, *, append: bool = False) -> None:
-    r"""Write text to path with LF-only line endings, never CRLF.
+    r"""Write text to path in the existing file's dominant line ending, else LF.
 
-    Normalizes embedded "\\r\\n" to "\\n"; a lone "\\r" is left untouched.
+    An existing file with line breaks keeps its dominant ending; a tie, a file
+    without line breaks, or a new file gets LF. Applies to appends and
+    overwrites. Every line break in ``text`` (CRLF, LF, lone CR) is converted
+    to that ending. The text is encoded before the file is opened, so an
+    encode error leaves an existing file untouched.
     """
-    normalized = text.replace("\r\n", "\n")
-    mode = "a" if append else "w"
-    with path.open(mode, encoding="utf-8", newline="\n") as handle:
-        handle.write(normalized)
+    existing = path.read_bytes() if path.is_file() else None
+    write_text(
+        path, text, newline=dominant_newline(existing or b"") or "\n", append=append
+    )

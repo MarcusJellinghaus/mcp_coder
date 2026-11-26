@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -33,22 +32,6 @@ def test_append_mode_normalizes_embedded_crlf(tmp_path: Path) -> None:
     assert b"\r" not in appended
 
 
-def test_open_called_with_newline_lf(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    path = tmp_path / "f.txt"
-    original_open = Path.open
-    captured: dict[str, object] = {}
-
-    def spy(self: Path, *args: Any, **kwargs: Any) -> object:
-        captured.update(kwargs)
-        return original_open(self, *args, **kwargs)
-
-    monkeypatch.setattr(Path, "open", spy)
-    write_repo_text(path, "x\n")
-    assert captured["newline"] == "\n"
-
-
 @pytest.mark.parametrize("append", [False, True])
 @pytest.mark.parametrize("text", ["", "no newline", "a\nb", "a\n\nb\n"])
 def test_lf_only_input_is_written_byte_identical(
@@ -62,3 +45,30 @@ def test_lf_only_input_is_written_byte_identical(
     else:
         write_repo_text(path, text)
         assert path.read_bytes() == text.encode()
+
+
+@pytest.mark.parametrize(
+    ("append", "expected"),
+    [(True, b"a\r\nb\r\nc\r\nd\r\n"), (False, b"c\r\nd\r\n")],
+)
+def test_existing_crlf_file_keeps_crlf(
+    tmp_path: Path, append: bool, expected: bytes
+) -> None:
+    path = tmp_path / "f.txt"
+    path.write_bytes(b"a\r\nb\r\n")
+    write_repo_text(path, "c\nd\n", append=append)
+    assert path.read_bytes() == expected
+
+
+def test_lone_cr_is_converted(tmp_path: Path) -> None:
+    path = tmp_path / "f.txt"
+    write_repo_text(path, "a\rb\n")
+    assert path.read_bytes() == b"a\nb\n"
+
+
+def test_encode_error_leaves_existing_bytes_untouched(tmp_path: Path) -> None:
+    path = tmp_path / "f.txt"
+    path.write_bytes(b"keep\r\n")
+    with pytest.raises(UnicodeEncodeError):
+        write_repo_text(path, "\ud800")
+    assert path.read_bytes() == b"keep\r\n"

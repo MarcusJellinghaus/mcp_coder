@@ -172,18 +172,18 @@ class TestInitFileAccess:
         assert "File access rules: unchanged" in caplog.text
         assert "Gitignore: .scratch/ added" in caplog.text
 
-    def test_crlf_bom_no_trailing_newline_appends_lf(
+    def test_crlf_bom_no_trailing_newline_appends_crlf(
         self, project: Path, mock_config: MagicMock
     ) -> None:
-        """Existing bytes are kept; the appended rules start on a new LF line."""
+        """Existing bytes are kept; the appended rules start on a new line in the file's CRLF ending."""
         original = b"\xef\xbb\xbf# mine\r\nread-only /docs/"
         (project / ".mcp-file-access").write_bytes(original)
 
         assert self._init(project) == 0
 
         raw = (project / ".mcp-file-access").read_bytes()
-        assert raw.startswith(original + b"\n")
-        assert b"\r\n" not in raw[len(original) :]
+        assert raw.startswith(original + b"\r\n")
+        assert b"\n" not in raw[len(original) :].replace(b"\r\n", b"")
         assert validate_access_rules(project) == []
         assert "read-only /docs/" in _rule_lines(raw.decode("utf-8-sig"))
 
