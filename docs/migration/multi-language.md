@@ -31,7 +31,7 @@ Configuration reference: [toolkits](../configuration/toolkits.md).
 
 Reference: [Project setup](../configuration/setup.md).
 
-- **One command.** The session launcher, the Linux implement, fix-ci, fix-conflict and review-implementation templates, and all Windows templates run `mcp-coder setup`. It runs the repo's `[tool.mcp-coder.setup]` steps; without the table a repo with a `pyproject.toml` gets `{ builtin = "python" }` (the previous `mcp-coder install --source local --use-sync`). `mcp-coder install` is unchanged.
+- **One command.** The session launcher, the Linux create-plan, implement, review-plan, review-implementation, fix-ci and fix-conflict templates, and all Windows templates run `mcp-coder setup`. It runs the repo's `[tool.mcp-coder.setup]` steps; without the table a repo with a `pyproject.toml` gets `{ builtin = "python" }` (the previous `mcp-coder install --source local --use-sync`). `mcp-coder install` is unchanged.
 - **Windows Jenkins runs setup in the templates (#1426).** Every Windows workflow and the coordinator test run `mcp-coder setup --refresh` instead of AutoRunner's provisioning; a workflow's setup failure moves the issue to its failed label. The changed-files check now applies on Windows too, including an untracked `uv.lock`.
 - **Linux Python repos are now provisioned** into `.venv` on every run, and checks run there. Repos whose dev extras lack their check tools now fail.
 - **Track or ignore `uv.lock`.** Setup fails on files it changed or created; `uv sync` creates a missing `uv.lock` and rewrites a stale one.

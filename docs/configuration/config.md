@@ -959,7 +959,7 @@ The templates don't probe `mcp-tools-py`: whether a repo needs it follows from i
 - Activates the project virtual environment if `.venv` exists (non-Python repos have none)
 - Re-verifies `mcp-coder`
 
-The Linux test template does not run `mcp-coder setup`; the Windows test template does. The Linux implement, fix-ci, fix-conflict and review-implementation templates and all seven Windows workflow templates run it ([Project setup](setup.md)).
+The Linux test template does not run `mcp-coder setup`; the Windows test template does. The Linux create-plan, implement, review-plan, review-implementation, fix-ci and fix-conflict templates and all seven Windows workflow templates run it; Linux create-pr does not ([Project setup](setup.md)).
 
 ### Test Command Script
 

@@ -100,8 +100,8 @@ TEST_COMMAND_TEMPLATES: dict[str, str] = {
 # The --project-dir parameter must match the Jenkins workspace structure
 # All templates follow the pattern:
 #   1. Checkout appropriate branch (main for planning, feature branch for implementation/PR)
-#   2. Pull latest code (implement, fix-ci, fix-conflict, review-implementation
-#      then run `mcp-coder setup`; see _linux_setup_template)
+#   2. Pull latest code (every workflow except create-pr, then run
+#      `mcp-coder setup`; see _linux_setup_template)
 #   3. Verify tool versions
 #   4. Execute mcp-coder command
 #   5. Capture exit code and run watchdog set-status
@@ -123,51 +123,46 @@ TEST_COMMAND_TEMPLATES: dict[str, str] = {
 #
 # The watchdog always runs (not gated on exit code). The original exit code
 # is re-emitted via exit $RC / exit /b %RC% so Jenkins sees the real outcome.
-CREATE_PLAN_COMMAND_TEMPLATE: str = """git checkout main
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
-
-mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir /workspace/repo --force || true
-
-echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
-
-exit $RC
-"""
 
 
-def _watchdog(failed: str, current: str) -> str:
-    """Return the watchdog set-status line for a workflow without --issue."""
+def _watchdog(failed: str, current: str, *, issue_flag: bool = False) -> str:
+    """Return the Linux watchdog set-status line.
+
+    With issue_flag the line carries `--issue {issue_number}`, a str.format
+    placeholder filled at dispatch.
+    """
+    issue = " --issue {issue_number}" if issue_flag else ""
     return (
-        f"mcp-coder gh-tool set-status {failed} --from-status {current} "
+        f"mcp-coder gh-tool set-status {failed} --from-status {current}{issue} "
         "--project-dir /workspace/repo --force || true"
     )
 
 
 def _linux_setup_template(
-    command: str, failed: str, current: str, *, archive_plan_sessions: bool = True
+    command: str,
+    failed: str,
+    current: str,
+    *,
+    checkout: str = "{branch_name}",
+    issue_flag: bool = False,
+    archive_plan_sessions: bool = True,
 ) -> str:
     """Return the Linux template for a workflow that needs the project set up.
 
-    `mcp-coder setup` runs after `git pull`; on failure the watchdog moves the
-    issue to its failed label and the script exits 1. The VIRTUAL_ENV line then
-    points mcp-tools-py checks at the project venv. The setup and venv lines
-    contain no $, braces or backticks (str.format and AutoRunner's outer
-    bash -c), and use if blocks because the executor runs under set -e.
+    `mcp-coder setup` runs after `git checkout <checkout>` and `git pull`; on
+    failure the watchdog moves the issue to its failed label and the script
+    exits 1. The VIRTUAL_ENV line then points mcp-tools-py checks at the project
+    venv. The setup and venv lines contain no $, braces or backticks (str.format
+    and AutoRunner's outer bash -c); the watchdog's only braces are the
+    `{issue_number}` placeholder, filled before bash sees the script. The
+    blocks use if because the executor runs under set -e.
     """
-    watchdog = _watchdog(failed, current)
+    watchdog = _watchdog(failed, current, issue_flag=issue_flag)
     plan_sessions = (
         "ls -la .mcp-coder/create_plan_sessions\n" if archive_plan_sessions else ""
     )
     return (
-        "git checkout {branch_name}\n"
+        f"git checkout {checkout}\n"
         "git pull\n"
         "if ! mcp-coder setup --project-dir /workspace/repo; then\n"
         f"{watchdog}\n"
@@ -193,6 +188,14 @@ def _linux_setup_template(
     )
 
 
+CREATE_PLAN_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "create-plan {issue_number}",
+    "status-03f:planning-failed",
+    "status-03:planning",
+    checkout="main",
+    issue_flag=True,
+)
+
 IMPLEMENT_COMMAND_TEMPLATE: str = _linux_setup_template(
     "implement", "status-06f:implementing-failed", "status-06:implementing"
 )
@@ -216,24 +219,9 @@ ls -la logs
 exit $RC
 """
 
-REVIEW_PLAN_COMMAND_TEMPLATE: str = """git checkout {branch_name}
-git pull
-export DISABLE_AUTOUPDATER=1
-export MCP_TIMEOUT=30000
-which mcp-coder && mcp-coder --version
-which claude && claude --version
-mcp-coder --log-level {log_level} review-plan --project-dir /workspace/repo --mcp-config .mcp.json
-RC=$?
-echo RC=$RC
-
-mcp-coder gh-tool set-status status-14f:plan-review-failed --from-status status-14i:plan-reviewing --project-dir /workspace/repo --force || true
-
-echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
-
-exit $RC
-"""
+REVIEW_PLAN_COMMAND_TEMPLATE: str = _linux_setup_template(
+    "review-plan", "status-14f:plan-review-failed", "status-14i:plan-reviewing"
+)
 
 REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE: str = _linux_setup_template(
     "review-implementation",
