@@ -21,6 +21,25 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Clean-tree check in `commit_changes` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `_tree_is_clean` helper + early return in `commit_changes`, autouse dirty-status fixture in `TestCommitChanges`, new `tests/workflow_steps/test_commit_clean_tree.py` (tests first)
+- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Safety net — no "committed successfully: None" — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `test_none_commit_hash_logs_no_changes` + `commit_hash is None` guard logging `No changes to commit` (tests first)
+- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Review regression guard — a clean round still pushes — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: add `env.push_changes.assert_called()` and docstring reason to `test_clean_tree_round_proceeds_normally`
+- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch, address findings
+- [ ] PR summary prepared
