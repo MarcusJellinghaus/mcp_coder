@@ -75,7 +75,7 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[dict[str, MagicMock]]:
         patch(f"{_COMMANDS}.load_repo_config", return_value=repo_config),
         patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
         patch(f"{_COMMANDS}.IssueBranchManager"),
-        patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
+        patch(f"{_COMMANDS}.get_all_cached_issues") as get_cached,
         patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
         patch(
             f"{_COMMANDS}.dispatch_workflow", return_value=DispatchResult.STARTED

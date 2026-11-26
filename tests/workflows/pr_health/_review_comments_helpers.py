@@ -15,7 +15,7 @@ from mcp_coder.mcp_workspace_github import (
 from mcp_coder.utils.log_utils import OUTPUT
 from tests.github_factories import make_issue_data
 
-CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
+CHECKS = "mcp_coder.workflows.pr_health.checks"
 REVIEW_LABEL = "status-91:pr-review-comments"
 CREATED_LABEL = "status-10:pr-created"
 

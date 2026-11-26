@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 from unittest.mock import Mock
 
@@ -7,13 +6,10 @@ import pytest
 from mcp_coder.mcp_workspace_github import (
     BranchLookup,
     BranchLookupError,
-    GithubException,
-    GitHubRateLimitError,
     IssueData,
 )
 from mcp_coder.workflows.vscodeclaude.issues import (
     build_eligible_issues_with_branch_check,
-    lookup_branch,
 )
 from tests.github_factories import make_issue_data
 from tests.workflows.vscodeclaude.conftest import patch_branch_cache
@@ -500,54 +496,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         assert len(eligible_issues) == 1
         assert eligible_issues[0][0] == "owner/good"
         assert eligible_issues[0][1]["number"] == 5
-
-
-class TestLookupBranch:
-    """Tests for lookup_branch()."""
-
-    def test_found_returns_branch(self) -> None:
-        cache = Mock()
-        cache.lookup.return_value = BranchLookup("found", "12-fix")
-
-        assert lookup_branch(cache, make_issue_data(number=12)) == "12-fix"
-
-    @pytest.mark.parametrize(
-        "result", [BranchLookup("not_found"), BranchLookup("ambiguous")]
-    )
-    def test_not_found_or_ambiguous_returns_none(self, result: BranchLookup) -> None:
-        cache = Mock()
-        cache.lookup.return_value = result
-
-        assert lookup_branch(cache, make_issue_data(number=12)) is None
-
-    @pytest.mark.parametrize(
-        "exc",
-        [
-            BranchLookupError("graphql incomplete"),
-            ValueError("bad"),
-            GithubException(500, {"message": "server error"}),
-        ],
-    )
-    def test_lookup_errors_return_none_with_warning(
-        self, exc: Exception, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        cache = Mock()
-        cache.lookup.side_effect = exc
-
-        with caplog.at_level(logging.WARNING, logger=ISSUES):
-            assert lookup_branch(cache, make_issue_data(number=12)) is None
-
-        assert any(
-            r.levelno == logging.WARNING and "#12" in r.getMessage()
-            for r in caplog.records
-        )
-
-    def test_rate_limit_propagates(self) -> None:
-        cache = Mock()
-        cache.lookup.side_effect = GitHubRateLimitError("limited")
-
-        with pytest.raises(GitHubRateLimitError):
-            lookup_branch(cache, make_issue_data(number=12))
 
 
 class TestBuildEligibleIssuesBranchCache:

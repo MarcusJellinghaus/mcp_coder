@@ -29,14 +29,14 @@ token = "ghp_your_github_token_here"
 
    | Permission | Level | Needed by |
    |---|---|---|
-   | Actions | Read | Workflow runs, jobs and logs: `workflow_steps/ci.py`, `workflow_steps/merge.py`, `check_branch_status`, vscodeclaude (`workflows/vscodeclaude/checks.py`, `get_latest_ci_status`) |
+   | Actions | Read | Workflow runs, jobs and logs: `workflow_steps/ci.py`, `workflow_steps/merge.py`, `check_branch_status`, Jenkins coordinator PR-health (`workflows/pr_health/checks.py`, `get_latest_ci_status`) |
    | Administration | Read (optional) | `verify` only: branch protection, Dependabot / secret-scanning rows; auto-delete branches unconfirmed (`verify` reads `delete_branch_on_merge` from the plain repo GET; whether it needs Administration is untested) |
-   | Code scanning alerts | Read | `check_branch_status`, vscodeclaude (`workflows/vscodeclaude/checks.py`), auto-merge (`merge.py`), `/pr_comment_triage` |
+   | Code scanning alerts | Read | `check_branch_status`, Jenkins coordinator PR-health (`workflows/pr_health/checks.py`), auto-merge (`merge.py`), `/pr_comment_triage` |
    | Commit statuses | Read | Listing non-green checks when a PR is `mergeable_state=unstable` (mcp-workspace `get_non_green_checks`, via `check_branch_status`) |
    | Contents | Read and write | Write: issue branch creation via GraphQL `createLinkedBranch` (`gh-tool checkout-issue-branch`, `create_plan/prerequisites.py`) and auto-merge (`merge.py` → PUT `/pulls/{n}/merge`) |
-   | Issues | Read and write | Labels create/update/delete (`define-labels`), `define-labels` initialising `status-01` on existing issues, label transitions (`set-status`, coordinator, `label_transitions.py`), the vscodeclaude `status-91` escalation, comments (`failure_handling.py`, `review/handoff.py`), mcp-workspace `github_issue_create` / `_edit` / `_comment` / `_set_status` / `github_subissue_*`; linking the branch in `createLinkedBranch` |
+   | Issues | Read and write | Labels create/update/delete (`define-labels`), `define-labels` initialising `status-01` on existing issues, label transitions (`set-status`, coordinator, `label_transitions.py`), the coordinator PR-health escalations (`status-71` / `81` / `91`), comments (`failure_handling.py`, `review/handoff.py`), mcp-workspace `github_issue_create` / `_edit` / `_comment` / `_set_status` / `github_subissue_*`; linking the branch in `createLinkedBranch` |
    | Metadata | Read | Always on |
-   | Pull requests | Read and write | `create-pr` (`workflows/create_pr/core.py`, incl. best-effort PR assignee when `auto_review_implementation` is on), PR description edit (`pr_description.py`), `/pr_comment_triage` (`github_review_comment_reply`, `github_review_thread_resolve`) |
+   | Pull requests | Read and write | `create-pr` (`workflows/create_pr/core.py`, incl. best-effort PR assignee when `auto_review_implementation` is on), PR description edit (`pr_description.py`), coordinator PR-health reads (open PRs, `mergeable_state`, review threads), `/pr_comment_triage` (`github_review_comment_reply`, `github_review_thread_resolve`) |
    | Workflows | Read and write (conditional) | Only if auto-merge may merge PRs that touch `.github/workflows/` (e.g. `define-labels --generate-github-actions` output, Dependabot `github-actions` bumps): GitHub rejects such an API merge without it |
 
    Unconfirmed, worth testing with a least-privilege token:
@@ -61,8 +61,8 @@ token = "ghp_your_github_token_here"
    Effective rules do not expose bypass actors, so "protected" does not mean "nobody
    can bypass".
 
-   **Code scanning alerts** — without `Code scanning alerts: Read`, vscodeclaude
-   silently does nothing about alerts, auto-merge merges with only a warning, and
+   **Code scanning alerts** — without `Code scanning alerts: Read`, the coordinator's
+   PR-health silently does nothing about alerts, auto-merge merges with only a warning, and
    `check_branch_status` reports the alerts as not checked.
 
 2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public

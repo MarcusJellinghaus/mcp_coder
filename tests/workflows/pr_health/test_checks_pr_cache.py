@@ -9,9 +9,9 @@ from mcp_coder.mcp_workspace_github import (
     BranchLookupError,
     GitHubRateLimitError,
 )
-from mcp_coder.workflows.vscodeclaude.checks import check_pr_health
-from tests.workflows.vscodeclaude._review_comments_helpers import _comment
-from tests.workflows.vscodeclaude.test_checks import (
+from mcp_coder.workflows.pr_health.checks import check_pr_health
+from tests.workflows.pr_health._review_comments_helpers import _comment
+from tests.workflows.pr_health.test_checks import (
     CHECKS,
     REPO_CONFIG,
     _empty_feedback,
@@ -137,14 +137,41 @@ class TestPullRequestCacheSave:
 
     def test_setup_failure_does_not_save(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _, branch_cache, _, pr_cache = _setup(monkeypatch)
-        monkeypatch.setattr(
-            f"{CHECKS}.get_github_username", Mock(side_effect=RuntimeError("no token"))
-        )
 
-        check_pr_health("test-repo", REPO_CONFIG, [_make_pr_issue(1)])
+        check_pr_health("test-repo", {"repo_url": "not-a-url"}, [_make_pr_issue(1)])
 
         pr_cache.save.assert_not_called()
         branch_cache.save.assert_not_called()
+
+
+class TestIssueCacheWriteBack:
+    """A successful escalation is written back to the issue cache (10 → target)."""
+
+    def test_escalation_updates_issue_cache(
+        self, monkeypatch: pytest.MonkeyPatch, _no_cache_write: MagicMock
+    ) -> None:
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.mergeable_state.return_value = "dirty"
+
+        check_pr_health("test-repo", REPO_CONFIG, [_make_pr_issue(999)])
+
+        _no_cache_write.assert_called_once_with(
+            issue_manager.repo_identifier,
+            issue_number=999,
+            old_label="status-10:pr-created",
+            new_label="status-71:merge-conflict",
+        )
+
+    def test_failed_label_update_does_not_touch_cache(
+        self, monkeypatch: pytest.MonkeyPatch, _no_cache_write: MagicMock
+    ) -> None:
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        issue_manager.transition_issue_label.return_value = False
+        pr_cache.mergeable_state.return_value = "dirty"
+
+        check_pr_health("test-repo", REPO_CONFIG, [_make_pr_issue(999)])
+
+        _no_cache_write.assert_not_called()
 
 
 class TestBranchLookupCacheInCheckPrHealth:

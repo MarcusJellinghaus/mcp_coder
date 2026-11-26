@@ -14,6 +14,7 @@ from mcp_coder.mcp_workspace_github import (
     BodyTrust,
     BodyTrustResult,
     IssueData,
+    RepoIdentifier,
 )
 from tests.github_factories import make_issue_data
 
@@ -98,7 +99,7 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[_Mocks]:
         patch(f"{_COMMANDS}.get_cache_refresh_minutes", return_value=1440),
         patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
         patch(f"{_COMMANDS}.IssueBranchManager"),
-        patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
+        patch(f"{_COMMANDS}.get_all_cached_issues") as get_cached,
         patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
         patch(f"{_COMMANDS}.dispatch_workflow") as dispatch,
         patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
@@ -119,8 +120,8 @@ def mocks(_trusted_issue_bodies: MagicMock) -> Iterator[_Mocks]:
             }
         )
 
-        def fetch(**kwargs: Any) -> list[IssueData]:
-            name = kwargs["repo_full_name"].split("/")[1]
+        def fetch(identifier: RepoIdentifier, **_kwargs: Any) -> list[IssueData]:
+            name = identifier.repo_name
             state.events.append(("fetch", name))
             return state.issues[name]
 
@@ -263,7 +264,9 @@ class TestCollectWork:
 
         assert [issue["number"] for issue, _ in work] == [1, 2, 3]
         repos = [repo for _, repo in work]
-        assert [(r.config_index, r.name, r.full_name) for r in repos] == [
+        assert [
+            (r.config_index, r.name, r.repo_identifier.full_name) for r in repos
+        ] == [
             (0, "repo_a", "user/repo_a"),
             (0, "repo_a", "user/repo_a"),
             (1, "repo_b", "user/repo_b"),

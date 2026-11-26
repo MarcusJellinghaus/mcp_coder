@@ -7,8 +7,8 @@ import pytest
 
 from mcp_coder.mcp_workspace_github import EventData, OpenPullRequest
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.workflows.vscodeclaude.checks import _check_review_comments
-from tests.workflows.vscodeclaude._review_comments_helpers import (
+from mcp_coder.workflows.pr_health.checks import _check_review_comments
+from tests.workflows.pr_health._review_comments_helpers import (
     AFTER_WATERMARK,
     BEFORE_WATERMARK,
     CHECKS,

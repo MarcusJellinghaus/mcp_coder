@@ -8,11 +8,11 @@ import pytest
 
 from mcp_coder.mcp_workspace_github import GitHubRateLimitError
 from mcp_coder.utils.log_utils import OUTPUT
-from tests.workflows.vscodeclaude._review_comments_helpers import (
+from tests.workflows.pr_health._review_comments_helpers import (
     MOCK_REVIEW_LABELS_CONFIG,
     _output_messages,
 )
-from tests.workflows.vscodeclaude.test_checks import (
+from tests.workflows.pr_health.test_checks import (
     CHECKS,
     _make_pr,
     _make_pr_issue,

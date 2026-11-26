@@ -7,13 +7,10 @@ from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_short_name,
 )
 from mcp_coder.workflows.vscodeclaude.helpers import (
-    get_issue_status,
     get_repo_short_name_from_full,
     get_stage_display_name,
-    is_marked,
     truncate_title,
 )
-from tests.github_factories import make_issue_data
 
 
 class TestRepoNameParsing:
@@ -80,28 +77,6 @@ class TestRepoNameParsing:
         assert get_repo_short_name_from_full("repo") == "repo"
 
 
-class TestIssueStatus:
-    """Test issue status extraction."""
-
-    def test_get_issue_status_with_status_label(self) -> None:
-        """Extracts status label from issue."""
-        issue = make_issue_data(
-            title="Test",
-            labels=["bug", "status-07:code-review", "priority-high"],
-            url="",
-        )
-        assert get_issue_status(issue) == "status-07:code-review"
-
-    def test_get_issue_status_no_status_label(self) -> None:
-        """Returns empty string if no status label."""
-        issue = make_issue_data(
-            title="Test",
-            labels=["bug", "priority-high"],
-            url="",
-        )
-        assert get_issue_status(issue) == ""
-
-
 class TestDisplayHelpers:
     """Test display helper functions."""
 
@@ -160,22 +135,3 @@ class TestDisplayHelpers:
         assert result.endswith("...")
         # Should have 47 'A's followed by '...'
         assert result == "A" * 47 + "..."
-
-
-class TestIsMarked:
-    """Test the first-line ❌ marker rule."""
-
-    @pytest.mark.parametrize(
-        ("body", "expected"),
-        [
-            ("", False),
-            ("## ❌ Implementation Failed\ndetails", True),
-            ("❌ handoff", True),
-            ("Implementation Failed\n❌ details", False),
-            ("\n## ❌ Implementation Failed", False),
-            ("plain comment", False),
-        ],
-    )
-    def test_is_marked(self, body: str, expected: bool) -> None:
-        """Marker counts only when it appears on the first line."""
-        assert is_marked(body) is expected

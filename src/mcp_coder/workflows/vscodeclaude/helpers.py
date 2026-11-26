@@ -2,7 +2,6 @@
 
 Contains utility functions for:
 - Repo URL parsing (extracting owner/repo from URLs)
-- Issue data extraction (status labels)
 - Session building
 - Display formatting (stage names, title truncation)
 """
@@ -11,7 +10,6 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ...mcp_workspace_github import IssueData
 from .config import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 
@@ -21,10 +19,8 @@ __all__ = [
     "TO_BE_DELETED_FILENAME",
     "add_to_be_deleted",
     "build_session",
-    "get_issue_status",
     "get_repo_short_name_from_full",
     "get_stage_display_name",
-    "is_marked",
     "load_to_be_deleted",
     "remove_from_to_be_deleted",
     "truncate_title",
@@ -43,21 +39,6 @@ def get_repo_short_name_from_full(repo_full_name: str) -> str:
     if "/" in repo_full_name:
         return repo_full_name.split("/")[-1]
     return repo_full_name
-
-
-def get_issue_status(issue: IssueData) -> str:
-    """Get the status label from an issue.
-
-    Args:
-        issue: Issue data dict
-
-    Returns:
-        Status label string or empty string if none found
-    """
-    for label in issue["labels"]:
-        if label.startswith("status-"):
-            return label
-    return ""
 
 
 def build_session(
@@ -122,23 +103,6 @@ def truncate_title(title: str, max_length: int = 50) -> str:
         return title
     # Subtract 3 for the ellipsis
     return title[: max_length - 3] + "..."
-
-
-def is_marked(body: str, marker: str = "❌") -> bool:
-    """Return True if the first line of ``body`` contains ``marker``.
-
-    mcp-coder's automated notes carry the marker on their first line.
-
-    Args:
-        body: Comment body text
-        marker: Marker string to look for
-
-    Returns:
-        True if the first line contains the marker
-    """
-    if not body:
-        return False
-    return marker in body.splitlines()[0]
 
 
 def load_to_be_deleted(workspace_base: str) -> set[str]:

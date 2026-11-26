@@ -16,14 +16,13 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes
+from ...workflow_utils.issue_helpers import get_issue_status, lookup_branch
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import _get_configured_repos
-from .helpers import get_issue_status
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
     is_status_eligible_for_session,
-    lookup_branch,
     status_requires_linked_branch,
 )
 from .session_launch import (

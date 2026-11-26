@@ -28,7 +28,7 @@ class TestCoordinatorRunCacheIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_with_force_refresh(
@@ -97,11 +97,11 @@ class TestCoordinatorRunCacheIntegration:
         # Verify - Exit code 0 (success)
         assert result == 0
 
-        # Verify - get_cached_eligible_issues was called with force_refresh=True
+        # Verify - get_all_cached_issues was called with force_refresh=True
         mock_get_cached_issues.assert_called_once()
         call_args = mock_get_cached_issues.call_args[1]
         assert call_args["force_refresh"] is True
-        assert call_args["repo_full_name"] == "user/test_repo"
+        assert mock_get_cached_issues.call_args.args[0].full_name == "user/test_repo"
 
         # Verify - dispatch_workflow was called for the issue
         mock_dispatch_workflow.assert_called_once()
@@ -111,7 +111,7 @@ class TestCoordinatorRunCacheIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_eligible_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_cache_fallback(
@@ -184,7 +184,7 @@ class TestCoordinatorRunCacheIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_continues_processing_after_dispatch_failure(
@@ -285,7 +285,7 @@ class TestCacheUpdateIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_updates_cache_after_successful_dispatch(
@@ -373,7 +373,7 @@ class TestCacheUpdateIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_cache_update_failure_does_not_break_dispatch(
@@ -466,7 +466,7 @@ class TestCacheUpdateIntegration:
     @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_all_cached_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_multiple_dispatches_keep_cache_synchronized(

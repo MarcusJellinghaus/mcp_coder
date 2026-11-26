@@ -6,11 +6,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.mcp_workspace_github import EventData, IssueData, OpenPullRequest
-from mcp_coder.workflows.vscodeclaude.checks import (
+from mcp_coder.workflows.pr_health.checks import (
     _check_review_comments,
     _review_comments_watermark,
 )
-from tests.workflows.vscodeclaude._review_comments_helpers import (
+from tests.workflows.pr_health._review_comments_helpers import (
     AFTER_WATERMARK,
     BEFORE_WATERMARK,
     CHECKS,

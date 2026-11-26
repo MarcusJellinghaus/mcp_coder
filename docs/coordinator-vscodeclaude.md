@@ -109,7 +109,9 @@ An issue whose body is untrusted opens a review-only session: a fixed prompt, an
 
 ### PR-health checks for `status-10:pr-created`
 
-`status-10:pr-created` issues never get a session themselves, but on every `coordinator vscodeclaude` run the coordinator checks each one's PR (live GitHub data, no local checkout needed). There is no internal loop — how often this happens depends on how often you run (or schedule) the command. The checks run whether or not a session slot is free. The checks run in a fixed order and at most one acts per poll — the rest are re-checked next poll:
+`status-10:pr-created` issues never get a session. `mcp-coder coordinator` on Jenkins checks each one's PR (live GitHub data, no local checkout needed), per repo, only while that repo's executor job has [capacity](repository-setup/jenkins.md#executor-capacity-gate). A busy job → no GitHub call for that repo; detection resumes on the next run with capacity. `vscodeclaude launch` does not run these checks.
+
+Selected: open issues with `status-10:pr-created`, any assignee, no `ignore_labels` label. The checks run in a fixed order and at most one acts per run — the rest are re-checked next run:
 
 1. **Merge conflict** → `status-71:merge-conflict` (Jenkins runs `fix-conflict`)
 2. **Failing CI** → `status-81:failing-ci` (Jenkins runs `fix-ci`)
@@ -118,7 +120,12 @@ An issue whose body is untrusted opens a review-only session: a fixed prompt, an
 
 On a PR whose author is untrusted, neither review feedback nor alerts are read. The coordinator prints one line per PR (`untrusted PR author @x — review comments and alerts not checked`) and writes nothing to GitHub.
 
-An account that posts PRs or ❌ notes on the owner's behalf (e.g. a Jenkins machine user via `github_credentials_id`) must be `COLLABORATOR` or listed in `[github] trusted_commenters` on the vscodeclaude host — otherwise its ❌ notes are dropped from the status file and its PRs never reach `status-91`.
+An account that posts PRs or ❌ notes on the owner's behalf (e.g. a Jenkins machine user via `github_credentials_id`) must be `COLLABORATOR` or listed in `[github] trusted_commenters` on both hosts:
+
+- the Jenkins coordinator agent (PR-health) — otherwise its PRs never reach `status-91`;
+- the vscodeclaude host (❌ notes in the status file, `workflows/vscodeclaude/workspace.py`) — otherwise its ❌ notes are dropped from the status file.
+
+An open issue with more than one `status-*` label is logged as ERROR on every coordinator run (→ UNSTABLE build) until fixed.
 
 This covers *authors* of PRs and notes. For *issue body editors* only the token user or `trusted_commenters` counts; see [Issue body trust](repository-setup/github.md#accepting-an-external-issue).
 
@@ -175,20 +182,20 @@ Sessions are tracked in:
 
 ### GitHub rate limits and caches
 
-`coordinator`, `vscodeclaude launch` and `vscodeclaude status` share one GitHub API budget. On the first rate-limit error they stop all remaining GitHub work, log one line with the reset time (`reset time unknown` for GraphQL and retry errors) and exit 0.
+`coordinator`, `vscodeclaude launch` and `vscodeclaude status` share one GitHub API budget when they use the same token; the Jenkins coordinator may use a different one (e.g. a machine user). On the first rate-limit error they stop all remaining GitHub work, log one line with the reset time (`reset time unknown` for GraphQL and retry errors) and exit 0.
 
 - **Coordinator partial dispatch** is the exception: if the Jenkins job was started but the label update hit the limit, one ERROR names the issue and the command exits non-zero.
-- **`vscodeclaude launch`**: cleanup and session bookkeeping still run; restart, PR-health checks and new launches are skipped until the next run.
+- **`vscodeclaude launch`**: cleanup and session bookkeeping still run; restart and new launches are skipped until the next run.
 - **`vscodeclaude status`** (also with `--explain`) prints only the rate-limit line, no table.
 - A session whose issue state cannot be fetched is never treated as closed or stale.
 - [Issue body trust](repository-setup/github.md#issue-body-trust) lookups are never cached: one lookup per gated issue per run.
 
-Cache files live next to `.issues.json` (same directory, same repo prefix) and are shared by all processes:
+Cache files live next to `.issues.json` (same directory, same repo prefix), per machine and user account (`~/.mcp_coder/coordinator_cache/`):
 
-| File | Contents |
-|------|----------|
-| `<repo>.prs.json` | Open PRs and PR-health results |
-| `<repo>.branches.json` | Issue → branch lookups |
+| File | Contents | Used by |
+|------|----------|---------|
+| `<repo>.prs.json` | Open PRs and PR-health results | coordinator only (on its host) |
+| `<repo>.branches.json` | Issue → branch lookups | coordinator and vscodeclaude |
 
 Workflows that update the final label (`--update-labels`, and always for `fix-conflict`) retry a failed update once after ~30 s, then exit non-zero.
 
