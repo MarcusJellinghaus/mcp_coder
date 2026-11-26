@@ -11,13 +11,16 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 from ...config.toml_utils import MCP_CODER_CONFIG_FILES
-from ...mcp_workspace import validate_access_rules
+from ...mcp_workspace import _check_reference_projects
 from ...utils.env_placeholders import resolve_placeholders
 from ...utils.pyproject_config import get_format_code, has_legacy_format_code_key
+from ...utils.toolkit_runner import WORKSPACE_SERVER
 from ...utils.verify_render import STATUS_SYMBOLS, Row, SectionBuilder, hint_row
 from .verify_project_keys import key_warning_rows
 from .verify_setup import setup_rows
@@ -53,6 +56,79 @@ class _DropUnexpandedWarnings(logging.Filter):
         return "unexpanded variable" not in record.getMessage()
 
 
+def _load_mcp_json(mcp_json_path: str) -> Any:
+    """Parse ``.mcp.json``.
+
+    Raises OSError when the file cannot be read and ``json.JSONDecodeError``
+    (a ``ValueError``) when it is not valid JSON.
+
+    Args:
+        mcp_json_path: Path to ``.mcp.json``.
+
+    Returns:
+        The parsed JSON document (any JSON type).
+    """
+    return json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+
+
+def _reference_project_args(server_args: list[Any]) -> list[str]:
+    """Return the ``--reference-project`` values in argument order.
+
+    Accepts both ``--reference-project X`` and ``--reference-project=X``;
+    non-string items and a trailing flag without a value are dropped.
+    """
+    prefix = "--reference-project="
+    values: list[str] = []
+    it = iter(server_args)
+    for arg in it:
+        if arg == "--reference-project":
+            value = next(it, None)
+            if isinstance(value, str):
+                values.append(value)
+        elif isinstance(arg, str) and arg.startswith(prefix):
+            values.append(arg[len(prefix) :])
+    return values
+
+
+def _lookup_reference_projects(
+    project_dir: Path, mcp_json_path: str | None, env_vars: Mapping[str, str] | None
+) -> tuple[list[tuple[str, Path]], list[tuple[str, str]]]:
+    """Validate the mcp-workspace server's ``--reference-project`` args.
+
+    The server's own ``--project-dir`` arg is ignored; *project_dir* is used
+    for the overlap checks. A missing or malformed ``.mcp.json``, or one
+    without an ``mcp-workspace`` server, yields no references. Raises
+    whatever ``_check_reference_projects`` raises, e.g. ``ValueError`` on an
+    explicit URL that does not match the detected git remote.
+
+    Args:
+        project_dir: Workspace directory.
+        mcp_json_path: Resolved ``.mcp.json`` path, or None.
+        env_vars: Extra variables used to resolve ``${...}`` placeholders.
+
+    Returns:
+        Accepted ``(final name, path)`` in argument order and rejected
+        ``(label, reason)`` pairs. Never returns ``ReferenceProject``: its
+        ``url`` keeps raw credentials.
+    """
+    if mcp_json_path is None:
+        return [], []
+    try:
+        data = _load_mcp_json(mcp_json_path)
+    except (OSError, ValueError):
+        return [], []
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    server = servers.get(WORKSPACE_SERVER) if isinstance(servers, dict) else None
+    server_args = server.get("args") if isinstance(server, dict) else None
+    if not isinstance(server_args, list):
+        return [], []
+    raw = _reference_project_args(server_args)
+    accepted, rejected = _check_reference_projects(
+        [resolve_placeholders(r, env_vars)[0] for r in raw], project_dir
+    )
+    return [(name, ref.path) for name, ref in accepted.items()], rejected
+
+
 def _validate_mcp_config(
     mcp_json_path: str,
     env_vars: dict[str, str] | None = None,
@@ -78,7 +154,7 @@ def _validate_mcp_config(
             fail.
     """
     try:
-        data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+        data = _load_mcp_json(mcp_json_path)
     except (OSError, json.JSONDecodeError) as exc:
         return (False, f"invalid JSON ({exc})", [])
     # A valid JSON document whose top level is NOT an object (e.g. [], "foo",
@@ -156,31 +232,6 @@ def _print_environment_section(out: SectionBuilder) -> None:
     out.close()
 
 
-def _file_access_row(
-    project_dir: Path, symbols: dict[str, str], out: SectionBuilder
-) -> bool:
-    """Add the ``.mcp-file-access`` row (indent 2) to *out*.
-
-    Args:
-        project_dir: Path to the project directory.
-        symbols: Dict with 'success', 'failure', 'warning' keys.
-        out: Builder the row is added to.
-
-    Returns:
-        False if the rules file is invalid (row added as [ERR]).
-    """
-    ok = True
-    if not (project_dir / ".mcp-file-access").exists():
-        marker, value = symbols["success"], "not present (gitignore defaults)"
-    elif problems := validate_access_rules(project_dir):
-        marker, value = symbols["failure"], f"invalid ({'; '.join(problems)})"
-        ok = False
-    else:
-        marker, value = symbols["success"], "valid"
-    out.add(Row(".mcp-file-access", marker, value, wrap=True))
-    return ok
-
-
 def _format_code_row(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder, indent: int = 4
 ) -> bool:
@@ -212,7 +263,7 @@ def _format_code_row(
 def _print_project_section(
     project_dir: Path, symbols: dict[str, str], out: SectionBuilder
 ) -> bool:
-    """Print the PROJECT section: the project config files, ``.mcp-file-access`` and tool config.
+    """Print the PROJECT section: the project config files and tool config.
 
     One flat layout for every repo. Opens and closes the section on *out*.
 
@@ -231,7 +282,6 @@ def _print_project_section(
         out.add(Row("Project config", symbols["success"], ", ".join(found)))
     else:
         out.add(Row("Project config", symbols["warning"], "none"))
-    file_access_ok = _file_access_row(project_dir, symbols, out)
     ok = _format_code_row(project_dir, symbols, out, indent=2)
     ok = toolkit_rows(project_dir, symbols, out, indent=2) and ok
     ok = setup_rows(project_dir, symbols, out, indent=2) and ok
@@ -248,7 +298,7 @@ def _print_project_section(
     ok = check_type_hints_row(project_dir, symbols, out) and ok
     out.add(*key_warning_rows(project_dir, "PROJECT", symbols))
     out.close()
-    return ok and file_access_ok
+    return ok
 
 
 def _prompt_source(configured: str | None, default_label: str) -> str:

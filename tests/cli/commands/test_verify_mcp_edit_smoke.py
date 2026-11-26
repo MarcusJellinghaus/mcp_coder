@@ -278,7 +278,7 @@ class TestMcpEditSmokeTest:
         )
 
         assert result.marker == "[WARN]"
-        assert result.value == "skipped: invalid .mcp-file-access (see PROJECT)"
+        assert result.value == "skipped: invalid .mcp-file-access (see FILE ACCESS)"
         mock_prompt_llm.assert_not_called()
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")

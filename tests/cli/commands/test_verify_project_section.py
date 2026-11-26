@@ -1,4 +1,4 @@
-"""Tests for the PROJECT section's .mcp-file-access, format_code, Toolkit, leftover-key rows."""
+"""Tests for the PROJECT section's format_code, Toolkit, leftover-key rows."""
 
 from collections.abc import Generator
 from contextlib import AbstractContextManager
@@ -61,59 +61,6 @@ def _row(lines: list[str], label: str) -> str:
 def _squash(text: str) -> str:
     """Remove all whitespace, so wrapped rows compare like single lines."""
     return "".join(text.split())
-
-
-_NOT_PRESENT = ".mcp-file-access [OK] not present (gitignore defaults)"
-_INVALID_WRITABLE = (
-    ".mcp-file-access [ERR] invalid (",
-    "unknown level 'writable'",
-)
-
-
-class TestFileAccessRow:
-    """.mcp-file-access row reports the rules file right after Project config."""
-
-    @pytest.mark.parametrize("with_pyproject", [True, False])
-    @pytest.mark.parametrize(
-        ("rules", "expected", "expected_ok"),
-        [
-            (None, (_NOT_PRESENT,), True),
-            ("read-write /.scratch/\n", (".mcp-file-access [OK] valid",), True),
-            ("writable /.scratch/\n", _INVALID_WRITABLE, False),
-            (
-                "<dir>",
-                (".mcp-file-access [ERR] invalid (is a directory)",),
-                False,
-            ),
-        ],
-        ids=["absent", "valid", "invalid", "directory"],
-    )
-    def test_row(
-        self,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-        with_pyproject: bool,
-        rules: str | None,
-        expected: tuple[str, ...],
-        expected_ok: bool,
-    ) -> None:
-        rules_path = tmp_path / ".mcp-file-access"
-        if rules == "<dir>":
-            rules_path.mkdir()
-        elif rules is not None:
-            rules_path.write_text(rules, encoding="utf-8")
-        ok, lines = _run(tmp_path, "[tool.black]\n" if with_pyproject else None, capsys)
-
-        project_config = next(
-            i
-            for i, line in enumerate(lines)
-            if line.strip().startswith("Project config ")
-        )
-        assert lines[project_config + 1].startswith("  .mcp-file-access ")
-        output = _squash("\n".join(lines))
-        for fragment in expected:
-            assert _squash(fragment) in output
-        assert ok is expected_ok
 
 
 class TestFormatCodeRow:
@@ -447,7 +394,6 @@ class TestProjectLayout:
         )
         labels = [
             "Project config",
-            ".mcp-file-access",
             "format_code",
             "Toolkit",
             "Setup",

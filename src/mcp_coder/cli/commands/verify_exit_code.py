@@ -19,15 +19,16 @@ def _compute_exit_code(
     jenkins_ok: bool | None = None,
     prompts_ok: bool = True,
     project_ok: bool = True,
+    file_access_ok: bool = True,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
     is enabled but broken, when the test prompt failed, when GitHub verification
     failed, when git verification failed, when a configured prompt path does not
-    resolve, when the PROJECT section reports an ``[ERR]`` row, when MCP
-    servers failed (langchain only), or when Claude MCP servers failed (claude
-    only).
+    resolve, when the PROJECT or FILE ACCESS section reports an ``[ERR]`` row,
+    when MCP servers failed (langchain only), or when Claude MCP servers failed
+    (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -56,8 +57,11 @@ def _compute_exit_code(
         project_ok: Whether the PROJECT section printed no ``[ERR]`` row:
             format_code, formatter resolution, leftover
             ``[tool.mcp-coder.implement] format_code`` key, Toolkit (load or
-            verify failure, or an error item), Setup (invalid config or an
-            unresolvable command), or an invalid ``.mcp-file-access``.
+            verify failure, or an error item), or Setup (invalid config or an
+            unresolvable command). False → exit 1, provider-independent.
+        file_access_ok: Whether the FILE ACCESS section printed no ``[ERR]``
+            row: any [ERR] row in FILE ACCESS: invalid rules file of the
+            workspace or a reference, rejected reference, lookup error.
             False → exit 1, provider-independent.
 
     Returns:
@@ -78,6 +82,10 @@ def _compute_exit_code(
 
     # An [ERR] row in the PROJECT section is provider-independent (exit 1).
     if not project_ok:
+        return 1
+
+    # An [ERR] row in the FILE ACCESS section is provider-independent (exit 1).
+    if not file_access_ok:
         return 1
 
     # Test prompt failure always means exit 1

@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: FILE ACCESS section (workspace + reference projects), exit code, docs
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture, deptry) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy, ruff, lint-imports, tach, vulture, deptry) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -263,6 +263,28 @@ def _mock_print_project_section() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def _mock_verify_file_access() -> Generator[MagicMock, None, None]:
+    """Keep execute_verify off the repo's own .mcp-file-access."""
+    default = {
+        "rules_file": {
+            "ok": True,
+            "value": "absent - gitignore only",
+            "severity": "error",
+        },
+        "overall_ok": True,
+    }
+    with patch(f"{_VERIFY}.verify_file_access", return_value=default) as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def _mock_lookup_reference_projects() -> Generator[MagicMock, None, None]:
+    """Keep execute_verify off the real .mcp.json and reference repos (no GitPython)."""
+    with patch(f"{_VERIFY}._lookup_reference_projects", return_value=([], [])) as mock:
+        yield mock
+
+
 @pytest.fixture
 def toolkit_with_ruff() -> Generator[None, None, None]:
     """Stub the toolkit so a non-formatter item (ruff) renders under ``format``."""

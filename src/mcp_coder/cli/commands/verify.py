@@ -22,11 +22,13 @@ from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...mcp_workspace import (
     FileAccess,
+    format_file_access_section,
     format_git_section,
     format_github_section,
     format_github_security_section,
     get_file_access,
     validate_access_rules,
+    verify_file_access,
 )
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import github_security_rows, verify_github
@@ -68,6 +70,7 @@ from .verify_sections import (
     _PROVIDER_ENV_SOURCE,
     _PROVIDER_ENV_VAR,
     _DropUnexpandedWarnings,
+    _lookup_reference_projects,
     _print_environment_section,
     _print_langchain_readiness_warning,
     _print_project_section,
@@ -94,13 +97,62 @@ def _smoke_test_skip_reason(project_dir: Path) -> str | None:
         The skip text, or None when the file is writable for MCP.
     """
     if validate_access_rules(project_dir):
-        return "skipped: invalid .mcp-file-access (see PROJECT)"
+        return "skipped: invalid .mcp-file-access (see FILE ACCESS)"
     access = get_file_access(_SMOKE_TEST_FILE, project_dir)
     if access == FileAccess.HIDDEN:
         return f"skipped: {_SMOKE_TEST_FILE} not exposed (gitignored, no rule)"
     if access == FileAccess.READ_ONLY:
         return f"skipped: {_SMOKE_TEST_FILE} has a read-only rule"
     return None
+
+
+def _print_file_access_section(
+    project_dir: Path,
+    mcp_config_path: str | None,
+    env_vars: dict[str, str],
+    symbols: dict[str, str],
+    out: SectionBuilder,
+) -> bool:
+    """Print FILE ACCESS: workspace, accepted references, rejected references.
+
+    Same rows as ``mcp-workspace verify``. A reference whose path does not
+    exist is a warning only. Opens and closes the section on *out*.
+
+    Args:
+        project_dir: Workspace directory.
+        mcp_config_path: Resolved ``.mcp.json`` path, or None.
+        env_vars: Variables used to resolve ``${...}`` placeholders.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+        out: Builder the section is rendered through.
+
+    Returns:
+        False when any row is [ERR].
+    """
+    out.open("FILE ACCESS")
+    workspace = verify_file_access(project_dir)
+    ok = workspace["overall_ok"]
+    out.add(*format_file_access_section(workspace, symbols, label="workspace"))
+    try:
+        accepted, rejected = _lookup_reference_projects(
+            project_dir, mcp_config_path, env_vars
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        # verify must not crash; the upstream message is credential-scrubbed
+        out.add(Row("reference projects", symbols["failure"], str(exc), wrap=True))
+        out.close()
+        return False
+    for name, path in accepted:
+        if not path.exists():
+            out.add(Row(name, symbols["warning"], "path not found"))
+            continue
+        result = verify_file_access(path)
+        ok &= result["overall_ok"]
+        out.add(*format_file_access_section(result, symbols, label=name))
+    for label, reason in rejected:
+        out.add(Row(label, symbols["failure"], f"rejected: {reason}"))
+        ok = False
+    out.close()
+    return ok
 
 
 def _run_mcp_edit_smoke_test(
@@ -297,6 +349,21 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
     # 0c. Project configuration section
     project_ok = _print_project_section(project_dir, symbols, out)
 
+    # Resolve MCP config for ALL providers: FILE ACCESS reads the reference
+    # projects from it, and the provider and MCP checks below reuse it.
+    mcp_config_resolved = resolve_mcp_config_path(
+        args.mcp_config, project_dir=args.project_dir
+    )
+    # Compute MCP_CODER_* env vars once: needed to resolve ${...} placeholders
+    # in .mcp.json for FILE ACCESS, the Claude/LangChain MCP health checks AND
+    # the smoke test / test prompt below.
+    env_vars = prepare_llm_environment(project_dir)
+
+    # 0c-bis. File access section (workspace + reference projects)
+    file_access_ok = _print_file_access_section(
+        project_dir, mcp_config_resolved, env_vars, symbols, out
+    )
+
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
     out.section("GIT", format_git_section(git_result, symbols))
@@ -356,10 +423,6 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
                 f"— using '{active_provider}'",
             )
         )
-    # 2a. Resolve MCP config for ALL providers (before provider branch)
-    mcp_config_resolved = resolve_mcp_config_path(
-        args.mcp_config, project_dir=args.project_dir
-    )
     settings_file = resolve_claude_settings_path(
         args.settings, project_dir=args.project_dir
     )
@@ -392,10 +455,6 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
     # 3a. MCP server health checks (provider-aware ordering)
     mcp_result: dict[str, Any] | None = None
     claude_mcp: list[ClaudeMCPStatus] | None = None
-    # Compute MCP_CODER_* env vars once: needed by the Claude/LangChain MCP
-    # health checks AND by the smoke test / test prompt below so .mcp.json
-    # placeholders like ${MCP_CODER_VENV_PATH} resolve in the subprocess.
-    env_vars = prepare_llm_environment(project_dir)
 
     # 2b. Validate .mcp.json itself (single parse; reused by 3a-bis warnings).
     # The validity row prints FIRST as the earliest, clearest upstream signal.
@@ -630,6 +689,7 @@ def _run_verify(args: argparse.Namespace, out: SectionBuilder) -> int:
         jenkins_ok=jenkins_ok,
         prompts_ok=prompts_ok,
         project_ok=project_ok,
+        file_access_ok=file_access_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

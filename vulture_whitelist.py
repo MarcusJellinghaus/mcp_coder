@@ -181,6 +181,13 @@ _._mock_verify_git
 # cli/commands/conftest.py - Autouse fixture to mock github_security_rows
 _._mock_github_security_rows
 
+# cli/commands/conftest.py - Autouse fixture to mock verify_file_access
+_._mock_verify_file_access
+
+# test_verify_file_access_section.py - Opt-in fixture restoring the real
+# verify_file_access, pulled in via usefixtures("real_file_access")
+_.real_file_access
+
 # cli/commands/conftest.py - Autouse fixture clearing retired env vars so the
 # CONFIG section width does not depend on the developer's environment
 _._clear_retired_env_vars

@@ -648,3 +648,32 @@ class TestProjectExitCode:
             )
             == 0
         )
+
+
+class TestFileAccessExitCode:
+    """Exit-code effect of the file_access_ok signal (provider-independent)."""
+
+    def test_file_access_not_ok_exit_1(self) -> None:
+        """Exit 1 when the FILE ACCESS section printed an [ERR] row."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                file_access_ok=False,
+            )
+            == 1
+        )
+
+    def test_file_access_default_no_effect(self) -> None:
+        """Exit 0 when file_access_ok is left at its default."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+            )
+            == 0
+        )

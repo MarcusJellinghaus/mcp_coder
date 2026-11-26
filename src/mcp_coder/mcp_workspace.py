@@ -1,17 +1,20 @@
 """Wrapper for mcp-workspace file listing, gitignore and file access utilities.
 
-Also re-exports the GIT / GITHUB / GITHUB SECURITY section formatters that
-``mcp-coder verify`` shares with ``mcp-workspace verify``.
+Also re-exports the FILE ACCESS / GIT / GITHUB / GITHUB SECURITY section
+formatters and checks that ``mcp-coder verify`` shares with
+``mcp-workspace verify``.
 """
 
 import logging
 from pathlib import Path
 
 from mcp_workspace.cli.verify_formatting import (
+    format_file_access_section,
     format_git_section,
     format_github_section,
     format_github_security_section,
 )
+from mcp_workspace.file_tools import FileAccessVerification, verify_file_access
 from mcp_workspace.file_tools.directory_utils import (
     FileAccess,
     get_file_access,
@@ -20,8 +23,14 @@ from mcp_workspace.file_tools.directory_utils import (
 )
 from mcp_workspace.file_tools.directory_utils import list_files as _list_files
 
+# Private upstream name: the only API that also returns the rejected references.
+from mcp_workspace.main import _check_reference_projects
+
 __all__ = [
     "FileAccess",
+    "FileAccessVerification",
+    "_check_reference_projects",
+    "format_file_access_section",
     "format_git_section",
     "format_github_section",
     "format_github_security_section",
@@ -29,6 +38,7 @@ __all__ = [
     "is_path_gitignored",
     "list_files",
     "validate_access_rules",
+    "verify_file_access",
 ]
 
 # Logger for the external library (verbose at INFO level)
