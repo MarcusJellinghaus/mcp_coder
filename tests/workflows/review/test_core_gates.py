@@ -125,7 +125,7 @@ def test_gate2_failure_details_reach_round_log(
         tmp_path / "pr_info" / f"{REVIEW_IMPLEMENTATION.log_stem}_review_log_1.md"
     ).read_text()
     lines = log_text.splitlines()
-    changes_value = lines[lines.index("**Changes**:") + 1]
+    changes_value = lines[lines.index("**Changes**:") + 2]
     assert "could not be collected" in changes_value
 
 
@@ -143,5 +143,5 @@ def test_after_steps_failure_falls_back_to_bare_reason(
         tmp_path / "pr_info" / f"{REVIEW_IMPLEMENTATION.log_stem}_review_log_1.md"
     ).read_text()
     lines = log_text.splitlines()
-    changes_value = lines[lines.index("**Changes**:") + 1]
+    changes_value = lines[lines.index("**Changes**:") + 2]
     assert changes_value == "ci"
