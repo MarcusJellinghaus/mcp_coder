@@ -2,8 +2,10 @@
 
 The review loop formats only through the real
 :func:`mcp_coder.workflow_steps.commit.run_formatters`, so the single
-``[tool.mcp-coder] format_code`` gate governs it. The shared ``env`` fixture
-mocks ``core.run_formatters``; tests here restore the real one.
+``[tool.mcp-coder] format_code`` gate governs it, including the whole-tree
+round-log flush (``handoff.format_best_effort``). The shared ``env`` fixture
+mocks ``core.run_formatters`` and the autouse ``formatter_mocks`` fixture mocks
+``handoff.format_best_effort``; tests here restore the real ones.
 """
 
 from pathlib import Path
@@ -13,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.workflow_steps import commit
-from mcp_coder.workflows.review import core
+from mcp_coder.workflows.review import core, handoff
 from tests.workflows.review.conftest import _DISMISS, _TASKS, _resp, _reviewer, _run
 
 
@@ -22,6 +24,7 @@ def test_format_code_false_skips_formatter_in_tasks_round(
 ) -> None:
     """``format_code = false`` → a ``tasks`` round never calls the formatter."""
     monkeypatch.setattr(core, "run_formatters", commit.run_formatters)
+    monkeypatch.setattr(handoff, "format_best_effort", commit.format_best_effort)
     (tmp_path / "pyproject.toml").write_text(
         "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
     )

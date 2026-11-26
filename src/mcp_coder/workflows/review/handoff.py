@@ -22,6 +22,7 @@ from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.commit import (
     BRANCH_MOVED_NEXT_STEP,
     PUSH_REJECTED_ERROR,
+    format_best_effort,
     push_changes,
 )
 from mcp_coder.workflow_steps.rebase import (
@@ -265,6 +266,11 @@ def _flush_round_log(
     (``push=False``) so the next round's rebase is not refused for unstaged
     changes. Neither re-writes the log — the caller wrote it first.
 
+    The whole-tree flush formats the tree first (:func:`format_best_effort`,
+    which never raises, so a formatter failure cannot skip the commit). The
+    scoped flush does not format: the formatter cannot be limited to one path,
+    and the unresolved-rebase handoff reaches it with a dirty tree.
+
     The push is skipped when the commit failed, when there was nothing to
     commit (``nothing_to_commit``, or ``commit_hash is None``), and whenever
     ``push=False``.
@@ -301,6 +307,7 @@ def _flush_round_log(
                 return
             result = commit_paths(message, [only], project_dir)
         else:
+            format_best_effort(project_dir, "round-log commit")
             result = commit_all_changes(message, project_dir)
         if result["error_category"] == "nothing_to_commit":
             logger.debug("Round-log commit had nothing to commit")
