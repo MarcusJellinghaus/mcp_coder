@@ -416,7 +416,11 @@ def test_push_failure_fails_run(env: SimpleNamespace, tmp_path: Path) -> None:
 def test_clean_tree_round_proceeds_normally(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """A round with no file changes (commit no-ops True) keeps looping to success."""
+    """A round with no file changes (commit no-ops True) keeps looping to success.
+
+    The push must still happen: it carries the previous round's log, which is
+    flushed with ``push=False``.
+    """
     env.is_working_directory_clean.return_value = True
     env.prompt_llm.side_effect = [
         _reviewer(),
@@ -430,6 +434,7 @@ def test_clean_tree_round_proceeds_normally(
 
     assert result == 0
     env.handle_workflow_failure.assert_not_called()
+    env.push_changes.assert_called()
 
 
 def test_labels_not_touched_when_gating_off(
