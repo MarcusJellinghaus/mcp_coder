@@ -233,7 +233,7 @@ def run_review_workflow(
                         exc=exc,
                     )
                 reviewer_sid = report_response["session_id"]
-                report = report_response["text"]
+                report = reviewer.report_text(report_response)
                 if report.strip():
                     break
             else:

@@ -6,11 +6,12 @@ known template, independent of ``prompts.md``).
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.workflows.review import reviewer
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 
@@ -345,3 +346,51 @@ class TestPrFeedbackNote:
         # The note must not claim unresolved feedback exists.
         assert "were posted on this PR" not in note
         assert "may report that reviews are clean" in note
+
+
+# --- Final reviewer message ------------------------------------------------
+
+
+def _report_response(
+    text: str, events: list[dict[str, Any]] | None = None
+) -> LLMResponseDict:
+    """Build a reviewer response; ``events=None`` leaves ``raw_response`` empty."""
+    raw: dict[str, Any] = {} if events is None else {"events": events}
+    return cast(
+        LLMResponseDict, {"text": text, "session_id": "rev-1", "raw_response": raw}
+    )
+
+
+class TestReportText:
+    """The final assistant message is the report, not the joined narration."""
+
+    def test_uses_final_done_result(self) -> None:
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "Still reviewing."},
+            {"type": "tool_use_start", "name": "read_file"},
+            {"type": "text_delta", "text": "a.py:1 — high — x"},
+            {"type": "done", "result": "a.py:1 — high — x"},
+        ]
+        response = _report_response("Still reviewing.a.py:1 — high — x", events)
+        assert reviewer.report_text(response) == "a.py:1 — high — x"
+
+    def test_empty_done_result_falls_back_to_joined_text(self) -> None:
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "joined"},
+            {"type": "done", "result": ""},
+        ]
+        response = _report_response("joined", events)
+        assert reviewer.report_text(response) == "joined"
+
+    def test_no_events_falls_back_to_joined_text(self) -> None:
+        response = _report_response("joined")
+        assert reviewer.report_text(response) == "joined"
+
+    def test_done_without_result_falls_back_to_joined_text(self) -> None:
+        """Copilot's ``done`` event carries no ``result``."""
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "joined"},
+            {"type": "done", "session_id": "s", "usage": {}},
+        ]
+        response = _report_response("joined", events)
+        assert reviewer.report_text(response) == "joined"

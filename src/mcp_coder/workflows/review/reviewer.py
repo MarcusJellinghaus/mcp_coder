@@ -81,6 +81,32 @@ def _pr_feedback_note(pr_feedback_text: str | None) -> str | None:
     )
 
 
+def report_text(response: LLMResponseDict) -> str:
+    """Return the final assistant message of a reviewer turn.
+
+    The last ``done`` event's ``result`` in ``raw_response["events"]`` when it
+    is a non-empty string, else ``response["text"]`` (the joined text blocks).
+    Providers without a ``result`` on ``done`` (copilot) always fall back.
+    Narration the reviewer emits between tool calls is joined into
+    ``response["text"]``; the final message is the report alone.
+
+    Args:
+        response: The reviewer's response.
+
+    Returns:
+        The stripped final result, or the unchanged joined text.
+    """
+    raw = response.get("raw_response") or {}
+    events = raw.get("events") if isinstance(raw, dict) else None
+    for event in reversed(events if isinstance(events, list) else []):
+        if isinstance(event, dict) and event.get("type") == "done":
+            result = event.get("result")
+            if isinstance(result, str) and result.strip():
+                return result.strip()
+            break
+    return response["text"]
+
+
 def _run_reviewer(
     config: ReviewConfig,
     project_dir: Path,
