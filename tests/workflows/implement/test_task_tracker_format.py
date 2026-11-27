@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import git
 import pytest
 
 from mcp_coder.workflow_steps import commit
@@ -194,6 +195,23 @@ class TestRestoreOnCommitFailure:
         mocks.reset_hard.assert_called_once_with(tmp_path, "HEAD")
         assert mocks.tracker.read_bytes() == original
 
+    def test_restores_when_listing_the_changes_fails(
+        self, tmp_path: Path, mocks: FormatMocks
+    ) -> None:
+        mocks.get_full_status.side_effect = [
+            TRACKER_ONLY,
+            RuntimeError("status failed"),
+        ]
+
+        with (
+            patch.object(prep, "_restore_formatted") as restore,
+            pytest.raises(TrackerPrepError),
+        ):
+            prepare_task_tracker(tmp_path, "claude")
+
+        restore.assert_called_once_with(tmp_path)
+        mocks.commit_paths.assert_not_called()
+
     def test_no_reset_when_formatter_changed_nothing(
         self, tmp_path: Path, mocks: FormatMocks
     ) -> None:
@@ -229,3 +247,27 @@ class TestRestoreOnCommitFailure:
             and "git reset --hard failed (exit 128)" in r.getMessage()
             for r in caplog.records
         )
+
+
+@pytest.mark.git_integration
+def test_restore_keeps_a_changed_build_artifact(
+    git_repo: tuple[git.Repo, Path],
+) -> None:
+    """The formatter's change is discarded; setup's uv.lock change survives."""
+    repo, project_dir = git_repo
+    with repo.config_writer() as config:
+        config.set_value("core", "autocrlf", "false")
+    (project_dir / "uv.lock").write_bytes(b"lock v1\n")
+    (project_dir / "a.py").write_bytes(b"x=1\n")
+    repo.index.add(["uv.lock", "a.py"])
+    repo.index.commit("initial")
+
+    (project_dir / "uv.lock").write_bytes(b"lock v2\n")  # rewritten by setup
+    (project_dir / "a.py").write_bytes(b"x = 1\n")  # rewritten by the formatter
+    repo.index.add(["a.py"])  # half-staged commit
+
+    prep._restore_formatted(project_dir)
+
+    assert (project_dir / "a.py").read_bytes() == b"x=1\n"
+    assert not repo.is_dirty(path="a.py")
+    assert (project_dir / "uv.lock").read_bytes() == b"lock v2\n"

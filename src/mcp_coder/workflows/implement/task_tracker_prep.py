@@ -118,7 +118,8 @@ def prepare_task_tracker(
         settings_file=settings_file,
     )
     done = False
-    formatted: list[str] = []
+    # Files the formatter changed; None once it ran and before they are known
+    formatted: list[str] | None = []
     try:
         if state is TrackerState.INVALID:
             logger.warning(
@@ -134,6 +135,7 @@ def prepare_task_tracker(
             _populate(ask, project_dir, reason)
 
         format_best_effort(project_dir, "task tracker commit")
+        formatted = None
         # _llm_rounds refused any change other than the tracker and the ignored
         # build artifacts, so every other changed path now came from the
         # formatter. .mcp-coder/ holds session files and is never committed.
@@ -166,23 +168,34 @@ def prepare_task_tracker(
         # Never leave a half-edited tracker behind, even on SystemExit
         if not done:
             tracker.write_bytes(original)
-            if formatted:
+            if formatted is None or formatted:
                 _restore_formatted(project_dir)
 
 
 def _restore_formatted(project_dir: Path) -> None:
     """Undo the formatter's changes and any half-staged commit; never raises.
 
-    The tree was clean before task tracker preparation, so resetting to HEAD
-    only discards what this step changed. A failed reset leaves the tree dirty.
+    Before task tracker preparation the tree was clean apart from the ignored
+    build artifacts (e.g. a ``uv.lock`` that setup rewrote). The tree is reset
+    to HEAD and those artifacts are written back byte for byte, so only what
+    this step changed is discarded. A failed reset leaves the tree dirty.
 
     Args:
         project_dir: Path to the project directory
     """
     try:
+        kept = {
+            path: path.read_bytes() if path.is_file() else None
+            for path in (project_dir / f for f in DEFAULT_IGNORED_BUILD_ARTIFACTS)
+        }
         result = reset_hard(project_dir, "HEAD")
+        for path, data in kept.items():
+            if data is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(data)
     except Exception:  # pylint: disable=broad-exception-caught  # runs in a finally
-        logger.error("git reset --hard HEAD failed", exc_info=True)
+        logger.error("Discarding the formatter's changes failed", exc_info=True)
         return
     if not result["success"]:
         logger.error("git reset --hard HEAD failed: %s", result["error"])
