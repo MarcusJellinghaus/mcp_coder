@@ -21,6 +21,35 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: create-plan logs steps 4-6 when each prompt starts
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: ordering test in `test_prompt_execution.py`, move Step 4/5/6 lines into `run_planning_prompts` (`core.py` must not grow)
+- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: rebase skips the force-push when HEAD already equals origin/<branch>
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `TestUpToDate` tests, in-place edits to `test_rebase.py`, `_up_to_date_branch` helper and call in `_attempt_rebase_and_push`, docstring/comment updates in `rebase.py` and `review/steps.py`
+- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set + `git_integration`) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: check loop logs each request with status, duration and summary (INFO)
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: `TestRequestLogging` tests, `_SUMMARY_MAX` / `_one_line` and `_run_group` logging in `check_loop.py`, fix-loop bullet in `docs/architecture/toolkit-interface.md`
+- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: command toolkit steps log what they ran (DEBUG)
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: `TestStepLogging` and `caplog` assertions in `TestFailures`, DEBUG lines and timing in `_run_step`
+- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the base branch and address findings
+- [ ] PR summary prepared
