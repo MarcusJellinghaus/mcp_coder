@@ -65,7 +65,8 @@ Deltas for every task:
 - **No discussion** — the skills are written for a conversation with a user. There is none:
   report once, at the end. Do not wait for answers.
 - **Writes** — only `pr_info/`, `.scratch/` probes, and requirement files named in the launch
-  prompt. Delete `.scratch/` before you report. Never commit, push or edit GitHub.
+  prompt. Delete the `.scratch/` files you wrote with `delete_this_file` before you report; never
+  delete `.scratch/` itself — other sessions may use it. Never commit, push or edit GitHub.
 - **Obsidian** — you have no Obsidian tools — skip CLAUDE.md's Obsidian knowledge base
   section; it is not a blocker.
 

@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Deployed agents and `issue_update` — delete only own `.scratch/` files
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: cleanup sentence in `code-engineer`, `issue-analyst`, `plan-engineer`; `issue_update` body file `.scratch/issue_body_<issue>.md` and own-files-only cleanup (verify searches + deployed-prose/skill tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: cleanup sentence in `code-engineer`, `issue-analyst`, `plan-engineer`; `issue_update` body file `.scratch/issue_body_<issue>.md` and own-files-only cleanup (verify searches + deployed-prose/skill tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `.claude/CLAUDE.md` — ownership rule, manual cleanup, probe name, Jenkins run folder
 See [step_4.md](./steps/step_4.md)

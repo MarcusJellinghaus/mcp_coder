@@ -38,9 +38,11 @@ Based on our prior `/issue_analyse` discussion, update the GitHub issue with ref
    - Well-structured body with implementation ideas
 
 4. **Write:** `mcp__mcp-workspace__github_issue_edit(number=…, title=…, body=… | body_file=…)`.
+   When using `body_file`, write the body to `.scratch/issue_body_<issue>.md`.
    The result must start with `Updated issue #`; anything else → report failure.
 
-5. **Temp files:** delete anything written to `.scratch/` afterwards.
+5. **Temp files:** afterwards, delete only the files this run wrote to `.scratch/`, with
+   `mcp__mcp-workspace__delete_this_file`; never delete `.scratch/` itself.
 
 **Editing Base Branch:**
 - To add a base branch: Insert `### Base Branch` section with the branch name
