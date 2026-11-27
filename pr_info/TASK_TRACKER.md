@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: command toolkit steps log what they ran (DEBUG)
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: `TestStepLogging` and `caplog` assertions in `TestFailures`, DEBUG lines and timing in `_run_step`
-- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestStepLogging` and `caplog` assertions in `TestFailures`, DEBUG lines and timing in `_run_step`
+- [x] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

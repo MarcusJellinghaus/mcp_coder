@@ -1,6 +1,7 @@
 """Tests for `CommandToolkit.describe` and `CommandToolkit.run`."""
 
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,8 @@ _JUNIT_ALL_PASSED = """<?xml version="1.0" encoding="utf-8"?>
   <testcase classname="pkg.TestA" name="test_ok"/>
 </testsuite></testsuites>
 """
+
+_LOGGER = "mcp_coder.toolkits.command.toolkit"
 
 
 def _script(scripts: Path, name: str, body: str) -> None:
@@ -250,17 +253,55 @@ class TestMerge:
         assert _run(config, project_dir).status == "ok"
 
 
+def _debug_messages(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == _LOGGER and r.levelno == logging.DEBUG
+    ]
+
+
+def _assert_early_return_logged(
+    caplog: pytest.LogCaptureFixture, result: ActionResult
+) -> None:
+    assert result.fix_text in _debug_messages(caplog)
+    assert not any(": ran " in r.getMessage() for r in caplog.records)
+
+
+class TestStepLogging:
+    """DEBUG lines of a step that ran."""
+
+    def test_step_logs_label_command_and_exit_code(
+        self, fake_npm: Path, project_dir: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        _exit_script(fake_npm, "lint", 1)
+        config = {"check": {"q": [{"argv": ["fakenpm", "lint"]}]}}
+        with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+            _run(config, project_dir)
+        ran = [m for m in _debug_messages(caplog) if "fakenpm lint: ran" in m]
+        assert len(ran) == 1
+        assert repr(resolve_executable("fakenpm", project_dir)) in ran[0]
+        assert "exit 1" in ran[0]
+        assert re.search(r"\(\d+\.\d s\)", ran[0])
+
+
 class TestFailures:
     """Steps that cannot produce a result."""
 
-    def test_timeout(self, fake_npm: Path, project_dir: Path) -> None:
+    def test_timeout(
+        self, fake_npm: Path, project_dir: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         _script(fake_npm, "slow", "import time\nprint('partial')\ntime.sleep(30)\n")
         config = {"test": {"q": [{"argv": ["fakenpm", "slow"], "timeout": 1}]}}
-        result = _run(config, project_dir, action="test")
+        with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+            result = _run(config, project_dir, action="test")
         assert result.status == "error"
         assert result.fix_text == "fakenpm slow: timed out after 1 s"
+        _assert_early_return_logged(caplog, result)
 
-    def test_execution_error(self, fake_npm: Path, project_dir: Path) -> None:
+    def test_execution_error(
+        self, fake_npm: Path, project_dir: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         _exit_script(fake_npm, "lint", 1)
         failed = CommandResult(
             return_code=1,
@@ -269,9 +310,12 @@ class TestFailures:
             timed_out=False,
             execution_error="permission denied",
         )
-        with patch(
-            "mcp_coder.toolkits.command.toolkit.execute_command",
-            MagicMock(return_value=failed),
+        with (
+            patch(
+                "mcp_coder.toolkits.command.toolkit.execute_command",
+                MagicMock(return_value=failed),
+            ),
+            caplog.at_level(logging.DEBUG, logger=_LOGGER),
         ):
             result = _run(
                 {"check": {"q": [{"argv": ["fakenpm", "lint"]}]}}, project_dir
@@ -279,12 +323,17 @@ class TestFailures:
         assert result.status == "error"
         assert result.findings == []
         assert "permission denied" in result.fix_text
+        _assert_early_return_logged(caplog, result)
 
-    def test_argv0_not_found(self, project_dir: Path) -> None:
+    def test_argv0_not_found(
+        self, project_dir: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         config = {"check": {"q": [{"argv": ["no-such-tool-xyz-1196"]}]}}
-        result = _run(config, project_dir)
+        with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+            result = _run(config, project_dir)
         assert result.status == "error"
         assert "not found" in result.fix_text
+        _assert_early_return_logged(caplog, result)
 
     def test_fix_text_capped(self, fake_npm: Path, project_dir: Path) -> None:
         _script(

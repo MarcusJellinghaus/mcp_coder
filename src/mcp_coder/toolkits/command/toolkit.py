@@ -6,6 +6,7 @@ into findings; the `exit-code` parser reports one finding per failed step.
 """
 
 import logging
+import time
 from pathlib import Path
 from xml.etree import ElementTree  # noqa: S405  # nosec B405
 
@@ -208,22 +209,25 @@ def _run_step(step: Step, project_dir: Path) -> ActionResult:
     exe = resolve_executable(step.argv[0], project_dir)
     if exe is None:
         message = f"{label}: {step.argv[0]!r} not found"
+        logger.debug("%s", message)
         return ActionResult(status="error", summary=message, fix_text=message)
 
     if step.report is not None:
         (project_dir / step.report).unlink(missing_ok=True)
 
-    res = execute_command(
-        [exe, *step.argv[1:]],
-        cwd=str(project_dir),
-        timeout_seconds=step.timeout,
-    )
+    cmd = [exe, *step.argv[1:]]
+    start = time.perf_counter()
+    res = execute_command(cmd, cwd=str(project_dir), timeout_seconds=step.timeout)
+    elapsed = time.perf_counter() - start
     if res.timed_out:
         message = f"{label}: timed out after {step.timeout} s"
+        logger.debug("%s", message)
         return ActionResult(status="error", summary=message, fix_text=message)
     if res.execution_error:
         message = f"{label}: {res.execution_error}"
+        logger.debug("%s", message)
         return ActionResult(status="error", summary=message, fix_text=message)
+    logger.debug("%s: ran %s, exit %s (%.1f s)", label, cmd, res.return_code, elapsed)
 
     status = exit_code_status(step.exit_codes, res.return_code)
     raw = (res.stdout + "\n" + res.stderr).strip()
