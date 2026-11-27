@@ -54,7 +54,6 @@ def pytest_configure(config: pytest.Config) -> None:
 
     # Get total number of tests (if available)
     # This will be updated in pytest_collection_modifyitems
-    pass
 
 
 def pytest_collection_modifyitems(
@@ -124,7 +123,7 @@ def pytest_sessionfinish(
         "durations": sorted_durations,
     }
 
-    with open(durations_path, "w") as f:
+    with open(durations_path, "w", encoding="utf-8") as f:
         json.dump(durations_data, f, indent=2)
 
     print(f"\n[OK] Saved {len(_profiler.durations)} test durations to {durations_path}")

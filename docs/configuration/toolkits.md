@@ -155,7 +155,10 @@ Rules:
   `pip install --upgrade "mcp-coder[python]"` (if the entry point is still
   missing, reinstall the tool env).
 - Its own settings stay in `[tool.mcp-tools-py]`: `formatter`, `<tool>-timeout`
-  (e.g. `pytest-timeout`), `check-timeout`. A
+  (e.g. `pytest-timeout`), `check-timeout`, `script-directories`.
+  `script-directories` lists folders of scripts that get the formatter, ruff,
+  pylint and mypy, but not vulture, bandit, deptry, coverage or pytest; it needs
+  mcp-tools-py with #308 (earlier versions ignore it). A
   `[tool.mcp-coder.toolkit.mcp-tools-py]` section is accepted but
   `PythonToolkit` ignores it.
 - pytest, pylint, mypy and deptry run in `VIRTUAL_ENV`'s interpreter, else

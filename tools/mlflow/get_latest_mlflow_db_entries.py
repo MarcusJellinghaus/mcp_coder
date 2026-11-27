@@ -173,7 +173,8 @@ def get_conversation_data(artifact_uri: str) -> dict[str, Any] | None:
             return None
 
         with open(conversation_file, encoding="utf-8") as f:
-            return json.load(f)
+            data: dict[str, Any] | None = json.load(f)
+        return data
 
     except Exception:
         return None

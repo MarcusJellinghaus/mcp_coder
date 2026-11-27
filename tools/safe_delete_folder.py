@@ -176,44 +176,46 @@ def _run_handle_exe(handle_exe: str, path: Path) -> list[str]:
 
 def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
     """Kill processes detected by handle64.exe, skipping protected ones."""
-    if sys.platform != "win32":
-        return []
+    # Positive platform guard: mypy skips the block silently on other
+    # platforms, whereas code after a platform-guarded early return is
+    # reported as unreachable under warn_unreachable. The block must not end
+    # in a return either: the shared return below would be unreachable on
+    # Windows.
+    results: list[str] = []
+    if sys.platform == "win32":
+        for proc_info in locking_processes:
+            if proc_info.startswith("[ERROR]") or proc_info.startswith("[INFO]"):
+                continue
 
-    results = []
+            # Parse: "cmd.exe  pid: 35140  type: File  ..."
+            match = re.search(r"^(\S+)\s+pid:\s*(\d+)", proc_info)
+            if not match:
+                continue
 
-    for proc_info in locking_processes:
-        if proc_info.startswith("[ERROR]") or proc_info.startswith("[INFO]"):
-            continue
+            proc_name = match.group(1)
+            pid = int(match.group(2))
 
-        # Parse: "cmd.exe  pid: 35140  type: File  ..."
-        match = re.search(r"^(\S+)\s+pid:\s*(\d+)", proc_info)
-        if not match:
-            continue
+            # Skip protected processes
+            if proc_name.lower() in {p.lower() for p in PROTECTED_PROCESSES}:
+                results.append(f"PROTECTED (not killed): {proc_name} (PID {pid})")
+                continue
 
-        proc_name = match.group(1)
-        pid = int(match.group(2))
-
-        # Skip protected processes
-        if proc_name.lower() in {p.lower() for p in PROTECTED_PROCESSES}:
-            results.append(f"PROTECTED (not killed): {proc_name} (PID {pid})")
-            continue
-
-        try:
-            result = subprocess.run(
-                ["taskkill", "/F", "/PID", str(pid)],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=False,
-            )
-            if result.returncode == 0:
-                results.append(f"KILLED: {proc_name} (PID {pid})")
-            elif "not found" in result.stderr.lower():
-                results.append(f"ALREADY GONE: {proc_name} (PID {pid})")
-            else:
-                results.append(f"FAILED: {proc_name} (PID {pid})")
-        except Exception as e:  # noqa: BLE001
-            results.append(f"ERROR: {proc_name} (PID {pid}): {e}")
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    results.append(f"KILLED: {proc_name} (PID {pid})")
+                elif "not found" in result.stderr.lower():
+                    results.append(f"ALREADY GONE: {proc_name} (PID {pid})")
+                else:
+                    results.append(f"FAILED: {proc_name} (PID {pid})")
+            except Exception as e:  # noqa: BLE001
+                results.append(f"ERROR: {proc_name} (PID {pid}): {e}")
 
     return results
 
@@ -252,27 +254,28 @@ def _delete_reserved_name(path: Path) -> tuple[bool, str]:
 
     Falls back to `rd /s /q` for directories if the direct approach fails.
     """
-    if sys.platform != "win32":
-        return False, "Reserved name handling is Windows-only"
+    # Platform guard with both branches: mypy skips the non-matching branch
+    # silently on each platform (see _kill_detected_lockers).
+    if sys.platform == "win32":
+        # Build \\?\C:\...\nul style path
+        resolved = str(path.resolve())
+        unc_path = (
+            f"\\\\?\\{resolved}" if not resolved.startswith("\\\\?\\") else resolved
+        )
 
-    # Build \\?\C:\...\nul style path
-    resolved = str(path.resolve())
-    unc_path = f"\\\\?\\{resolved}" if not resolved.startswith("\\\\?\\") else resolved
-
-    try:
-        if path.is_dir():
-            # Use rd /s /q with the \\?\ path for directories
-            result = subprocess.run(
-                ["cmd", "/c", "rd", "/s", "/q", unc_path],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=False,
-            )
-            if result.returncode == 0 or not path.exists():
-                return True, f"Deleted reserved-name directory via rd: {path.name}"
-            return False, f"rd failed: {result.stderr.strip()}"
-        else:
+        try:
+            if path.is_dir():
+                # Use rd /s /q with the \\?\ path for directories
+                result = subprocess.run(
+                    ["cmd", "/c", "rd", "/s", "/q", unc_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
+                if result.returncode == 0 or not path.exists():
+                    return True, f"Deleted reserved-name directory via rd: {path.name}"
+                return False, f"rd failed: {result.stderr.strip()}"
             # Use del with the \\?\ path for files
             result = subprocess.run(
                 ["cmd", "/c", "del", "/f", "/q", unc_path],
@@ -284,8 +287,10 @@ def _delete_reserved_name(path: Path) -> tuple[bool, str]:
             if result.returncode == 0 or not path.exists():
                 return True, f"Deleted reserved-name file via del: {path.name}"
             return False, f"del failed: {result.stderr.strip()}"
-    except Exception as e:  # noqa: BLE001
-        return False, f"Failed to delete reserved name {path.name}: {e}"
+        except Exception as e:  # noqa: BLE001
+            return False, f"Failed to delete reserved name {path.name}: {e}"
+    else:
+        return False, "Reserved name handling is Windows-only"
 
 
 def _delete_reserved_names_recursive(root: Path, quiet: bool = False) -> list[str]:
@@ -297,35 +302,34 @@ def _delete_reserved_names_recursive(root: Path, quiet: bool = False) -> list[st
     Returns list of paths that were successfully deleted.
     """
     deleted: list[str] = []
-    if sys.platform != "win32":
-        return deleted
+    # Positive platform guard: see _kill_detected_lockers.
+    if sys.platform == "win32":
+        # Collect all reserved-name entries (bottom-up for safe deletion)
+        reserved_paths: list[Path] = []
+        try:
+            for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+                parent = Path(dirpath)
+                for name in filenames:
+                    child = parent / name
+                    if _is_windows_reserved_name(child):
+                        reserved_paths.append(child)
+                for name in dirnames:
+                    child = parent / name
+                    if _is_windows_reserved_name(child):
+                        reserved_paths.append(child)
+        except (PermissionError, OSError):
+            pass
 
-    # Collect all reserved-name entries (bottom-up for safe deletion)
-    reserved_paths: list[Path] = []
-    try:
-        for dirpath, dirnames, filenames in os.walk(root, topdown=False):
-            parent = Path(dirpath)
-            for name in filenames:
-                child = parent / name
-                if _is_windows_reserved_name(child):
-                    reserved_paths.append(child)
-            for name in dirnames:
-                child = parent / name
-                if _is_windows_reserved_name(child):
-                    reserved_paths.append(child)
-    except (PermissionError, OSError):
-        pass
-
-    for rpath in reserved_paths:
-        if not quiet:
-            print(f"  Removing reserved-name entry: {rpath}")
-        success, msg = _delete_reserved_name(rpath)
-        if success:
-            deleted.append(str(rpath))
+        for rpath in reserved_paths:
             if not quiet:
-                print(f"    -> {msg}")
-        elif not quiet:
-            print(f"    -> FAILED: {msg}")
+                print(f"  Removing reserved-name entry: {rpath}")
+            success, msg = _delete_reserved_name(rpath)
+            if success:
+                deleted.append(str(rpath))
+                if not quiet:
+                    print(f"    -> {msg}")
+            elif not quiet:
+                print(f"    -> FAILED: {msg}")
 
     return deleted
 
@@ -495,7 +499,7 @@ def _try_rmdir_with_kill(
             return True, "Deleted empty directory after killing lockers"
     except (PermissionError, OSError) as e:
         # Still locked - try move as last resort
-        moved, move_result = _move_file_to_temp(path)
+        moved, _ = _move_file_to_temp(path)
         if moved:
             return True, "Moved empty directory to staging"
         return False, f"Still locked after killing: {e}"
@@ -557,7 +561,9 @@ def _delete_folder(
 
         try:
             if sys.version_info >= (3, 12):
-                shutil.rmtree(path, onexc=_rmtree_remove_readonly)
+                shutil.rmtree(  # pylint: disable=unexpected-keyword-arg
+                    path, onexc=_rmtree_remove_readonly
+                )
             else:
                 shutil.rmtree(  # pylint: disable=deprecated-argument
                     path, onerror=_rmtree_remove_readonly
@@ -593,7 +599,7 @@ def _delete_folder(
                 # Continue to try other strategies
 
             # Step 1: Try move
-            moved, result = _move_file_to_temp(locked_path)
+            moved, _ = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
                 moved_files.append(locked_path.name)
@@ -629,7 +635,7 @@ def _delete_folder(
                         time.sleep(1)  # Wait for handles to release
 
             # Step 3: Try move again after kill
-            moved, result = _move_file_to_temp(locked_path)
+            moved, _ = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
                 moved_files.append(locked_path.name)

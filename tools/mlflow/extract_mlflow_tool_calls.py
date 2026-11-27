@@ -70,7 +70,10 @@ def load_messages(artifact_uri: str, step: int = 0) -> list[dict[str, Any]]:
         return []
     try:
         data = json.loads(conv_file.read_text(encoding="utf-8"))
-        return data.get("response_data", {}).get("raw_response", {}).get("messages", [])
+        messages: list[dict[str, Any]] = (
+            data.get("response_data", {}).get("raw_response", {}).get("messages", [])
+        )
+        return messages
     except (json.JSONDecodeError, ValueError):
         return []
 

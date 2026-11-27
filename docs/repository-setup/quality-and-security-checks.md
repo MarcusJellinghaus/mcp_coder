@@ -71,7 +71,7 @@ disagreeing. CI jobs `ruff-format` (format) and `ruff` (import order), both over
 
 ## Types
 
-mypy strict, CI job `mypy`. [`upstream-compat-check.yml`](../../.github/workflows/upstream-compat-check.yml)
+mypy strict over `src`, `tests` and `tools`, CI job `mypy`. [`upstream-compat-check.yml`](../../.github/workflows/upstream-compat-check.yml)
 runs mypy strict and an import check of every module against upstream main of
 mcp-coder-utils, mcp-workspace and mcp-tools-py, on `repository_dispatch` or
 `workflow_dispatch`, so interface breaks show before a release.
@@ -79,8 +79,8 @@ mcp-coder-utils, mcp-workspace and mcp-tools-py, on `repository_dispatch` or
 ## Pylint
 
 Errors and warnings; `C` and `R` are off except `R0401` (cyclic imports). It runs alongside
-ruff because ruff does not fully cover pylint. CI job `pylint`. See
-[`pyproject.toml`](../../pyproject.toml) `[tool.pylint.messages_control]`.
+ruff because ruff does not fully cover pylint. CI job `pylint`, over `src`, `tests` and
+`tools`. See [`pyproject.toml`](../../pyproject.toml) `[tool.pylint.messages_control]`.
 
 ## Architecture
 

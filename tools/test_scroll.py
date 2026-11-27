@@ -4,7 +4,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import RichLog
 
 
-class TestScrollApp(App):
+class TestScrollApp(App[None]):
     """App with a single RichLog filled with scrollable lines."""
 
     def compose(self) -> ComposeResult:

@@ -559,6 +559,8 @@ def main(argv: list[str] | None = None) -> int:
     if client is None:
         return 3
     if args.inspect is not None:
+        if job is None:  # checked above; narrows job to str
+            parser.error("--inspect needs --job (no single executor job configured)")
         saved = [
             inspect_log(
                 client, job, number, args.log_dir, build_name(client, job, number)

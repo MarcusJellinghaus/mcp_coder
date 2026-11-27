@@ -615,9 +615,9 @@ jobs:
         check:
           - {name: "ruff", cmd: "ruff version && ruff check src tests tools"}
           - {name: "ruff-format", cmd: "ruff version && ruff format --check src tests tools"}
-          - {name: "pylint", cmd: "pylint -E ./src ./tests"}
+          - {name: "pylint", cmd: "pylint -E ./src ./tests ./tools"}
           - {name: "pytest", cmd: "pytest"}
-          - {name: "mypy", cmd: "mypy --strict src tests"}
+          - {name: "mypy", cmd: "mypy --strict src tests tools"}
           - {name: "import-linter", cmd: "lint-imports"}
           - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
     name: ${{ matrix.check.name }}

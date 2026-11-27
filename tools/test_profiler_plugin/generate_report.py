@@ -11,6 +11,7 @@ import json
 import pstats
 import sys
 from pathlib import Path
+from typing import Any
 
 # Configuration
 PROF_OUTPUT_DIR = Path("docs/tests/performance_data/prof")
@@ -61,7 +62,7 @@ def generate_profile_report(
 
             # Capture summary output
             stream = io.StringIO()
-            stats.stream = stream
+            stats.stream = stream  # type: ignore[attr-defined]
             stats.print_stats(0)  # Just the summary line
             f.write(stream.getvalue())
             f.write("\n")
@@ -74,7 +75,7 @@ def generate_profile_report(
             )
 
             stream = io.StringIO()
-            stats.stream = stream
+            stats.stream = stream  # type: ignore[attr-defined]
             stats.sort_stats(pstats.SortKey.CUMULATIVE)
             stats.print_stats(TOP_N_FUNCTIONS)
             f.write(stream.getvalue())
@@ -88,7 +89,7 @@ def generate_profile_report(
             )
 
             stream = io.StringIO()
-            stats.stream = stream
+            stats.stream = stream  # type: ignore[attr-defined]
             stats.sort_stats(pstats.SortKey.TIME)
             stats.print_stats(TOP_N_FUNCTIONS)
             f.write(stream.getvalue())
@@ -100,7 +101,7 @@ def generate_profile_report(
             f.write("This shows which functions called the top functions.\n\n")
 
             stream = io.StringIO()
-            stats.stream = stream
+            stats.stream = stream  # type: ignore[attr-defined]
             stats.sort_stats(pstats.SortKey.CUMULATIVE)
             stats.print_callers(20)
             f.write(stream.getvalue())
@@ -111,7 +112,7 @@ def generate_profile_report(
 
 
 def create_summary_report(
-    durations_data: dict, slow_tests: list[tuple[str, float]]
+    durations_data: dict[str, Any], slow_tests: list[tuple[str, float]]
 ) -> None:
     """Create a summary report of all profiling results.
 
@@ -182,7 +183,7 @@ def main() -> int:
         return 1
 
     # Load durations data
-    with open(DURATIONS_FILE) as f:
+    with open(DURATIONS_FILE, encoding="utf-8") as f:
         durations_data = json.load(f)
 
     threshold = durations_data.get("threshold_seconds", 1.0)
