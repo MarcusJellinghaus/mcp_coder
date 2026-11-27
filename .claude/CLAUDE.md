@@ -15,7 +15,7 @@ If you can't name the gap, use the MCP tool. Exempt: the approved commands under
 
 **Protected files** (`.mcp*.json`, `.claude/settings*.json`, `.mcp-file-access`): MCP refuses writes to them by design. Stop and ask the user to edit the file — a refusal is not a gap, so never fall back to Edit/Write, Bash or PowerShell.
 
-**No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`.
+**No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`. Other sessions may share this folder: name your files by issue or topic, and delete only the files you wrote (`delete_this_file`) or a `.scratch/` subfolder you created (`delete_directory(<subfolder>, recursive=True)`) — never `.scratch/` itself. The user deletes `.scratch/` and leftover `pr_info/issue_analysis_log_*.md` by hand, when no session runs in this folder.
 
 
 ### Tool mapping
@@ -105,11 +105,11 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 Don't assert Python behaviour you haven't run. Probe it:
 
 ```python
-mcp__mcp-workspace__save_file(".scratch/test_probe.py", ...)
-mcp__mcp-tools-py__run_pytest_check(extra_args=["-p", "no:cacheprovider", ".scratch/test_probe.py"])
+mcp__mcp-workspace__save_file(".scratch/test_probe_<issue or topic>.py", ...)
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-p", "no:cacheprovider", ".scratch/test_probe_<issue or topic>.py"])
 ```
 
-A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI still blocks any PR carrying one. `.scratch/` is gitignored; the `read-write /.scratch/` rule in `.mcp-file-access` keeps it writable for the MCP file tools.
+A path argument scopes the run, so a probe costs seconds. Delete your probe file when done (`delete_this_file`); CI still blocks any PR carrying one. `.scratch/` is gitignored; the `read-write /.scratch/` rule in `.mcp-file-access` keeps it writable for the MCP file tools.
 
 Never use `python -c` via Bash. If you reason instead of running, label the conclusion analytical.
 
@@ -140,11 +140,11 @@ git add / rebase / push --force-with-lease
 - Connection or `401`/`403` errors: `mcp-coder verify` (JENKINS sections).
 - Status check of recent runs: follow `tools/jenkins_status_check.md`.
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
-- Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
-- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs/Executor_2935.txt`. No default job. The output path must be readable for MCP (e.g. not under `logs/`) — `read_file` refuses gitignored paths unless `.mcp-file-access` exposes them; `.scratch/` works (its `read-write` rule), delete it afterwards.
+- Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] --outdir .scratch/jenkins_logs_<issue or topic>_<date>` — writes an `index.csv` alongside; read them with `read_file`, delete that run folder when done.
+- Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs_<issue or topic>_<date>/Executor_2935.txt` (the tool creates parent folders). No default job. The output path must be readable for MCP (e.g. not under `logs/`) — `read_file` refuses gitignored paths unless `.mcp-file-access` exposes them; `.scratch/` works (its `read-write` rule), delete the run folder afterwards.
 - Without `--job`, `jenkins_builds` and `jenkins_download_logs` default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
 - `--name-pattern` matches the build display name before `--limit` applies; workflow builds are labelled like `mcp_coder - #1346 - implement - #2559` (`" - #\d+$"`).
-- Analyse failures: `tools/jenkins_classify_logs.sh [--logdir .scratch/jenkins_logs]` tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.
+- Analyse failures: `tools/jenkins_classify_logs.sh --logdir .scratch/jenkins_logs_<issue or topic>_<date>` (the download's `--outdir`) tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.
 - LLM side of a run (prompt, tool calls, errors): `tools/mlflow/`, read its README first. API errors such as 529 appear only in the Claude Code transcript (`~/.claude/projects/<sanitised cwd>/*.jsonl` on the machine that ran the session).
 
 ## Shared Libraries

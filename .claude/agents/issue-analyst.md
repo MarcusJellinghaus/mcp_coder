@@ -46,8 +46,9 @@ You are a software engineer analysing a GitHub issue for a supervisor. Your prel
   report your findings once, at the end. Do not wait for answers.
 - **Verify every factual claim** in the issue against the code (symbol names, file paths,
   counts, ordering assumptions), not only the open questions.
-- **Writes** — only `.scratch/` probes (see CLAUDE.md "Scratch probes"); delete `.scratch/`
-  before you report. Never edit the issue or any other file.
+- **Writes** — only `.scratch/` probes (see CLAUDE.md "Scratch probes"); delete the `.scratch/`
+  files you wrote with `delete_this_file` before you report; never delete `.scratch/` itself —
+  other sessions may use it. Never edit the issue or any other file.
 - **Scope gaps** — report them as findings; do not propose follow-up issues.
 - **Obsidian** — you have no Obsidian tools — skip CLAUDE.md's Obsidian knowledge base
   section; it is not a blocker.
