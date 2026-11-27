@@ -13,6 +13,7 @@
 - `src/mcp_coder/prompts/prompts.md` — both reviewer headers' **Fixes** paragraph
 - `src/mcp_coder/workflows/review/core.py` — keep the task reply; backstop `changes=`
 - `tests/workflows/review/test_reviewer.py`, `tests/prompts/test_prompt_loader.py`,
+  `tests/workflows/review/test_review_log.py`,
   `tests/workflows/review/test_core_round_outcomes.py` — tests
 
 ## WHAT
@@ -36,8 +37,13 @@ def parse_task_outcomes(text: str) -> list[str]:
   order: `applied` or `not applied: <reason>`. Then re-emit your structured report:\n"` +
   task lines.
 - `prompts.md`: in both `Review Implementation Reviewer` and `Review Plan Reviewer`, the
-  tool list `(`edit_file`, `save_file`)` becomes `(`edit_file`, `save_file`,
-  `delete_this_file`)`.
+  **Fixes** paragraph changes in two ways:
+  - the tool list `(`edit_file`, `save_file`)` becomes `(`edit_file`, `save_file`,
+    `delete_this_file`)`;
+  - when a task list is given, the re-emitted report starts with one line per task, in
+    order: `applied` or `not applied: <reason>`. The paragraph says these outcome lines are
+    the one allowed exception to the "No preamble" contract, so the header and the task
+    prompt agree.
 - `core.py`:
   - `reviewer._run_reviewer(..., tasks=verdict.tasks, ...)` → assign the result to
     `apply_response`.
@@ -74,7 +80,14 @@ return outcomes
   `applied`, `not applied: <reason>` and asks for them at the start of the final message,
   after the edits.
 
-`test_prompt_loader.py`: both reviewer headers contain `delete_this_file`.
+`test_prompt_loader.py`: both reviewer headers contain `delete_this_file` and
+`not applied: <reason>`, and their **Fixes** paragraph names the outcome lines as the
+exception to "No preamble".
+
+`test_review_log.py` (use the existing `_assert_formatter_stable` and `_read` helpers, as
+step 2 does for `format_verdict`): `write_round_log(..., changes="no-op\nnot applied: no PR
+exists")` → the log has `**Changes**:\n\nno-op\nnot applied: no PR exists\n` and is
+formatter-stable.
 
 `test_core_round_outcomes.py`:
 - round 1 `tasks`, `env.round_applied.return_value = False`, apply reply text
