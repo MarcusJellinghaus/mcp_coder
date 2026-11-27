@@ -21,6 +21,42 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `issue_analyse_supervisor` — per-issue analysis log
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: per-issue log name `pr_info/issue_analysis_log_<issue>.md`, `list_directory` existence check, no glob delete, Finalize deletes only that file (verify searches + deployed-prose/skill tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Review supervisors — create the log in the step that picks `{n}`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: merge Setup steps 3 and 4 in `plan_review_supervisor` and `implementation_review_supervisor`, with "already exists → next number" rule (verify searches + deployed-prose/skill tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Deployed agents and `issue_update` — delete only own `.scratch/` files
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: cleanup sentence in `code-engineer`, `issue-analyst`, `plan-engineer`; `issue_update` body file `.scratch/issue_body_<issue>.md` and own-files-only cleanup (verify searches + deployed-prose/skill tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `.claude/CLAUDE.md` — ownership rule, manual cleanup, probe name, Jenkins run folder
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: extend "No session scratchpad" line, probe `.scratch/test_probe_<issue or topic>.py` deleted with `delete_this_file`, Jenkins lines use `.scratch/jenkins_logs_<issue or topic>_<date>/` (verify searches + deployed-prose/skill tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Jenkins process docs — run folder, delete only it
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: run folder in `tools/jenkins_status_check.md` and `tools/jenkins_issue_analysis.md` for `--outdir`, `--logdir`, single-build output and subagent findings; Decision 6 re-check over `.claude/**` (verify searches + deployed-prose/skill tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against the summary and fix findings
+- [ ] PR summary prepared
