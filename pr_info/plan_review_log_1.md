@@ -8,3 +8,11 @@ Reviewing the plan for #1487. I've read the issue, the plan files and the review
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md (around line 79), add a test to test_review_log.py that writes an outcome block (e.g. `no-op\\nnot applied: <reason>`) into the **Changes** section of the round log and asserts it with `_assert_formatter_stable`, matching the formatter-stability check that step 2 adds for `format_verdict`.', "In pr_info/steps/step_4.md (around line 38), update the **Fixes** paragraph of both reviewer headers so that, when a task list is given, it tells the reviewer to start the re-emitted report with one `applied` / `not applied: <reason>` line per task. State that this is an allowed exception to the 'No preamble' contract, so the header and the task prompt agree."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-11-27
+**Findings**:
+Still reviewing: reading the supervisor header in `prompts.md` to check the plan against the re-litigation rule.Checking that the test helpers the plan names exist, then writing the report.`pr_info/steps/step_4.md:58` — medium — `_OUTCOME_RE` accepts only a bare `applied` / `not applied: <reason>` after an optional list marker. The task prompt at line 37 shows both tokens in backticks, and LLMs often copy that formatting, writing `` `applied` `` or `**not applied:** …`. Those lines fail the match and the parse stops at the first one, so it returns `[]`: **Changes** loses its outcome lines and step 5's no-op note says `(none reported)`. `severity.py`'s `_RE` already tolerates backticks for the same reason. Either strip backticks and `*` before matching (with a DATA example and test for it), or have the prompt ask for plain unformatted lines.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In pr_info/steps/step_4.md (around line 58), make `_OUTCOME_RE` parsing tolerant of markdown formatting the way `severity.py`'s `_RE` is: strip backticks and `*` from each line before matching, so `` `applied` `` and `**not applied:** <reason>` both parse. Add a DATA example and a test covering backtick- and bold-wrapped outcome lines."], escalate_reason=None)
+**Changes**:
+applied
