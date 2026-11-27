@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Safety net — no "committed successfully: None" — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `test_none_commit_hash_logs_no_changes` + `commit_hash is None` guard logging `No changes to commit` (tests first)
-- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `test_none_commit_hash_logs_no_changes` + `commit_hash is None` guard logging `No changes to commit` (tests first)
+- [x] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Review regression guard — a clean round still pushes — [step_3.md](./steps/step_3.md)
 

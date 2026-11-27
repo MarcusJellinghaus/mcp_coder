@@ -150,3 +150,28 @@ def test_dirty_status_nothing_staged_flows_through_fallback(
     assert commit_changes(tmp_path) is True
 
     mock_commit.assert_called_once_with(FALLBACK_COMMIT_MESSAGE, tmp_path)
+
+
+@patch(COMMIT)
+@patch(GENERATE)
+@patch(STATUS)
+def test_none_commit_hash_logs_no_changes(
+    mock_status: MagicMock,
+    mock_generate: MagicMock,
+    mock_commit: MagicMock,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A successful commit without a hash logs that nothing was committed.
+
+    It must never claim "committed successfully: None".
+    """
+    caplog.set_level(logging.INFO)
+    mock_status.return_value = _status()
+    mock_generate.return_value = (True, "feat: m", None)
+    mock_commit.return_value = {"success": True, "commit_hash": None, "error": None}
+
+    assert commit_changes(tmp_path) is True
+
+    assert "No changes to commit" in caplog.text
+    assert "committed successfully" not in caplog.text

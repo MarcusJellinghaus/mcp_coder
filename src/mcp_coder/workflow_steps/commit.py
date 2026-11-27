@@ -227,12 +227,18 @@ def commit_changes(
             logger.error(f"Commit message was: {commit_message}")
             return False
 
-        # Show commit message first line along with hash
-        commit_lines = commit_message.strip().split("\n")
-        first_line = commit_lines[0].strip() if commit_lines else commit_message.strip()
-        logger.info(
-            f"Changes committed successfully: {commit_result['commit_hash']} - {first_line}",
-        )
+        if commit_result["commit_hash"] is None:
+            # Nothing was staged, so no commit was created
+            logger.info("No changes to commit")
+        else:
+            # Show commit message first line along with hash
+            commit_lines = commit_message.strip().split("\n")
+            first_line = (
+                commit_lines[0].strip() if commit_lines else commit_message.strip()
+            )
+            logger.info(
+                f"Changes committed successfully: {commit_result['commit_hash']} - {first_line}",
+            )
         return True
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
