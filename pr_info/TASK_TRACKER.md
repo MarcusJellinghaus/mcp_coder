@@ -23,6 +23,37 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `jenkins_watch.py` — narrow `job` for mypy, pin `--inspect` exit code ([step_1.md](./steps/step_1.md))
+
+- [ ] Implementation: test `test_inspect_without_job_exits_2` + `job is None` narrowing in `main()`
+- [ ] Quality checks (format, ruff, mypy, pylint, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Remaining mypy `--strict` findings in `tools/` ([step_2.md](./steps/step_2.md))
+
+- [ ] Implementation: typing fixes in `generate_report.py`, `test_scroll.py`, mlflow scripts
+- [ ] Quality checks (format, ruff, mypy on `src tests tools`, pylint, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: pylint findings in `tools/` ([step_3.md](./steps/step_3.md))
+
+- [ ] Implementation: targeted disables, unused variables, `encoding="utf-8"`, remove `pass`
+- [ ] Quality checks (format, ruff, pylint and mypy on `src tests tools`, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Add `tools` to the mypy / pylint command lines ([step_4.md](./steps/step_4.md))
+
+- [ ] Implementation: `ci.yml`, `upstream-compat-check.yml`, `.bat` wrappers, `github.md` template
+- [ ] Quality checks (search, format, mypy, pylint, pytest) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `script-directories = ["tools"]` in `pyproject.toml` + docs ([step_5.md](./steps/step_5.md))
+
+- [ ] Implementation: `pyproject.toml` key, `toolkits.md`, `python.md`, `quality-and-security-checks.md`
+- [ ] Quality checks (search, format, ruff, mypy, pylint, pytest) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes on the branch against the plan
+- [ ] PR summary prepared
