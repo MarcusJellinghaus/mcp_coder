@@ -135,6 +135,26 @@ def run_formatters(project_dir: Path) -> bool:
     return True
 
 
+def format_best_effort(project_dir: Path, context: str) -> None:
+    """Run the commit binding's formatters; never raise.
+
+    A raised exception or a False result logs a WARNING naming ``context``,
+    so the caller's commit always proceeds.
+
+    Args:
+        project_dir: Path to the project directory
+        context: What the formatting precedes, e.g. "the plan commit"; it
+            appears in the warning
+    """
+    try:
+        ok = run_formatters(project_dir)
+    except Exception as e:  # pylint: disable=broad-exception-caught  # best-effort: the commit must still happen
+        logger.warning("Formatting failed before %s: %s", context, e)
+        return
+    if not ok:
+        logger.warning("Formatting failed before %s", context)
+
+
 def _tree_is_clean(project_dir: Path) -> bool:
     """Return True only if git status succeeded and the tree is clean. Never raises.
 

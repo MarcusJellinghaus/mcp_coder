@@ -31,10 +31,7 @@ from mcp_coder.checks.branch_status import (
     CIStatus,
     collect_branch_status,
 )
-from mcp_coder.mcp_workspace_git import (
-    get_latest_commit_sha,
-    is_working_directory_clean,
-)
+from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.workflow_steps.commit import (
     check_formatter_config,
     commit_changes,
@@ -49,10 +46,16 @@ from mcp_coder.workflow_utils.failure_handling import (
 from . import reviewer
 from .config import ReviewConfig
 from .gates import check_ci_proven_gate, check_open_tasks_gate
-from .handoff import _fail, _flush_round_log, _route_to_human, _set_label
+from .handoff import (
+    FORMAT_BEFORE_GATE_MESSAGE,
+    _fail,
+    _flush_round_log,
+    _route_to_human,
+    _set_label,
+)
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
-from .steps import _after_steps, _resolve_context
+from .steps import _after_steps, _resolve_context, round_applied
 from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
@@ -309,6 +312,12 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
+                if config.run_after_steps:
+                    # The rebase push in _after_steps carries this commit, so
+                    # the commit check_ci_proven_gate judges is formatted.
+                    _flush_round_log(
+                        project_dir, FORMAT_BEFORE_GATE_MESSAGE, push=False
+                    )
                 reason, rebase_outcome, ci_detail = _after_steps(
                     config,
                     project_dir,
@@ -550,6 +559,9 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
 
+            # Measured before _after_steps, so base-branch changes the rebase
+            # brings in are not counted as this round's fix.
+            applied = round_applied(project_dir, sha_before)
             reason, rebase_outcome, ci_detail = _after_steps(
                 config,
                 project_dir,
@@ -615,12 +627,10 @@ def run_review_workflow(
                 # After-steps clean (CI green / nothing to do): clear stale note.
                 pending_ci_note = None
 
-            # Backstop (layer C): a `tasks` round that changed nothing is a
-            # silent no-op — log it, but let the round count toward the cap and
-            # keep going (the next fresh reviewer re-surfaces the finding).
-            changed = get_latest_commit_sha(
-                project_dir
-            ) != sha_before or not is_working_directory_clean(project_dir)
+            # Backstop (layer C): a `tasks` round that changed nothing besides
+            # the review logs is a silent no-op — log it, but let the round
+            # count toward the cap and keep going (the next fresh reviewer
+            # re-surfaces the finding).
             # Left uncommitted on purpose: the top of the next iteration lands
             # it, and every terminal path flushes its own write.
             pending_log = write_round_log(
@@ -630,7 +640,7 @@ def run_review_workflow(
                 round_number,
                 findings=report,
                 decisions=str(verdict),
-                changes="applied" if changed else "no-op",
+                changes="applied" if applied else "no-op",
             )
 
         # Rounds cap. The last `tasks` round already wrote its log at the end of

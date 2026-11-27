@@ -20,6 +20,9 @@ PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
 BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 
+# The CI fix drive reaches the real workflow_steps.ci.run_formatters.
+pytestmark = pytest.mark.real_formatters
+
 
 @dataclass
 class _RefreshMocks:

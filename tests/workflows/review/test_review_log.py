@@ -3,8 +3,185 @@
 from datetime import date
 from pathlib import Path
 
+import pytest
+
+from mcp_coder.workflows.review import review_log
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
 from mcp_coder.workflows.review.review_log import next_run_number, write_round_log
+
+_BLOCK_LABELS = {"**Findings**:", "**Decisions**:", "**Changes**:"}
+
+
+class _FixedDate:
+    """Stand-in for ``datetime.date`` whose ``today()`` is fixed."""
+
+    @staticmethod
+    def today() -> date:
+        return date(2026, 1, 2)
+
+
+@pytest.fixture
+def fixed_date(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Pin the date the round log writes into each round heading."""
+    monkeypatch.setattr(review_log, "date", _FixedDate)
+    return _FixedDate.today().isoformat()
+
+
+def _read(path: Path) -> str:
+    return path.read_bytes().decode("utf-8")
+
+
+def _assert_formatter_stable(text: str) -> None:
+    """Assert the markdown layout a formatter would leave unchanged."""
+    assert not text.startswith("\n")
+    assert text.endswith("\n") and not text.endswith("\n\n")
+    assert "\n\n\n" not in text
+    lines = text.split("\n")[:-1]
+    for index, line in enumerate(lines):
+        if line.startswith("# ") or line.startswith("## "):
+            assert lines[index + 1] == "", f"no blank line after {line!r}"
+            if index > 0:
+                assert lines[index - 1] == "", f"no blank line before {line!r}"
+        if line in _BLOCK_LABELS:
+            assert lines[index + 1] == "", f"no blank line after {line!r}"
+        if line.startswith("**Escalate reason**:"):
+            assert line == "**Escalate reason**: x"
+
+
+class TestWriteRoundLogGolden:
+    """Exact text of the round log."""
+
+    def test_one_round(self, tmp_path: Path, fixed_date: str) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings=" f \n",
+            decisions="d",
+            changes="c",
+        )
+        assert _read(path) == (
+            "# review-implementation review log 1\n"
+            "\n"
+            f"## Round 1 — {fixed_date}\n"
+            "\n"
+            "**Findings**:\n"
+            "\n"
+            "f\n"
+            "\n"
+            "**Decisions**:\n"
+            "\n"
+            "d\n"
+            "\n"
+            "**Changes**:\n"
+            "\n"
+            "c\n"
+        )
+
+    def test_two_rounds_with_escalate_reason(
+        self, tmp_path: Path, fixed_date: str
+    ) -> None:
+        write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings="f1",
+            decisions="d1",
+            changes="c1",
+        )
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=2,
+            findings="f2",
+            decisions="d2",
+            changes="c2",
+            escalate_reason=" why \n",
+        )
+        assert _read(path) == (
+            "# review-implementation review log 1\n"
+            "\n"
+            f"## Round 1 — {fixed_date}\n"
+            "\n"
+            "**Findings**:\n"
+            "\n"
+            "f1\n"
+            "\n"
+            "**Decisions**:\n"
+            "\n"
+            "d1\n"
+            "\n"
+            "**Changes**:\n"
+            "\n"
+            "c1\n"
+            "\n"
+            f"## Round 2 — {fixed_date}\n"
+            "\n"
+            "**Findings**:\n"
+            "\n"
+            "f2\n"
+            "\n"
+            "**Decisions**:\n"
+            "\n"
+            "d2\n"
+            "\n"
+            "**Changes**:\n"
+            "\n"
+            "c2\n"
+            "\n"
+            "**Escalate reason**: why\n"
+        )
+
+    def test_later_round_on_missing_file_starts_with_heading(
+        self, tmp_path: Path, fixed_date: str
+    ) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=3,
+            findings="f",
+            decisions="d",
+            changes="c",
+        )
+        assert _read(path).startswith(f"## Round 3 — {fixed_date}\n\n**Findings**:\n")
+
+
+class TestWriteRoundLogInvariants:
+    """Formatter-stable layout across input shapes."""
+
+    @pytest.mark.parametrize(
+        ("findings", "escalate_reason"),
+        [
+            pytest.param("plain text", None, id="plain"),
+            pytest.param("- a\n- b", None, id="starts-with-list"),
+            pytest.param("intro\n- a\n- b", None, id="ends-with-list"),
+            pytest.param("\n\n  padded  \n\n", None, id="surrounding-blank-lines"),
+            pytest.param("plain text", "x", id="escalate"),
+            pytest.param("- a\n- b\n", " x \n", id="list-and-escalate"),
+        ],
+    )
+    def test_layout_after_each_round(
+        self, tmp_path: Path, findings: str, escalate_reason: str | None
+    ) -> None:
+        for round_number in (1, 2):
+            path = write_round_log(
+                tmp_path,
+                REVIEW_IMPLEMENTATION,
+                run_number=1,
+                round_number=round_number,
+                findings=findings,
+                decisions="\nd\n",
+                changes="c",
+                escalate_reason=escalate_reason,
+            )
+            text = _read(path)
+            _assert_formatter_stable(text)
+            if escalate_reason:
+                assert text.count("**Escalate reason**: x\n") == round_number
 
 
 class TestNextRunNumber:

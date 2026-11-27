@@ -103,7 +103,7 @@ def test_fix_task_exception_is_in_comment_not_round_log(
 
     assert "RuntimeError: fix boom" in _comment(env)
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
-    assert "**Changes**:\ngeneral\n" in log
+    assert "**Changes**:\n\ngeneral\n" in log
     assert "fix boom" not in log
 
 
@@ -168,7 +168,7 @@ def test_dismiss_ci_exception_keeps_bare_reason_in_round_log(
     log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
         encoding="utf-8"
     )
-    assert "**Changes**:\ngeneral\n" in log
+    assert "**Changes**:\n\ngeneral\n" in log
     assert "ci boom" not in log
 
 

@@ -11,6 +11,9 @@ from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.workflow_steps import commit
 from tests.ci_fix_drive import patch_ci_fix_externals
 
+# The CI fix drive reaches the real workflow_steps.ci.run_formatters.
+pytestmark = pytest.mark.real_formatters
+
 
 @pytest.fixture
 def failed_ci_report() -> BranchStatusReport:

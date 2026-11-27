@@ -64,6 +64,12 @@ STEP_TRACKER = (
 
 RESTRUCTURED = STEP_TRACKER.replace("## Step ", "### Step ")
 
+# Violation location of the first misplaced step header; follows the template's length
+STEP_1_VIOLATION = (
+    "pr_info/TASK_TRACKER.md line "
+    f"{STEP_TRACKER.splitlines().index('## Step 1: Setup') + 1}"
+)
+
 
 def _prompts(_path: str, name: str) -> str:
     if name == "Task Tracker Feedback Prompt":
@@ -336,7 +342,7 @@ class TestRestructureRepair:
         assert first.startswith("RESTRUCTURE")
         assert "[violations]" not in first
         assert "[expected_format]" not in first
-        assert "pr_info/TASK_TRACKER.md line 24" in first
+        assert STEP_1_VIOLATION in first
         assert mocks.prompt_llm.call_count == 1
         mocks.commit.assert_called_once()
         assert "- [x] Implementation" in mocks.tracker.read_text(encoding="utf-8")
@@ -366,7 +372,7 @@ class TestRestructureRepair:
         assert exc.reason == "general"
         assert "after 3 LLM calls" in str(exc)
         assert "Original violations:" in str(exc)
-        assert "pr_info/TASK_TRACKER.md line 24" in str(exc)
+        assert STEP_1_VIOLATION in str(exc)
         calls = mocks.prompt_llm.call_args_list
         assert len(calls) == 3
         assert calls[0].kwargs["session_id"] is None

@@ -11,6 +11,9 @@ from mcp_coder.workflow_steps.commit import PUSH_REJECTED_ERROR, PushRejectedErr
 from mcp_coder.workflow_steps.constants import CI_MAX_FIX_ATTEMPTS, COMMIT_MESSAGE_FILE
 from tests.ci_fix_drive import patch_ci_fix_externals
 
+# The CI fix drive reaches the real workflow_steps.ci.run_formatters.
+pytestmark = pytest.mark.real_formatters
+
 
 def _rejected_push_error(reason: str) -> str:
     """Build a push error shaped like a stringified ``GitCommandError``."""

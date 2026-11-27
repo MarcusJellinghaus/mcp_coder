@@ -330,8 +330,8 @@ def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) ->
 
 
 def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) -> None:
-    """tasks with no change (same sha + clean dir) logs a no-op yet keeps looping."""
-    env.is_working_directory_clean.return_value = True  # clean == no change applied
+    """tasks with no change outside the review logs logs a no-op yet keeps looping."""
+    env.round_applied.return_value = False
     per_round = [_reviewer(), _resp(_TASKS), _reviewer(session_id="rev-1")]
     env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
 
@@ -421,7 +421,7 @@ def test_clean_tree_round_proceeds_normally(
     The push must still happen: it carries the previous round's log, which is
     flushed with ``push=False``.
     """
-    env.is_working_directory_clean.return_value = True
+    env.round_applied.return_value = False
     env.prompt_llm.side_effect = [
         _reviewer(),
         _resp(_TASKS),

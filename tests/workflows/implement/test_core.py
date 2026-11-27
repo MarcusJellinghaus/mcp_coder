@@ -381,6 +381,7 @@ class TestRunImplementWorkflow:
         call_names = [name for name, _, _ in manager.mock_calls]
         assert call_names.index("read_blocked") < call_names.index("get_status")
 
+    @pytest.mark.real_formatters
     @patch("mcp_coder.workflow_steps.commit.run_binding")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)

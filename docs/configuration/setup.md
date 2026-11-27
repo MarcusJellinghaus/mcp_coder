@@ -13,9 +13,11 @@ Callers pass only these flags, so setup changes land in mcp-coder alone:
 
 - VSCodeClaude session launcher: `--refresh`, before the session env is built
   ([coordinator and VSCodeClaude](../coordinator-vscodeclaude.md#session-lifecycle)).
-- Linux Jenkins templates (implement, fix-ci, fix-conflict,
-  review-implementation): right after `git pull`. A failure moves the issue to
-  its failed label and stops the run.
+- Linux Jenkins templates (create-plan, implement, review-plan,
+  review-implementation, fix-ci, fix-conflict): right after `git pull`. A
+  failure moves the issue to its failed label and stops the run. create-plan
+  runs setup on `main`, before the plan branch is checked out. Linux create-pr
+  and the coordinator test template do not run setup.
 - Windows Jenkins templates (all workflows and the coordinator test): `--refresh`, before the workflow command. A workflow's failure moves the issue to its failed label and stops the run.
 
 `mcp-coder install` is unchanged; it also builds tool envs and stays Python-only.

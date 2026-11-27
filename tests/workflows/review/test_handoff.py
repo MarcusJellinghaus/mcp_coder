@@ -4,6 +4,7 @@ These deterministic tests exercise the round-log flush in isolation with the
 git externals mocked. ``_flush_round_log`` must be best-effort (never raise,
 warn on a falsy or raised result, skip the push when the commit did not
 succeed), and with ``only=`` it must commit that one path and nothing else.
+The whole-tree flush formats first, best-effort; the scoped flush never does.
 
 ``_route_to_human`` and ``_fail``, the callers of this helper, are covered in
 ``test_handoff_route.py``.
@@ -11,6 +12,7 @@ succeed), and with ``only=`` it must commit that one path and nothing else.
 
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -18,6 +20,7 @@ import pytest
 from git import Repo
 
 from mcp_coder.mcp_workspace_git import get_full_status
+from mcp_coder.workflow_steps import commit as commit_module
 from mcp_coder.workflows.review import handoff
 
 
@@ -390,3 +393,73 @@ def test_flush_push_false_commits_without_pushing(
 
     commit.assert_called_once()
     push.assert_not_called()
+
+
+# --- formatting before the whole-tree flush --------------------------------
+
+
+def test_flush_formats_before_the_whole_tree_commit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, formatter_mocks: SimpleNamespace
+) -> None:
+    """The whole-tree flush formats the tree, then commits it."""
+    order: list[str] = []
+    formatter_mocks.format_best_effort.side_effect = lambda *_a: order.append("format")
+
+    def _commit(*_a: Any) -> dict[str, Any]:
+        order.append("commit")
+        return _commit_result()
+
+    monkeypatch.setattr(handoff, "commit_all_changes", MagicMock(side_effect=_commit))
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+
+    handoff._flush_round_log(tmp_path)
+
+    formatter_mocks.format_best_effort.assert_called_once()
+    assert formatter_mocks.format_best_effort.call_args.args[0] == tmp_path
+    assert order == ["format", "commit"]
+
+
+def test_flush_only_does_not_format(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, formatter_mocks: SimpleNamespace
+) -> None:
+    """The scoped flush never formats: the formatter cannot be limited to one path."""
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    monkeypatch.setattr(handoff, "stage_specific_files", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        handoff, "commit_paths", MagicMock(return_value=_commit_result())
+    )
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+
+    handoff._flush_round_log(tmp_path, only=log_path)
+
+    formatter_mocks.format_best_effort.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["raises", "returns-false"])
+def test_flush_formatter_failure_still_commits_and_pushes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    failure: str,
+) -> None:
+    """A failing formatter warns; the round log is still committed and pushed."""
+    monkeypatch.setattr(handoff, "format_best_effort", commit_module.format_best_effort)
+    if failure == "raises":
+        formatters = MagicMock(
+            side_effect=commit_module.FormatterConfigError("bad formatter config")
+        )
+    else:
+        formatters = MagicMock(return_value=False)
+    monkeypatch.setattr(commit_module, "run_formatters", formatters)
+    commit = MagicMock(return_value=_commit_result())
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "commit_all_changes", commit)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    with caplog.at_level(logging.WARNING):
+        handoff._flush_round_log(tmp_path)
+
+    formatters.assert_called_once_with(tmp_path)
+    assert "Formatting failed before round-log commit" in caplog.text
+    commit.assert_called_once()
+    push.assert_called_once_with(tmp_path)

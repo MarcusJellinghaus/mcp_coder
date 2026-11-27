@@ -56,6 +56,12 @@ def write_round_log(
     ``## Round {r}`` block carrying findings, decisions, and changes, plus an
     optional escalate reason.
 
+    The output is stable under a markdown formatter, because the scoped
+    round-log flush commits it without formatting: every heading has a blank
+    line around it, every block label is followed by a blank line, each
+    block's text is stripped, blocks are separated by exactly one blank line,
+    and the file ends with exactly one newline.
+
     Args:
         project_dir: Repository root; the log lives under ``project_dir/pr_info``.
         config: The review workflow config providing ``log_stem``/``name``.
@@ -72,17 +78,23 @@ def write_round_log(
     path = project_dir / "pr_info" / f"{config.log_stem}_review_log_{run_number}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    has_content = path.exists() and path.stat().st_size > 0
     parts: list[str] = []
     if round_number == 1 and not path.exists():
         parts.append(f"# {config.name} review log {run_number}\n")
+    if parts or has_content:
+        parts.append("\n")
 
-    parts.append(f"\n## Round {round_number} — {date.today().isoformat()}\n")
-    parts.append(f"**Findings**:\n{findings}\n")
-    parts.append(f"**Decisions**:\n{decisions}\n")
-    parts.append(f"**Changes**:\n{changes}\n")
+    parts.append(f"## Round {round_number} — {date.today().isoformat()}\n\n")
+    for label, body in (
+        ("Findings", findings),
+        ("Decisions", decisions),
+        ("Changes", changes),
+    ):
+        parts.append(f"**{label}**:\n\n{body.strip()}\n\n")
     if escalate_reason:
-        parts.append(f"**Escalate reason**: {escalate_reason}\n")
+        parts.append(f"**Escalate reason**: {escalate_reason.strip()}\n\n")
 
-    write_repo_text(path, "".join(parts), append=True)
+    write_repo_text(path, "".join(parts).rstrip("\n") + "\n", append=True)
 
     return path

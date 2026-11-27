@@ -9,8 +9,9 @@ import tempfile
 from collections.abc import Generator
 from importlib.resources.abc import Traversable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import git
 import pytest
@@ -297,6 +298,56 @@ def _resolvable_formatter(
                 )
             )
         yield
+
+
+@pytest.fixture(autouse=True)
+def formatter_mocks(
+    request: pytest.FixtureRequest,
+) -> Generator[SimpleNamespace, None, None]:
+    """Replace run_formatters / format_best_effort in every importing mcp_coder module.
+
+    Scans ``sys.modules`` and patches each ``mcp_coder.*`` module attribute that
+    is the real function, matched by identity, so no module list needs upkeep.
+    ``mcp_coder.workflow_steps.commit`` itself keeps the real functions, so its
+    own tests and ``format_best_effort``'s call to ``run_formatters`` stay real.
+
+    The scan only sees modules already loaded when the fixture runs. Every
+    current importer (under ``workflows/`` and ``workflow_steps/``) is imported
+    at collection time by its own tests, so it is loaded by then.
+
+    Tests marked ``real_formatters`` get the mocks but no patching. A test's
+    own patch of ``<module>.run_formatters`` is applied after this one and
+    undone first, so it still wins. Tests that need the shared mocks request
+    ``formatter_mocks`` by name.
+
+    Uses patch.object rather than monkeypatch, for the reason given in
+    _resolvable_formatter.
+    """
+    from mcp_coder.workflow_steps import commit
+
+    mocks = SimpleNamespace(
+        run_formatters=MagicMock(return_value=True),
+        format_best_effort=MagicMock(return_value=None),
+    )
+    if request.node.get_closest_marker("real_formatters") is not None:
+        yield mocks
+        return
+    names = ("run_formatters", "format_best_effort")
+    with contextlib.ExitStack() as stack:
+        for module in list(sys.modules.values()):
+            module_name = getattr(module, "__name__", None)
+            if (
+                not isinstance(module_name, str)
+                or not module_name.startswith("mcp_coder.")
+                or module is commit
+            ):
+                continue
+            for name in names:
+                if getattr(module, name, None) is getattr(commit, name):
+                    stack.enter_context(
+                        patch.object(module, name, getattr(mocks, name))
+                    )
+        yield mocks
 
 
 @pytest.fixture(autouse=True)

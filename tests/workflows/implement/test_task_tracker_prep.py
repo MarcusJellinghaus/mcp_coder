@@ -157,7 +157,10 @@ class TestPrepareTaskTrackerPopulation:
         mocks.prompt_llm.assert_called_once()
         call_kwargs = mocks.prompt_llm.call_args[1]
         assert call_kwargs.get("project_dir") == str(tmp_path)
-        mocks.get_full_status.assert_called_once_with(tmp_path)
+        # The changed-files guard, then the post-format status
+        assert mocks.get_full_status.call_count == 2
+        for call in mocks.get_full_status.call_args_list:
+            assert call.args == (tmp_path,)
         mocks.commit.assert_called_once()
         _message, paths, project_dir = mocks.commit.call_args[0]
         assert paths == [tmp_path / "pr_info" / "TASK_TRACKER.md"]

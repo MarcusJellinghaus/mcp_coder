@@ -28,43 +28,59 @@ VENV_LINE = (
     "if [ -x .venv/bin/python ]; then export VIRTUAL_ENV=/workspace/repo/.venv; fi"
 )
 
+
+def _watchdog(failed: str, current: str, *, issue: bool = False) -> str:
+    issue_part = " --issue {issue_number}" if issue else ""
+    return (
+        f"mcp-coder gh-tool set-status {failed} --from-status {current}{issue_part} "
+        "--project-dir /workspace/repo --force || true"
+    )
+
+
 SETUP_CASES = [
+    pytest.param(
+        CREATE_PLAN_COMMAND_TEMPLATE,
+        "create-plan {issue_number}",
+        "main",
+        _watchdog("status-03f:planning-failed", "status-03:planning", issue=True),
+        id="create-plan",
+    ),
     pytest.param(
         IMPLEMENT_COMMAND_TEMPLATE,
         "implement",
-        "status-06f:implementing-failed",
-        "status-06:implementing",
+        "{branch_name}",
+        _watchdog("status-06f:implementing-failed", "status-06:implementing"),
         id="implement",
+    ),
+    pytest.param(
+        REVIEW_PLAN_COMMAND_TEMPLATE,
+        "review-plan",
+        "{branch_name}",
+        _watchdog("status-14f:plan-review-failed", "status-14i:plan-reviewing"),
+        id="review-plan",
     ),
     pytest.param(
         FIX_CI_COMMAND_TEMPLATE,
         "fix-ci",
-        "status-83:ci-fix-failed",
-        "status-82:fixing-ci",
+        "{branch_name}",
+        _watchdog("status-83:ci-fix-failed", "status-82:fixing-ci"),
         id="fix-ci",
     ),
     pytest.param(
         FIX_CONFLICT_COMMAND_TEMPLATE,
         "fix-conflict",
-        "status-73:merge-conflict-failed",
-        "status-72:fixing-merge-conflict",
+        "{branch_name}",
+        _watchdog("status-73:merge-conflict-failed", "status-72:fixing-merge-conflict"),
         id="fix-conflict",
     ),
     pytest.param(
         REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
         "review-implementation",
-        "status-17f:code-review-failed",
-        "status-17i:code-reviewing",
+        "{branch_name}",
+        _watchdog("status-17f:code-review-failed", "status-17i:code-reviewing"),
         id="review-implementation",
     ),
 ]
-
-
-def _watchdog(failed: str, current: str) -> str:
-    return (
-        f"mcp-coder gh-tool set-status {failed} --from-status {current} "
-        "--project-dir /workspace/repo --force || true"
-    )
 
 
 def _command_index(lines: list[str], command: str) -> int:
@@ -75,12 +91,12 @@ def _command_index(lines: list[str], command: str) -> int:
     )
 
 
-@pytest.mark.parametrize("template,command,failed,current", SETUP_CASES)
+@pytest.mark.parametrize("template,command,checkout,watchdog", SETUP_CASES)
 class TestLinuxSetupTemplates:
-    """The four project-setup Linux templates run ``mcp-coder setup``."""
+    """The six project-setup Linux templates run ``mcp-coder setup``."""
 
     def test_setup_between_pull_and_command(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
         """Setup runs after ``git pull`` and before the workflow command."""
         lines = template.splitlines()
@@ -89,19 +105,15 @@ class TestLinuxSetupTemplates:
         assert setup_index < _command_index(lines, command)
 
     def test_failure_block_runs_watchdog_and_exits(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
         """A failed setup runs the template's own watchdog, then ``exit 1``."""
         lines = template.splitlines()
         setup_index = lines.index(SETUP_LINE)
-        assert lines[setup_index + 1 : setup_index + 4] == [
-            _watchdog(failed, current),
-            "exit 1",
-            "fi",
-        ]
+        assert lines[setup_index + 1 : setup_index + 4] == [watchdog, "exit 1", "fi"]
 
     def test_virtual_env_after_setup(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
         """``VIRTUAL_ENV`` is exported after setup and before the command."""
         lines = template.splitlines()
@@ -109,27 +121,37 @@ class TestLinuxSetupTemplates:
         assert lines.index(SETUP_LINE) < venv_index < _command_index(lines, command)
 
     def test_watchdog_appears_twice(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
         """The watchdog runs on setup failure and after the command."""
-        assert template.splitlines().count(_watchdog(failed, current)) == 2
+        assert template.splitlines().count(watchdog) == 2
 
     def test_formats(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
         """The template formats with the dispatch site's kwargs."""
         result = template.format(log_level="info", branch_name="b", issue_number=1)
-        assert "git checkout b" in result
-        assert f"mcp-coder --log-level info {command} " in result
+        expected_checkout = checkout.format(branch_name="b")
+        assert f"git checkout {expected_checkout}" in result.splitlines()
+        assert f"mcp-coder --log-level info {command.format(issue_number=1)} " in result
 
     def test_new_lines_have_no_expansion_characters(
-        self, template: str, command: str, failed: str, current: str
+        self, template: str, command: str, checkout: str, watchdog: str
     ) -> None:
-        """The setup block and venv line contain no ``$``, braces or backticks."""
-        for line in (SETUP_LINE, _watchdog(failed, current), "exit 1", "fi", VENV_LINE):
-            assert line in template.splitlines()
+        """The setup block and venv line contain no ``$``, braces or backticks.
+
+        The watchdog's only braces are the ``{issue_number}`` placeholder,
+        which ``str.format`` fills before bash sees the script.
+        """
+        lines = template.splitlines()
+        for line in (SETUP_LINE, "exit 1", "fi", VENV_LINE):
+            assert line in lines
             for char in ("$", "{", "}", "`"):
                 assert char not in line
+        assert watchdog in lines
+        without_placeholder = watchdog.replace("{issue_number}", "")
+        for char in ("$", "{", "}", "`"):
+            assert char not in without_placeholder
 
 
 WIN_SETUP_LINE = r"mcp-coder setup --project-dir %WORKSPACE%\repo --refresh"
@@ -271,15 +293,10 @@ def test_fix_conflict_does_not_list_plan_sessions() -> None:
 
 @pytest.mark.parametrize(
     "template",
-    [
-        CREATE_PLAN_COMMAND_TEMPLATE,
-        CREATE_PR_COMMAND_TEMPLATE,
-        REVIEW_PLAN_COMMAND_TEMPLATE,
-        DEFAULT_TEST_COMMAND,
-    ],
+    [CREATE_PR_COMMAND_TEMPLATE, DEFAULT_TEST_COMMAND],
 )
 def test_other_templates_do_not_run_setup(template: str) -> None:
-    """Linux planning/PR and test templates skip setup."""
+    """The Linux create-pr and test templates skip setup."""
     assert "mcp-coder setup" not in template
 
 
