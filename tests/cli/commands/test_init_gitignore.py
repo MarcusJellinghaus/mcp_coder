@@ -63,7 +63,7 @@ class TestWriteSessionLogEntries:
     """Tests for _write_session_log_entries() on its own."""
 
     def test_bom_crlf_no_trailing_newline(self, tmp_path: Path) -> None:
-        """BOM and CRLF are tolerated; the block starts on its own line, LF."""
+        """BOM is kept; the block starts on its own line in the file's CRLF."""
         gitignore = tmp_path / ".gitignore"
         original = b"\xef\xbb\xbf.mcp-coder/\r\n*.pyc"
         gitignore.write_bytes(original)
@@ -71,7 +71,7 @@ class TestWriteSessionLogEntries:
         assert _write_session_log_entries(tmp_path) == (True, True)
 
         assert gitignore.read_bytes() == (
-            original + b"\n\n# mcp-coder session logs\n/logs/\n"
+            original + b"\r\n\r\n# mcp-coder session logs\r\n/logs/\r\n"
         )
 
 

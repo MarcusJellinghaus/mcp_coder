@@ -93,7 +93,7 @@ Inside the orchestration band the order is also fixed: `workflows` on top, then 
 | `prompts`, `prompt_manager` | Prompt templates and the system and project prompts layered on them. |
 | `install` | Provisions a target environment for `mcp-coder install`. Reads policy from the target's `pyproject.toml`. `install/project_setup.py` backs `mcp-coder setup`: runs the declared steps in order, the `python` built-in in-process through `install()`, and fails on files setup changed. |
 | `utils` | Technical helpers and shims for shared libraries. `utils/setup_config.py` loads `[tool.mcp-coder.setup]`; `utils/executable.py` resolves `argv[0]` for the command toolkit, `mcp-coder setup` and `verify`, so core never imports `toolkits`. |
-| shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`; for mcp-coder-utils `utils/subprocess_runner`, `utils/subprocess_streaming`, `utils/log_utils`, `utils/toolkit` (toolkit contract), `utils/user_app_data` and `utils/verify_render` (status-check render primitives). |
+| shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`; for mcp-coder-utils `utils/subprocess_runner`, `utils/subprocess_streaming`, `utils/log_utils`, `utils/toolkit` (toolkit contract), `utils/user_app_data`, `utils/verify_render` (status-check render primitives) and `utils/fs` (line endings, path containment). |
 | `toolkits` | Toolkits shipped with mcp-coder (`command`). tach `tools` layer, depends only on `mcp_coder.utils`. The `toolkits_isolation` contracts in `.importlinter` forbid core imports; core reaches them only through the `mcp_coder.toolkits` entry points. |
 | `config`, `constants` | Foundation. No internal dependencies. |
 
