@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Jenkins process docs — run folder, delete only it
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: run folder in `tools/jenkins_status_check.md` and `tools/jenkins_issue_analysis.md` for `--outdir`, `--logdir`, single-build output and subagent findings; Decision 6 re-check over `.claude/**` (verify searches + deployed-prose/skill tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: run folder in `tools/jenkins_status_check.md` and `tools/jenkins_issue_analysis.md` for `--outdir`, `--logdir`, single-build output and subagent findings; Decision 6 re-check over `.claude/**` (verify searches + deployed-prose/skill tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
