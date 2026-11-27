@@ -56,7 +56,7 @@ from .handoff import (
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
 from .steps import _after_steps, _resolve_context, round_applied
-from .verdict import Verdict
+from .verdict import Verdict, format_verdict
 
 logger = logging.getLogger(__name__)
 
@@ -337,7 +337,7 @@ def run_review_workflow(
                         run_number,
                         round_number,
                         findings=report,
-                        decisions=str(verdict),
+                        decisions=format_verdict(verdict),
                         changes="rebase-needed",
                         escalate_reason="rebase",
                     )
@@ -361,7 +361,7 @@ def run_review_workflow(
                         run_number,
                         round_number,
                         findings=report,
-                        decisions=str(verdict),
+                        decisions=format_verdict(verdict),
                         changes=details or reason,
                         escalate_reason=reason,
                     )
@@ -383,7 +383,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="dismiss",
                 )
                 _flush_round_log(project_dir)
@@ -398,7 +398,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="escalate",
                     escalate_reason=verdict.escalate_reason,
                 )
@@ -436,7 +436,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="no-reviewer-session",
                     escalate_reason="no-reviewer-session",
                 )
@@ -485,7 +485,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes=reason,
                     escalate_reason=reason,
                 )
@@ -517,7 +517,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="commit-failed",
                     escalate_reason="commit-failed",
                 )
@@ -542,7 +542,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="push-failed",
                     escalate_reason="push-failed",
                 )
@@ -577,7 +577,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="rebase-needed",
                     escalate_reason="rebase",
                 )
@@ -607,7 +607,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes=reason,
                     escalate_reason=reason,
                 )
@@ -639,7 +639,7 @@ def run_review_workflow(
                 run_number,
                 round_number,
                 findings=report,
-                decisions=str(verdict),
+                decisions=format_verdict(verdict),
                 changes="applied" if applied else "no-op",
             )
 

@@ -68,6 +68,31 @@ def parse_verdict(text: str) -> Verdict | None:
     return Verdict(decision="dismiss")
 
 
+def format_verdict(verdict: Verdict) -> str:
+    """Render a verdict as formatter-stable markdown for the round log.
+
+    The decision on one line; for ``tasks``, a blank line and one ``-`` item per
+    task, continuation lines indented by two spaces and blank lines inside a task
+    dropped. The escalate reason is left out (``write_round_log`` writes it).
+
+    Args:
+        verdict: The parsed supervisor verdict.
+
+    Returns:
+        The markdown text, without a trailing newline.
+    """
+    lines = [verdict.decision]
+    if verdict.tasks:
+        lines.append("")
+    for task in verdict.tasks:
+        parts = [part.strip() for part in task.splitlines() if part.strip()]
+        if not parts:
+            continue
+        lines.append(f"- {parts[0]}")
+        lines.extend(f"  {part}" for part in parts[1:])
+    return "\n".join(lines)
+
+
 def _extract_object(text: str) -> dict[str, object] | None:
     """Return the JSON object from the last fenced block, else the first ``{...}``."""
     candidates = _FENCE_RE.findall(text)
