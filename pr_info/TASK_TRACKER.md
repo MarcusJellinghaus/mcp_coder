@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: `.claude/CLAUDE.md` — ownership rule, manual cleanup, probe name, Jenkins run folder
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: extend "No session scratchpad" line, probe `.scratch/test_probe_<issue or topic>.py` deleted with `delete_this_file`, Jenkins lines use `.scratch/jenkins_logs_<issue or topic>_<date>/` (verify searches + deployed-prose/skill tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extend "No session scratchpad" line, probe `.scratch/test_probe_<issue or topic>.py` deleted with `delete_this_file`, Jenkins lines use `.scratch/jenkins_logs_<issue or topic>_<date>/` (verify searches + deployed-prose/skill tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Jenkins process docs — run folder, delete only it
 See [step_5.md](./steps/step_5.md)
