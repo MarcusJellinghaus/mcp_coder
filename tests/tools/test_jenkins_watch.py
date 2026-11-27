@@ -549,3 +549,12 @@ def test_repo_without_issue_exits_2() -> None:
     with pytest.raises(SystemExit) as exc_info:
         jenkins_watch.main(["--repo", "x"])
     assert exc_info.value.code == 2
+
+
+def test_inspect_without_job_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(jenkins_watch, "configured_executor_job", lambda: None)
+    # A check after make_client() would return 3 here instead of exiting 2.
+    monkeypatch.setattr(jenkins_watch, "make_client", lambda: None)
+    with pytest.raises(SystemExit) as exc_info:
+        jenkins_watch.main(["--inspect", "7"])
+    assert exc_info.value.code == 2

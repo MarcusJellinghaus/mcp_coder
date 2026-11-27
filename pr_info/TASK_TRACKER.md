@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `jenkins_watch.py` — narrow `job` for mypy, pin `--inspect` exit code ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: test `test_inspect_without_job_exits_2` + `job is None` narrowing in `main()`
-- [ ] Quality checks (format, ruff, mypy, pylint, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: test `test_inspect_without_job_exits_2` + `job is None` narrowing in `main()`
+- [x] Quality checks (format, ruff, mypy, pylint, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Remaining mypy `--strict` findings in `tools/` ([step_2.md](./steps/step_2.md))
 
