@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Review regression guard — a clean round still pushes — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: add `env.push_changes.assert_called()` and docstring reason to `test_clean_tree_round_proceeds_normally`
-- [ ] Quality checks (pylint, pytest, mypy, format) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `env.push_changes.assert_called()` and docstring reason to `test_clean_tree_round_proceeds_normally`
+- [x] Quality checks (pylint, pytest, mypy, format) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
