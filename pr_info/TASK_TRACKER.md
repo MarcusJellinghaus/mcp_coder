@@ -87,9 +87,9 @@ See [step_9.md](./steps/step_9.md)
 ### Step 10: "applied" ignores review logs and is measured before `_after_steps`
 See [step_10.md](./steps/step_10.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 11: docs: formatting users, pre-flight list, failure behaviour
 See [step_11.md](./steps/step_11.md)

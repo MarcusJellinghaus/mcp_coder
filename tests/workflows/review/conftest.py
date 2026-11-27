@@ -93,13 +93,11 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks.push_changes = MagicMock(return_value=True)
     monkeypatch.setattr(core, "push_changes", mocks.push_changes)
 
-    # By default every round registers a change (dirty working dir).
     mocks.get_latest_commit_sha = MagicMock(return_value="SHA0")
     monkeypatch.setattr(core, "get_latest_commit_sha", mocks.get_latest_commit_sha)
-    mocks.is_working_directory_clean = MagicMock(return_value=False)
-    monkeypatch.setattr(
-        core, "is_working_directory_clean", mocks.is_working_directory_clean
-    )
+    # By default every round registers a change outside the review logs.
+    mocks.round_applied = MagicMock(return_value=True)
+    monkeypatch.setattr(core, "round_applied", mocks.round_applied)
 
     monkeypatch.setattr(
         steps, "get_current_branch_name", MagicMock(return_value="1072-review")
