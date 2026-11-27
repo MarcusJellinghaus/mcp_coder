@@ -183,7 +183,7 @@ def main() -> int:
         return 1
 
     # Load durations data
-    with open(DURATIONS_FILE) as f:
+    with open(DURATIONS_FILE, encoding="utf-8") as f:
         durations_data = json.load(f)
 
     threshold = durations_data.get("threshold_seconds", 1.0)

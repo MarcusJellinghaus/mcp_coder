@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: pylint findings in `tools/` ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation: targeted disables, unused variables, `encoding="utf-8"`, remove `pass`
-- [ ] Quality checks (format, ruff, pylint and mypy on `src tests tools`, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: targeted disables, unused variables, `encoding="utf-8"`, remove `pass`
+- [x] Quality checks (format, ruff, pylint and mypy on `src tests tools`, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Add `tools` to the mypy / pylint command lines ([step_4.md](./steps/step_4.md))
 

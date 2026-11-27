@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 # Sibling script in tools/; resolved at runtime via sys.path[0].
-from jenkins_builds import (  # type: ignore[import-not-found]
+from jenkins_builds import (  # type: ignore[import-not-found]  # pylint: disable=import-error
     add_selection_args,
     make_client,
     resolve_job,

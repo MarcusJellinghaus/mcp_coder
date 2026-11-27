@@ -495,7 +495,7 @@ def _try_rmdir_with_kill(
             return True, "Deleted empty directory after killing lockers"
     except (PermissionError, OSError) as e:
         # Still locked - try move as last resort
-        moved, move_result = _move_file_to_temp(path)
+        moved, _ = _move_file_to_temp(path)
         if moved:
             return True, "Moved empty directory to staging"
         return False, f"Still locked after killing: {e}"
@@ -557,7 +557,9 @@ def _delete_folder(
 
         try:
             if sys.version_info >= (3, 12):
-                shutil.rmtree(path, onexc=_rmtree_remove_readonly)
+                shutil.rmtree(  # pylint: disable=unexpected-keyword-arg
+                    path, onexc=_rmtree_remove_readonly
+                )
             else:
                 shutil.rmtree(  # pylint: disable=deprecated-argument
                     path, onerror=_rmtree_remove_readonly
@@ -593,7 +595,7 @@ def _delete_folder(
                 # Continue to try other strategies
 
             # Step 1: Try move
-            moved, result = _move_file_to_temp(locked_path)
+            moved, _ = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
                 moved_files.append(locked_path.name)
@@ -629,7 +631,7 @@ def _delete_folder(
                         time.sleep(1)  # Wait for handles to release
 
             # Step 3: Try move again after kill
-            moved, result = _move_file_to_temp(locked_path)
+            moved, _ = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
                 moved_files.append(locked_path.name)
