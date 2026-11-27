@@ -114,7 +114,13 @@ async def test_session_preserved_after_cancel(
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot, text="hello")
         await pilot.press("escape")
-        await pilot.pause(delay=0.5)
+        indicator = app.query_one(BusyIndicator)
+        # Wait for the cancel to finish: a streaming worker still running at
+        # teardown queries OutputLog on a dismantled screen and fails.
+        for _ in range(50):
+            await pilot.pause(delay=0.1)
+            if "Ready" in indicator.label_text:
+                break
         assert svc.session_id == "test-session-123"
 
 
