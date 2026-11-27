@@ -77,8 +77,13 @@ It uses the `env` fixture and `caplog.at_level("INFO", logger=_CL)`.
 1. `test_one_info_line_per_request`, parametrized over `ok`, `findings` and
    `error`:
    - The result has `summary="a: ok\nb: " + status`.
-   - `env.binding("check@quick")`, and `env.run.return_value` is that result.
-     For `findings`, also give it a `Finding`, as `_findings` does.
+   - `env.binding("check@quick")`, and `env.results({"check@quick": result}, {})`,
+     so only the first pass returns that result and any later pass is `ok`.
+     The `env` fixture mocks `_fix_turn` to return None, so a `findings` result
+     on every pass would re-run `check@quick` up to `MAX_FIX_TURNS` times. The
+     second pass logs `check@quick: ok (…): clean`, which the regex below does
+     not match. For `findings`, also give the result a `Finding`, as `_findings`
+     does.
    - Exactly one INFO record matches the regex
      `^check@quick: <status> \(\d+\.\d s\): a: ok, b: <status>$`.
    - For `error`, there is also an ERROR record containing
