@@ -8,6 +8,7 @@ unparseable one up to :data:`VERDICT_REPAIR_RETRIES` times.
 """
 
 import logging
+import re
 from pathlib import Path
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
@@ -151,6 +152,43 @@ def report_text(response: LLMResponseDict) -> str:
     return response["text"]
 
 
+# `*` list markers are removed together with bold/italic markers before
+# matching, so only `-` and numbered markers remain to be accepted here.
+_OUTCOME_RE = re.compile(
+    r"^(?:-|\d+[.)])?\s*((?:not applied:\s*\S.*)|applied)$", re.IGNORECASE
+)
+
+
+def parse_task_outcomes(text: str) -> list[str]:
+    """Return the leading per-task outcome lines of a task-application reply.
+
+    Reads lines from the start (blank lines skipped) while each matches
+    ``applied`` or ``not applied: <reason>``, optionally after a ``-``, ``*`` or
+    ``1.`` marker; stops at the first other line. Backticks and ``*`` are
+    removed from each line before matching, so markdown-wrapped tokens
+    (`` `applied` ``, ``**not applied:** <reason>``) still parse. Returned lines
+    are stripped, without the marker and without that formatting.
+
+    Args:
+        text: The reviewer's final message after applying tasks.
+
+    Returns:
+        The outcome lines in order; empty when the reply starts otherwise.
+    """
+    outcomes: list[str] = []
+    for line in text.splitlines():
+        if not line.strip():
+            if outcomes:
+                break
+            continue
+        plain = re.sub(r"\s+", " ", line.replace("`", "").replace("*", "")).strip()
+        match = _OUTCOME_RE.match(plain)
+        if not match:
+            break
+        outcomes.append(match.group(1).strip())
+    return outcomes
+
+
 def _run_reviewer(
     config: ReviewConfig,
     project_dir: Path,
@@ -219,9 +257,11 @@ def _run_reviewer(
     else:
         task_lines = "\n".join(f"- {task}" for task in tasks)
         prompt = (
-            "Apply the following fixes now, editing the relevant files with the "
-            "`mcp-workspace` edit tools, then re-emit your structured report:\n"
-            f"{task_lines}"
+            "Apply the following fixes now with the `mcp-workspace` tools "
+            "(`edit_file`, `save_file`, `delete_this_file`). After the edits, "
+            "begin your final message with one line per task, in order: "
+            "`applied` or `not applied: <reason>`. Then re-emit your structured "
+            f"report:\n{task_lines}"
         )
 
     return prompt_llm(

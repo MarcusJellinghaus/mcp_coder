@@ -464,3 +464,52 @@ class TestSupervisorInput:
             + reviewer._quote_pr_feedback("changes requested on foo.py")
             in text
         )
+
+
+# --- Task outcomes ---------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "applied\nnot applied: no PR exists\n\nfoo.py:1 — high — x",
+            ["applied", "not applied: no PR exists"],
+        ),
+        ("- applied\n- not applied: n/a", ["applied", "not applied: n/a"]),
+        (
+            "`applied`\n**not applied:** no PR exists\n* `not applied: n/a`",
+            ["applied", "not applied: no PR exists", "not applied: n/a"],
+        ),
+        ("1. applied\n2) not applied: n/a", ["applied", "not applied: n/a"]),
+        ("\n\napplied\nfoo.py:1 — high — x\napplied", ["applied"]),
+        ("NO FINDINGS", []),
+        ("not applied:", []),
+        ("", []),
+    ],
+    ids=[
+        "plain",
+        "dash_list",
+        "markdown_wrapped",
+        "numbered",
+        "stops_at_first_other_line",
+        "no_findings",
+        "reason_required",
+        "empty",
+    ],
+)
+def test_parse_task_outcomes(text: str, expected: list[str]) -> None:
+    """Leading outcome lines are returned stripped of markers and formatting."""
+    assert reviewer.parse_task_outcomes(text) == expected
+
+
+def test_task_resume_prompt_asks_for_outcome_lines(mock_llm: MagicMock) -> None:
+    """The resume prompt names the edit tools and the leading outcome lines."""
+    _call(session_id="rev-1", tasks=["Fix foo.py:1"])
+
+    prompt = mock_llm.call_args.args[0]
+    assert "delete_this_file" in prompt
+    assert "`applied`" in prompt
+    assert "`not applied: <reason>`" in prompt
+    assert "After the edits, begin your final message" in prompt
+    assert prompt.index("After the edits") < prompt.index("- Fix foo.py:1")

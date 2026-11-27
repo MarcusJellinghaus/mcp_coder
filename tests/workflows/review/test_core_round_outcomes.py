@@ -12,6 +12,7 @@ from typing import Any
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 from tests.workflows.review.conftest import (
     _DISMISS,
+    _TASKS,
     _resp,
     _reviewer,
     _run,
@@ -106,3 +107,55 @@ def test_plan_lane_supervisor_has_no_review_state(
     assert result == 0
     supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
     assert "## Review state" not in supervisor_prompt
+
+
+_APPLY_REPLY = "not applied: no PR exists\nfoo.py:1 — high — x"
+
+
+def test_noop_round_logs_the_task_outcomes(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The apply reply's outcome lines follow the no-op token in **Changes**."""
+    env.round_applied.return_value = False
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(_APPLY_REPLY),
+        _reviewer(),
+        _resp(_DISMISS),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    assert "**Changes**:\n\nno-op\nnot applied: no PR exists\n" in _log(tmp_path)
+
+
+def test_commit_failed_round_ignores_the_task_outcomes(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A failed commit records only ``commit-failed`` in **Changes**."""
+    env.commit_changes.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_TASKS), _reviewer(_APPLY_REPLY)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    log = _log(tmp_path)
+    assert "**Changes**:\n\ncommit-failed\n\n**Escalate reason**" in log
+    assert "not applied" not in log
+
+
+def test_push_failed_round_ignores_the_task_outcomes(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A failed push records only ``push-failed`` in **Changes**."""
+    env.push_changes.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_TASKS), _reviewer(_APPLY_REPLY)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    log = _log(tmp_path)
+    assert "**Changes**:\n\npush-failed\n\n**Escalate reason**" in log
+    assert "not applied" not in log

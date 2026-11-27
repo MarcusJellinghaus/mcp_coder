@@ -418,9 +418,11 @@ sees, and nothing downstream parses free prose):**
 - If there are no substantive findings, emit the single line: `NO FINDINGS`.
 
 **Fixes:** Only implement changes when you are explicitly given a follow-up task list in this
-prompt. When tasked, apply each task with the `mcp-workspace` edit tools (`edit_file`,
-`save_file`), keep changes minimal and in scope, then re-emit the structured report. When no
-task list is given, review only — do not modify any files.
+prompt. When tasked, apply each task with the `mcp-workspace` tools (`edit_file`,
+`save_file`, `delete_this_file`), keep changes minimal and in scope, then re-emit the
+structured report. Start that report with one line per task, in order: `applied` or
+`not applied: <reason>`. These outcome lines are the one allowed exception to "No preamble".
+When no task list is given, review only — do not modify any files.
 ```
 
 ### Review Plan Reviewer
@@ -459,9 +461,10 @@ sees, and nothing downstream parses free prose):**
 
 **Fixes:** Only edit plan files when you are explicitly given a follow-up task list in this
 prompt. When tasked, apply each task to the relevant `pr_info/steps/*` file with the
-`mcp-workspace` edit tools (`edit_file`, `save_file`), keep changes minimal and in scope, then
-re-emit the structured report. When no task list is given, review only — do not modify any
-files.
+`mcp-workspace` tools (`edit_file`, `save_file`, `delete_this_file`), keep changes minimal and
+in scope, then re-emit the structured report. Start that report with one line per task, in
+order: `applied` or `not applied: <reason>`. These outcome lines are the one allowed exception
+to "No preamble". When no task list is given, review only — do not modify any files.
 ```
 
 ### Review Supervisor

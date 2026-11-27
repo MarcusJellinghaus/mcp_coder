@@ -515,6 +515,24 @@ def test_review_supervisor_limits_tasks_to_file_changes() -> None:
     assert "escalate_reason" in supervisor
 
 
+@pytest.mark.parametrize(
+    "header", ["Review Implementation Reviewer", "Review Plan Reviewer"]
+)
+def test_review_reviewer_fixes_paragraph_asks_for_task_outcomes(header: str) -> None:
+    """The Fixes paragraph names delete_this_file and the leading outcome lines.
+
+    The outcome lines are the one exception to "No preamble", so the header and
+    the task-application prompt agree.
+    """
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), header)
+    fixes = prompt[prompt.index("**Fixes:**") :]
+    assert "delete_this_file" in fixes
+    assert "`applied`" in fixes
+    assert "`not applied: <reason>`" in fixes
+    assert "No preamble" in fixes
+    assert "exception" in fixes
+
+
 def test_review_supervisor_has_no_header_lines() -> None:
     """No body line starts with '#' - the header parser would pick it up."""
     supervisor = get_prompt(str(PROMPTS_FILE_PATH), "Review Supervisor")

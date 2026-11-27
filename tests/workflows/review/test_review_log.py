@@ -233,6 +233,22 @@ class TestWriteRoundLogFormattedVerdict:
         _assert_formatter_stable(text)
 
 
+def test_changes_with_task_outcome_lines(tmp_path: Path) -> None:
+    """Outcome lines follow the applied/no-op token as plain lines."""
+    path = write_round_log(
+        tmp_path,
+        REVIEW_IMPLEMENTATION,
+        run_number=1,
+        round_number=1,
+        findings="f",
+        decisions=format_verdict(Verdict("tasks", ["a"])),
+        changes="no-op\nnot applied: no PR exists",
+    )
+    text = _read(path)
+    assert "**Changes**:\n\nno-op\nnot applied: no PR exists\n" in text
+    _assert_formatter_stable(text)
+
+
 class TestNextRunNumber:
     """Allocation of the run number from existing log files."""
 

@@ -454,7 +454,7 @@ def run_review_workflow(
                 len(verdict.tasks),
             )
             try:
-                reviewer._run_reviewer(
+                apply_response = reviewer._run_reviewer(
                     config,
                     project_dir,
                     provider,
@@ -496,6 +496,9 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                     exc=exc,
                 )
+            outcomes = reviewer.parse_task_outcomes(
+                reviewer.report_text(apply_response)
+            )
             run_formatters(project_dir)
             if not commit_changes(
                 project_dir,
@@ -635,7 +638,7 @@ def run_review_workflow(
                 round_number,
                 findings=report,
                 decisions=format_verdict(verdict),
-                changes="applied" if applied else "no-op",
+                changes="\n".join(["applied" if applied else "no-op", *outcomes]),
             )
 
         # Rounds cap. The last `tasks` round already wrote its log at the end of
