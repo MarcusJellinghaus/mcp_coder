@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: create-plan logs steps 4-6 when each prompt starts
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: ordering test in `test_prompt_execution.py`, move Step 4/5/6 lines into `run_planning_prompts` (`core.py` must not grow)
-- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: ordering test in `test_prompt_execution.py`, move Step 4/5/6 lines into `run_planning_prompts` (`core.py` must not grow)
+- [x] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: rebase skips the force-push when HEAD already equals origin/<branch>
 See [step_2.md](./steps/step_2.md)
