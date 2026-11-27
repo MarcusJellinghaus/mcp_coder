@@ -199,6 +199,8 @@ asyncio_mode = "auto"
 formatter = "ruff"
 # Overrides every test depth's timeout: test@quick (~170 s here) gates implement_final
 pytest-timeout = 1800
+# A full run takes ~155 s on its own; the default 120 s is too short
+pylint-timeout = 300
 
 [tool.pylint.main]
 # Add project root to Python path so pylint can find workflows module
