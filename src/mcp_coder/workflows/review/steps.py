@@ -126,11 +126,11 @@ def _after_steps(
        (``07:code-review``) — never a success and never a failure label.
     2. **CI gate:** ``check_and_fix_ci`` runs its own retries (reusing
        ``implement``'s prompt headers, overriding ``session_dir_name`` and
-       pinning the first poll to the SHA the rebase step just pushed). A
-       green result returns ``None``. A red result returns ``"ci"``: on the
-       final dismiss gate (``is_dismiss``) the caller treats that as a terminal
-       ``17f-ci`` failure; mid-loop the caller instead carries it forward as a
-       finding (see :data:`core._CI_NOTE`).
+       pinning the first poll to local HEAD, which the rebase step left on
+       origin). A green result returns ``None``. A red result returns
+       ``"ci"``: on the final dismiss gate (``is_dismiss``) the caller treats
+       that as a terminal ``17f-ci`` failure; mid-loop the caller instead
+       carries it forward as a finding (see :data:`core._CI_NOTE`).
 
     Args:
         config: The review workflow config.
@@ -171,12 +171,13 @@ def _after_steps(
     branch = get_current_branch_name(project_dir)
     if not branch:
         return None, outcome, None
-    # The rebase step just pushed local HEAD - including the round-log commit
-    # the loop lands at its entry, which on a dismiss round is the only thing
-    # pushed. Correlate the CI poll with that SHA: the newest run on the branch
-    # is still the *previous* commit's for the first seconds after a push, and
-    # taking its green would hand check_ci_proven_gate a branch whose newest run
-    # is the queued one it reads as PENDING -> "ci_unknown".
+    # After the rebase step, origin/<branch> holds local HEAD (pushed by it, or
+    # already there) - including the round-log commit the loop lands at its
+    # entry, which on a dismiss round is the only thing pushed. Correlate the
+    # CI poll with that SHA: the newest run on the branch is still the
+    # *previous* commit's for the first seconds after a push, and taking its
+    # green would hand check_ci_proven_gate a branch whose newest run is the
+    # queued one it reads as PENDING -> "ci_unknown".
     pushed_sha = get_latest_commit_sha(project_dir)
     try:
         ci_ok = check_and_fix_ci(

@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: rebase skips the force-push when HEAD already equals origin/<branch>
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `TestUpToDate` tests, in-place edits to `test_rebase.py`, `_up_to_date_branch` helper and call in `_attempt_rebase_and_push`, docstring/comment updates in `rebase.py` and `review/steps.py`
-- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set + `git_integration`) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestUpToDate` tests, in-place edits to `test_rebase.py`, `_up_to_date_branch` helper and call in `_attempt_rebase_and_push`, docstring/comment updates in `rebase.py` and `review/steps.py`
+- [x] Quality checks: format, pylint, mypy, pytest (fast unit set + `git_integration`) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: check loop logs each request with status, duration and summary (INFO)
 See [step_3.md](./steps/step_3.md)
