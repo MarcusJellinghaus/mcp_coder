@@ -285,10 +285,57 @@ def test_windows_test_template_formats_with_log_level_only() -> None:
     assert not re.search(r"\{[a-zA-Z_]\w*\}", result)
 
 
-def test_fix_conflict_does_not_list_plan_sessions() -> None:
-    """fix-conflict keeps its archive section without plan sessions."""
-    assert ".mcp-coder/create_plan_sessions" not in FIX_CONFLICT_COMMAND_TEMPLATE
-    assert r".mcp-coder\create_plan_sessions" not in FIX_CONFLICT_COMMAND_WINDOWS
+WIN_WORKFLOWS = [
+    pytest.param(param.values[0], id=param.id)
+    for param in WIN_CASES
+    if param.id != "test"
+]
+
+
+@pytest.mark.parametrize("template", WIN_WORKFLOWS)
+def test_windows_workflow_runs_in_repo_and_lists_sessions(template: str) -> None:
+    """Windows workflows run in the repo and list all of .mcp-coder and logs."""
+    lines = _stripped_lines(template)
+    for line in (
+        r"cd %WORKSPACE%\repo",
+        "if exist .mcp-coder dir /s .mcp-coder",
+        "dir logs",
+    ):
+        assert line in lines
+    assert "VENV_BASE_DIR" not in template
+    assert "create_plan_sessions" not in template
+
+
+WIN_VERSION_LINES = (
+    "where claude.exe",
+    "call claude.exe --version",
+    "where mcp-coder",
+    "call mcp-coder --version",
+)
+
+
+@pytest.mark.parametrize("template", WIN_WORKFLOWS)
+def test_windows_workflow_prints_tool_versions(template: str) -> None:
+    """Windows workflows print Claude Code and mcp-coder versions before the command."""
+    lines = _stripped_lines(template)
+    command_index = _anchor_index(lines, "mcp-coder --log-level ")
+    timeout_index = lines.index("set MCP_TIMEOUT=30000")
+    for line in WIN_VERSION_LINES:
+        assert timeout_index < lines.index(line) < command_index
+
+
+LINUX_WORKFLOWS = [
+    pytest.param(param.values[0], id=param.id) for param in SETUP_CASES
+] + [pytest.param(CREATE_PR_COMMAND_TEMPLATE, id="create-pr")]
+
+
+@pytest.mark.parametrize("template", LINUX_WORKFLOWS)
+def test_linux_workflow_lists_sessions(template: str) -> None:
+    """Linux workflows list all of .mcp-coder and logs without failing under set -e."""
+    lines = template.splitlines()
+    assert "ls -laR .mcp-coder || true" in lines
+    assert "ls -la logs || true" in lines
+    assert "create_plan_sessions" not in template
 
 
 @pytest.mark.parametrize(

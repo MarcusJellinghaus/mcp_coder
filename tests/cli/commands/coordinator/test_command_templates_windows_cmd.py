@@ -1,6 +1,7 @@
 """Run the rendered Windows templates through cmd.exe with a stub ``mcp-coder``."""
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -46,13 +47,19 @@ exit /b 0
 
 def _run(
     tmp_path: Path, template: str, *, setup_rc: int, has_venv: bool
-) -> tuple[int, list[tuple[str, str]]]:
-    """Run the rendered template through cmd.exe; return (exit code, stub calls as (args, venv))."""
+) -> tuple[int, list[tuple[str, str]], str]:
+    """Run the rendered template through cmd.exe.
+
+    Return (exit code, stub calls as (args, venv), stdout).
+    """
     workspace = tmp_path / "ws"
-    (workspace / "repo").mkdir(parents=True)
-    # VENV_BASE_DIR is also the cwd: cmd searches the cwd first, so it holds no mcp-coder
+    (workspace / "repo" / "logs").mkdir(parents=True)
+    (workspace / "repo" / "logs" / "repo_log_marker.txt").touch()
+    # The script starts in VENV_BASE_DIR, like the Jenkins wrapper; neither it
+    # nor ws\repo holds an mcp-coder (cmd searches the cwd first).
     venv_base = tmp_path / "venv_base"
-    venv_base.mkdir()
+    (venv_base / "logs").mkdir(parents=True)
+    (venv_base / "logs" / "venv_log_decoy.txt").touch()
     if has_venv:
         scripts = workspace / "repo" / ".venv" / "Scripts"
         scripts.mkdir(parents=True)
@@ -63,11 +70,22 @@ def _run(
     (stub_dir / "mcp-coder.cmd").write_text(
         STUB.format(log=log, setup_rc=setup_rc), newline="\r\n"
     )
+    # Writes only to stdout: the stub log is parsed as ARGS/VENV pairs.
+    (stub_dir / "claude.cmd").write_text(
+        "@echo off\necho CLAUDE_STUB %*\n", newline="\r\n"
+    )
+    (workspace / "repo" / "claude.bat").write_text(
+        "@echo off\necho CLAUDE_DECOY\n", newline="\r\n"
+    )
 
     # A .cmd invoked without `call` never returns; production runs mcp-coder.exe.
     script = template.format(log_level="INFO", issue_number=42, branch_name="b")
+    script = re.sub(r"(?m)^mcp-coder ", "call mcp-coder ", script)
+    # The test cannot create a real claude.exe. An explicit extension still
+    # skips the repo's claude.bat, so the stub is found via PATH.
+    script = script.replace("claude.exe", "claude.cmd")
     bat = tmp_path / "run.bat"
-    bat.write_text(script.replace("mcp-coder ", "call mcp-coder "), newline="\r\n")
+    bat.write_text(script, newline="\r\n")
 
     result = execute_subprocess(
         [os.environ["COMSPEC"], "/c", str(bat)],
@@ -89,7 +107,7 @@ def _run(
         (args.removeprefix("ARGS="), venv.removeprefix("VENV="))
         for args, venv in zip(lines[::2], lines[1::2], strict=True)
     ]
-    return result.return_code, calls
+    return result.return_code, calls, result.stdout
 
 
 @pytest.mark.parametrize("has_venv", [True, False], ids=["venv", "no-venv"])
@@ -98,7 +116,7 @@ def test_setup_succeeds(
     tmp_path: Path, template: str, command: str, has_venv: bool
 ) -> None:
     """Setup passes: the command runs, with VIRTUAL_ENV only when the venv exists."""
-    return_code, calls = _run(tmp_path, template, setup_rc=0, has_venv=has_venv)
+    return_code, calls, stdout = _run(tmp_path, template, setup_rc=0, has_venv=has_venv)
 
     workspace = tmp_path / "ws"
     assert calls[0][0] == f"setup --project-dir {workspace}\\repo --refresh"
@@ -109,6 +127,12 @@ def test_setup_succeeds(
     expected_venv = f"{workspace}\\repo\\.venv" if has_venv else ""
     assert command_calls[0][1] == expected_venv
     assert return_code == 0
+    # The echoed `dir logs` names neither file, so this shows where it listed.
+    assert "repo_log_marker.txt" in stdout
+    assert "venv_log_decoy.txt" not in stdout
+    assert "CLAUDE_STUB --version" in stdout
+    assert "CLAUDE_DECOY" not in stdout
+    assert "--version" in [args for args, _ in calls]
 
 
 @pytest.mark.parametrize(
@@ -121,7 +145,7 @@ def test_setup_succeeds(
 )
 def test_setup_fails(tmp_path: Path, template: str, expected_calls: list[str]) -> None:
     """Setup fails: workflows run the watchdog, nothing reaches the command, exit 1."""
-    return_code, calls = _run(tmp_path, template, setup_rc=1, has_venv=True)
+    return_code, calls, _ = _run(tmp_path, template, setup_rc=1, has_venv=True)
 
     assert return_code == 1
     assert [args.split()[0] for args, _ in calls] == expected_calls

@@ -145,7 +145,6 @@ def _linux_setup_template(
     *,
     checkout: str = "{branch_name}",
     issue_flag: bool = False,
-    archive_plan_sessions: bool = True,
 ) -> str:
     """Return the Linux template for a workflow that needs the project set up.
 
@@ -155,12 +154,11 @@ def _linux_setup_template(
     venv. The setup and venv lines contain no $, braces or backticks (str.format
     and AutoRunner's outer bash -c); the watchdog's only braces are the
     `{issue_number}` placeholder, filled before bash sees the script. The
-    blocks use if because the executor runs under set -e.
+    blocks use if because the executor runs under set -e; for the same reason
+    the archive listings end in `|| true`, so a missing folder cannot abort the
+    script before `exit $RC`.
     """
     watchdog = _watchdog(failed, current, issue_flag=issue_flag)
-    plan_sessions = (
-        "ls -la .mcp-coder/create_plan_sessions\n" if archive_plan_sessions else ""
-    )
     return (
         f"git checkout {checkout}\n"
         "git pull\n"
@@ -181,8 +179,8 @@ def _linux_setup_template(
         f"{watchdog}\n"
         "\n"
         'echo "archive after execution ======================================="\n'
-        f"{plan_sessions}"
-        "ls -la logs\n"
+        "ls -laR .mcp-coder || true\n"
+        "ls -la logs || true\n"
         "\n"
         "exit $RC\n"
     )
@@ -213,8 +211,8 @@ echo RC=$RC
 mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir /workspace/repo --force || true
 
 echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
+ls -laR .mcp-coder || true
+ls -la logs || true
 
 exit $RC
 """
@@ -237,7 +235,6 @@ FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
     "fix-conflict",
     "status-73:merge-conflict-failed",
     "status-72:fixing-merge-conflict",
-    archive_plan_sessions=False,
 )
 
 # Windows workflow command templates
@@ -246,42 +243,33 @@ FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
 
 
 def _windows_template(
-    command: str,
-    failed: str,
-    current: str,
-    *,
-    issue_flag: bool = False,
-    archive_plan_sessions: bool = True,
+    command: str, failed: str, current: str, *, issue_flag: bool = False
 ) -> str:
-    """Return the Windows template for a workflow.
+    r"""Return the Windows template for a workflow.
 
-    `mcp-coder setup` runs before the command; on failure the watchdog moves the
-    issue to its failed label and the script exits 1. VIRTUAL_ENV is set only
-    when the project venv has an interpreter. Block bodies are not indented and
-    use a literal `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed).
+    The script runs in %WORKSPACE%\repo, so the relative archive listing finds
+    the project's `.mcp-coder` and `logs`. `if exist` guards `dir /s`: on a
+    missing folder `dir /s` searches the whole tree. `mcp-coder setup` runs
+    before the command; on failure the watchdog moves the issue to its failed
+    label and the script exits 1. VIRTUAL_ENV is set only when the project venv
+    has an interpreter. Block bodies are not indented and use a literal
+    `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed). The
+    tool versions are printed via `claude.exe`, not `claude`, because cmd
+    searches the cwd (the repo, which may hold a `claude.bat` launcher) before
+    PATH; `call` keeps a `.cmd` from ending the batch, and the `call` lines
+    contain no `%` because `call` expands it a second time.
     """
     issue = " --issue {issue_number}" if issue_flag else ""
     watchdog = (
         f"mcp-coder gh-tool set-status {failed} --from-status {current}{issue} "
         r"--project-dir %WORKSPACE%\repo --force"
     )
-    plan_sessions = (
-        r"dir .mcp-coder\create_plan_sessions" + "\n" if archive_plan_sessions else ""
-    )
     return rf"""@echo ON
 
 echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
+cd %WORKSPACE%\repo
 
 echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
-)
-
 mcp-coder setup --project-dir %WORKSPACE%\repo --refresh
 if %ERRORLEVEL% NEQ 0 (
 {watchdog}
@@ -292,6 +280,12 @@ if exist "%WORKSPACE%\repo\.venv\Scripts\python.exe" set "VIRTUAL_ENV=%WORKSPACE
 set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
+echo tool versions =====================================
+where claude.exe
+call claude.exe --version
+where mcp-coder
+call mcp-coder --version
+
 echo command execution  =====================================
 mcp-coder --log-level {{log_level}} {command} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
@@ -300,7 +294,8 @@ echo RC=%RC%
 {watchdog}
 
 echo archive after execution =======================================
-{plan_sessions}dir logs
+if exist .mcp-coder dir /s .mcp-coder
+dir logs
 
 exit /b %RC%
 """
@@ -339,7 +334,6 @@ FIX_CONFLICT_COMMAND_WINDOWS: str = _windows_template(
     "fix-conflict",
     "status-73:merge-conflict-failed",
     "status-72:fixing-merge-conflict",
-    archive_plan_sessions=False,
 )
 
 # Data-driven workflow dispatch table.
