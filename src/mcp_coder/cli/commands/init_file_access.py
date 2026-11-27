@@ -242,7 +242,7 @@ def append_gitignore_block(gitignore: Path, existing: str, block: str) -> None:
     Args:
         gitignore: Path of the .gitignore to append to.
         existing: Its current decoded content, ``""`` when missing or empty.
-        block: Lines to append, each ending in ``\\n``.
+        block: Lines to append, each ending in a newline.
     """
     if existing:
         block = "\n" + block  # blank line before the new block
