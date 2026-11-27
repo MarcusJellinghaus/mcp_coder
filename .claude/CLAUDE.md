@@ -139,6 +139,7 @@ git add / rebase / push --force-with-lease
 
 - Connection or `401`/`403` errors: `mcp-coder verify` (JENKINS sections).
 - Status check of recent runs: follow `tools/jenkins_status_check.md`.
+- Follow one issue's builds live until something needs a look: `/jenkins_watch <issue>` (runs `tools/jenkins_watch.sh` in the background; logs go to `.scratch/jenkins_watch_<issue or all>_<date>/`, deleted when the watch ends).
 - Recent builds: `tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status failure,...] [--name-pattern REGEX]`
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] --outdir .scratch/jenkins_logs_<issue or topic>_<date>` — writes an `index.csv` alongside; read them with `read_file`, delete that run folder when done.
 - Download one build's console log: `tools/jenkins_download_log.sh <job_path> <number> <output_file>`, e.g. `tools/jenkins_download_log.sh Windows-Agents/Executor 2935 .scratch/jenkins_logs_<issue or topic>_<date>/Executor_2935.txt` (the tool creates parent folders). No default job. The output path must be readable for MCP (e.g. not under `logs/`) — `read_file` refuses gitignored paths unless `.mcp-file-access` exposes them; `.scratch/` works (its `read-write` rule), delete the run folder afterwards.

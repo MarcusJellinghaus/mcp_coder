@@ -35,6 +35,7 @@ See [`tools/mlflow/README.md`](../../tools/mlflow/README.md) for the full list.
 | `tools/jenkins_download_logs.py` (+ `.bat` / `.sh`) | Download console logs of recent Jenkins builds (default: failure, aborted, unstable), named by display name, plus an `index.csv` |
 | `tools/jenkins_download_log.py` (+ `.bat` / `.sh`) | Download the console log of one Jenkins build, given job path and build number, to a chosen file; no default job |
 | `tools/jenkins_classify_logs.py` (+ `.bat` / `.sh`) | Tag downloaded logs with issue ids from `tools/jenkins_issue_patterns.toml` and add target repo and package versions to `index.csv`; workflow in `tools/jenkins_issue_analysis.md` |
+| `tools/jenkins_watch.py` (+ `.bat` / `.sh`) | Watch one issue's (or all) Executor builds and exit with one `RESULT:` line (problem, stalled, idle, heartbeat, jenkins-error); saves and scans finished builds' logs; `--list` and `--inspect` modes; used by `/jenkins_watch` |
 | `tools/jenkins_status_check.md` | Process: check recent Executor runs and decide which issues need action |
 | `tools/__init__.py` | Makes `tools/` an importable Python package |
 

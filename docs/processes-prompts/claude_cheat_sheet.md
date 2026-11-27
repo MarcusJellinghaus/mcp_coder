@@ -37,8 +37,9 @@ For a complete overview of the process, see [development-process.md](development
 | `/commit_push` | Format, commit, and push changes |
 | `/check_branch_status` | Check CI, rebase need, tasks and labels; recommends next steps |
 | `/implement_direct <issue>` | Implement a small issue directly; sets `status-07:code-review` |
+| `/jenkins_watch [issue] [repo]` | Follow an issue's (or all) Jenkins builds in the background; analyse when one fails, stalls or goes idle |
 
-All commands except `/issue_analyse`, `/plan_review`, `/plan_update`, `/implementation_review` and `/check_branch_status` are user-only (`disable-model-invocation`), including every command that changes status, commits or edits issues: type them yourself.
+All commands except `/issue_analyse`, `/plan_review`, `/plan_update`, `/implementation_review`, `/check_branch_status` and `/jenkins_watch` are user-only (`disable-model-invocation`), including every command that changes status, commits or edits issues: type them yourself.
 
 ---
 

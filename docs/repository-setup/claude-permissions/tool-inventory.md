@@ -126,11 +126,12 @@ Write = publishes off-machine.
 | `mcp-coder gh-tool set-status *` | `github_issue_set_status` | approve skills, pr_comment_triage, implement_direct, issue-approver, CLAUDE.md |
 | `/approve` comment for cross-repo issues | `github_issue_set_status` with `reference_name` (the Action only swaps the label + posts a confirmation) | issue_approve, issue-approver |
 
-**Bash only as last resort.** Bash pre-approved by this repo: the L rows above (4 entries in `settings.local.json`) and the turn-scoped `rebase` / `implement_direct` skill grants below. Any other Bash call prompts unless a user (U) pattern matches. Per-item decision (MCP tool or narrow Bash): [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434).
+**Bash only as last resort.** Bash pre-approved by this repo: the L rows above (5 entries in `settings.local.json`) and the turn-scoped `rebase` / `implement_direct` / `jenkins_watch` skill grants below. Any other Bash call prompts unless a user (U) pattern matches. Per-item decision (MCP tool or narrow Bash): [#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434).
 
 | Bash left | Why | Pre-approved by |
 |---|---|---|
 | `git rebase/add/rm/restore/stash/checkout --ours/--theirs` | rebase conflict handling, no MCP tool (upstream: mcp-workspace #263) | `rebase` skill |
 | `git push --force-with-lease` | fallback when `git_push_force` refuses (no reflog, fresh clone) | `rebase` skill |
 | `tools/jenkins_builds.sh`, `jenkins_download_log.sh`, `jenkins_download_logs.sh` | Jenkins read, no MCP tool | `settings.local.json` |
+| `tools/jenkins_watch.sh` | Jenkins read, no MCP tool; writes only its `.scratch/` run folder | `settings.local.json`, `jenkins_watch` skill |
 | `mcp-coder gh-tool checkout-issue-branch` | `implement_direct` branch checkout, no MCP tool | `settings.local.json`, `implement_direct` skill — the only pre-approved `gh-tool` subcommand; define-labels / issue-stats prompt (human CLI actions) |
