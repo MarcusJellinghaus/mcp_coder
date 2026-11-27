@@ -324,9 +324,18 @@ def test_windows_workflow_prints_tool_versions(template: str) -> None:
         assert timeout_index < lines.index(line) < command_index
 
 
-def test_linux_fix_conflict_does_not_list_plan_sessions() -> None:
-    """fix-conflict keeps its archive section without plan sessions."""
-    assert ".mcp-coder/create_plan_sessions" not in FIX_CONFLICT_COMMAND_TEMPLATE
+LINUX_WORKFLOWS = [
+    pytest.param(param.values[0], id=param.id) for param in SETUP_CASES
+] + [pytest.param(CREATE_PR_COMMAND_TEMPLATE, id="create-pr")]
+
+
+@pytest.mark.parametrize("template", LINUX_WORKFLOWS)
+def test_linux_workflow_lists_sessions(template: str) -> None:
+    """Linux workflows list all of .mcp-coder and logs without failing under set -e."""
+    lines = template.splitlines()
+    assert "ls -laR .mcp-coder || true" in lines
+    assert "ls -la logs || true" in lines
+    assert "create_plan_sessions" not in template
 
 
 @pytest.mark.parametrize(

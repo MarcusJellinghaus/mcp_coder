@@ -145,7 +145,6 @@ def _linux_setup_template(
     *,
     checkout: str = "{branch_name}",
     issue_flag: bool = False,
-    archive_plan_sessions: bool = True,
 ) -> str:
     """Return the Linux template for a workflow that needs the project set up.
 
@@ -155,12 +154,11 @@ def _linux_setup_template(
     venv. The setup and venv lines contain no $, braces or backticks (str.format
     and AutoRunner's outer bash -c); the watchdog's only braces are the
     `{issue_number}` placeholder, filled before bash sees the script. The
-    blocks use if because the executor runs under set -e.
+    blocks use if because the executor runs under set -e; for the same reason
+    the archive listings end in `|| true`, so a missing folder cannot abort the
+    script before `exit $RC`.
     """
     watchdog = _watchdog(failed, current, issue_flag=issue_flag)
-    plan_sessions = (
-        "ls -la .mcp-coder/create_plan_sessions\n" if archive_plan_sessions else ""
-    )
     return (
         f"git checkout {checkout}\n"
         "git pull\n"
@@ -181,8 +179,8 @@ def _linux_setup_template(
         f"{watchdog}\n"
         "\n"
         'echo "archive after execution ======================================="\n'
-        f"{plan_sessions}"
-        "ls -la logs\n"
+        "ls -laR .mcp-coder || true\n"
+        "ls -la logs || true\n"
         "\n"
         "exit $RC\n"
     )
@@ -213,8 +211,8 @@ echo RC=$RC
 mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir /workspace/repo --force || true
 
 echo "archive after execution ======================================="
-ls -la .mcp-coder/create_plan_sessions
-ls -la logs
+ls -laR .mcp-coder || true
+ls -la logs || true
 
 exit $RC
 """
@@ -237,7 +235,6 @@ FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
     "fix-conflict",
     "status-73:merge-conflict-failed",
     "status-72:fixing-merge-conflict",
-    archive_plan_sessions=False,
 )
 
 # Windows workflow command templates
