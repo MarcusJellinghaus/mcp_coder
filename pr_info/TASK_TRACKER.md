@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Review supervisors — create the log in the step that picks `{n}`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: merge Setup steps 3 and 4 in `plan_review_supervisor` and `implementation_review_supervisor`, with "already exists → next number" rule (verify searches + deployed-prose/skill tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: merge Setup steps 3 and 4 in `plan_review_supervisor` and `implementation_review_supervisor`, with "already exists → next number" rule (verify searches + deployed-prose/skill tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Deployed agents and `issue_update` — delete only own `.scratch/` files
 See [step_3.md](./steps/step_3.md)
