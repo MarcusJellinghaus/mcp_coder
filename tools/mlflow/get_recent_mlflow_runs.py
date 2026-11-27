@@ -14,15 +14,7 @@ def get_db_path() -> Path:
     import os
 
     try:
-        # Try to import and use tomllib/tomli
-        try:
-            import tomllib
-        except ImportError:
-            try:
-                import tomli as tomllib
-            except ImportError:
-                # Fallback to default
-                return Path.home() / "mlflow_data" / "mlflow.db"
+        import tomllib
 
         config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
         if not config_path.exists():

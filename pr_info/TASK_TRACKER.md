@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Remaining mypy `--strict` findings in `tools/` ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: typing fixes in `generate_report.py`, `test_scroll.py`, mlflow scripts
-- [ ] Quality checks (format, ruff, mypy on `src tests tools`, pylint, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: typing fixes in `generate_report.py`, `test_scroll.py`, mlflow scripts
+- [x] Quality checks (format, ruff, mypy on `src tests tools`, pylint, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: pylint findings in `tools/` ([step_3.md](./steps/step_3.md))
 
