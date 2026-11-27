@@ -42,7 +42,9 @@ The return values of the changed functions are unchanged (`dict[str, Any] | None
 4. `run_pylint_check()` (default scope): clean
 5. Fast unit-test run from `.claude/CLAUDE.md` (with `-n auto`): pass
 
-If mypy on `src tests tools` reports any finding not listed here (i.e. the counts changed),
-write one line to `pr_info/.blocked.txt` naming it and stop.
+If mypy on `src tests tools` reports a finding not listed here (i.e. the counts changed),
+fix it the same way as the listed ones (a typing change or a targeted ignore, no behaviour
+change). Only if a fix would change behaviour, write one line to `pr_info/.blocked.txt`
+naming the finding and stop.
 
 Commit message: `fix(tools): pass mypy --strict`

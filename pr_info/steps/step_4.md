@@ -38,10 +38,11 @@ None.
 
 ## Checks before commit
 
-1. `search_files(pattern="mypy --strict src tests(?! tools)|pylint (-E +)?\\./src \\./tests(?! \\./tools)")`:
+1. `search_files(pattern="mypy --strict src tests(?! tools)|--strict-optional src tests(?! tools)|pylint (-E +)?\\./src \\./tests(?! \\./tools)")`:
    no hits in the files above (hits elsewhere, e.g. `pr_info/`, are fine)
-2. `run_mypy_check(target_directories=["src", "tests", "tools"])` and
+2. `run_format_code(target_directories=["src", "tests", "tools"])`
+3. `run_mypy_check(target_directories=["src", "tests", "tools"])` and
    `run_pylint_check(target_directories=["src", "tests", "tools"])`: clean (no regression)
-3. Fast unit-test run from `.claude/CLAUDE.md` (with `-n auto`): pass
+4. Fast unit-test run from `.claude/CLAUDE.md` (with `-n auto`): pass
 
 Commit message: `ci: run mypy and pylint on tools/`
