@@ -285,10 +285,30 @@ def test_windows_test_template_formats_with_log_level_only() -> None:
     assert not re.search(r"\{[a-zA-Z_]\w*\}", result)
 
 
-def test_fix_conflict_does_not_list_plan_sessions() -> None:
+WIN_WORKFLOWS = [
+    pytest.param(param.values[0], id=param.id)
+    for param in WIN_CASES
+    if param.id != "test"
+]
+
+
+@pytest.mark.parametrize("template", WIN_WORKFLOWS)
+def test_windows_workflow_runs_in_repo_and_lists_sessions(template: str) -> None:
+    """Windows workflows run in the repo and list all of .mcp-coder and logs."""
+    lines = _stripped_lines(template)
+    for line in (
+        r"cd %WORKSPACE%\repo",
+        "if exist .mcp-coder dir /s .mcp-coder",
+        "dir logs",
+    ):
+        assert line in lines
+    assert "VENV_BASE_DIR" not in template
+    assert "create_plan_sessions" not in template
+
+
+def test_linux_fix_conflict_does_not_list_plan_sessions() -> None:
     """fix-conflict keeps its archive section without plan sessions."""
     assert ".mcp-coder/create_plan_sessions" not in FIX_CONFLICT_COMMAND_TEMPLATE
-    assert r".mcp-coder\create_plan_sessions" not in FIX_CONFLICT_COMMAND_WINDOWS
 
 
 @pytest.mark.parametrize(

@@ -246,42 +246,29 @@ FIX_CONFLICT_COMMAND_TEMPLATE: str = _linux_setup_template(
 
 
 def _windows_template(
-    command: str,
-    failed: str,
-    current: str,
-    *,
-    issue_flag: bool = False,
-    archive_plan_sessions: bool = True,
+    command: str, failed: str, current: str, *, issue_flag: bool = False
 ) -> str:
-    """Return the Windows template for a workflow.
+    r"""Return the Windows template for a workflow.
 
-    `mcp-coder setup` runs before the command; on failure the watchdog moves the
-    issue to its failed label and the script exits 1. VIRTUAL_ENV is set only
-    when the project venv has an interpreter. Block bodies are not indented and
-    use a literal `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed).
+    The script runs in %WORKSPACE%\repo, so the relative archive listing finds
+    the project's `.mcp-coder` and `logs`. `if exist` guards `dir /s`: on a
+    missing folder `dir /s` searches the whole tree. `mcp-coder setup` runs
+    before the command; on failure the watchdog moves the issue to its failed
+    label and the script exits 1. VIRTUAL_ENV is set only when the project venv
+    has an interpreter. Block bodies are not indented and use a literal
+    `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed).
     """
     issue = " --issue {issue_number}" if issue_flag else ""
     watchdog = (
         f"mcp-coder gh-tool set-status {failed} --from-status {current}{issue} "
         r"--project-dir %WORKSPACE%\repo --force"
     )
-    plan_sessions = (
-        r"dir .mcp-coder\create_plan_sessions" + "\n" if archive_plan_sessions else ""
-    )
     return rf"""@echo ON
 
 echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
+cd %WORKSPACE%\repo
 
 echo python environment ================================
-if "%VENV_BASE_DIR%"=="" (
-    echo ERROR: VENV_BASE_DIR environment variable not set
-    exit /b 1
-)
-
 mcp-coder setup --project-dir %WORKSPACE%\repo --refresh
 if %ERRORLEVEL% NEQ 0 (
 {watchdog}
@@ -300,7 +287,8 @@ echo RC=%RC%
 {watchdog}
 
 echo archive after execution =======================================
-{plan_sessions}dir logs
+if exist .mcp-coder dir /s .mcp-coder
+dir logs
 
 exit /b %RC%
 """
@@ -339,7 +327,6 @@ FIX_CONFLICT_COMMAND_WINDOWS: str = _windows_template(
     "fix-conflict",
     "status-73:merge-conflict-failed",
     "status-72:fixing-merge-conflict",
-    archive_plan_sessions=False,
 )
 
 # Data-driven workflow dispatch table.

@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Windows workflow templates run in `%WORKSPACE%\repo` and list all sessions — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code + docs)
-- [ ] Quality checks (pylint, pytest incl. `cmd.exe` test on Windows, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code + docs)
+- [x] Quality checks (pylint, pytest incl. `cmd.exe` test on Windows, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Windows workflow templates print the Claude Code and mcp-coder versions — [step_2.md](./steps/step_2.md)
 
