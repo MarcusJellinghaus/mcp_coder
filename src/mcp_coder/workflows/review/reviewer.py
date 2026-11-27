@@ -190,8 +190,11 @@ def report_text(response: LLMResponseDict) -> str:
 
 # `*` list markers are removed together with bold/italic markers before
 # matching, so only `-` and numbered markers remain to be accepted here.
+# `applied` may carry trailing punctuation or a punctuation-led detail
+# (`applied.`, `applied: edited foo.py`); a bare word after it does not match.
 _OUTCOME_RE = re.compile(
-    r"^(?:-|\d+[.)])?\s*((?:not applied:\s*\S.*)|applied)$", re.IGNORECASE
+    r"^(?:-|\d+[.)])?\s*((?:not applied:\s*\S.*)|applied(?:\s*[.:;,!—–-].*)?)$",
+    re.IGNORECASE,
 )
 
 
@@ -199,8 +202,10 @@ def parse_task_outcomes(text: str) -> list[str]:
     """Return the leading per-task outcome lines of a task-application reply.
 
     Reads lines from the start (blank lines skipped) while each matches
-    ``applied`` or ``not applied: <reason>``, optionally after a ``-``, ``*`` or
-    ``1.`` marker; stops at the first other line. Backticks and ``*`` are
+    ``applied`` (optionally followed by punctuation or a punctuation-led
+    detail, e.g. ``applied: edited foo.py``) or ``not applied: <reason>``,
+    optionally after a ``-``, ``*`` or ``1.`` marker; stops at the first other
+    line. Backticks and ``*`` are
     removed from each line before matching, so markdown-wrapped tokens
     (`` `applied` ``, ``**not applied:** <reason>``) still parse. Returned lines
     are stripped, without the marker and without that formatting.
