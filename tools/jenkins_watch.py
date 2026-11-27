@@ -77,7 +77,9 @@ LABEL_CHANGE = re.compile(
 LOG_PATTERNS = (
     (
         "error",
-        re.compile(r" - (ERROR|CRITICAL) - |^ERROR:|Traceback \(most recent call last\)"),
+        re.compile(
+            r" - (ERROR|CRITICAL) - |^ERROR:|Traceback \(most recent call last\)"
+        ),
     ),
     (
         "decision",
@@ -130,7 +132,9 @@ def issue_pattern(issue: int, repo: str | None) -> re.Pattern[str]:
     return re.compile(f"{prefix} - #{issue} - ")
 
 
-def changed_builds(previous: list[BuildInfo], current: list[BuildInfo]) -> list[BuildInfo]:
+def changed_builds(
+    previous: list[BuildInfo], current: list[BuildInfo]
+) -> list[BuildInfo]:
     """Return the builds that are new or changed status.
 
     Keyed on job and number: the display name changes once a build gets an agent.
@@ -292,7 +296,9 @@ def inspect_log(
     if label:
         print(f"  label: {label}")
     for match in matches[:MAX_PRINTED_MATCHES]:
-        shown = match.text[:MAX_WARNING_WIDTH] if match.kind == "warning" else match.text
+        shown = (
+            match.text[:MAX_WARNING_WIDTH] if match.kind == "warning" else match.text
+        )
         print(f"  {match.line_number:>6}: {shown}")
     if len(matches) > MAX_PRINTED_MATCHES:
         print(f"  ... {len(matches) - MAX_PRINTED_MATCHES} more, see the log file")
@@ -327,7 +333,9 @@ def watch(
         return [b for b in builds if b.status == "running"]
 
     def inspect(build: BuildInfo) -> None:
-        inspect_log(client, build.job_path, build.number, options.log_dir, build.display_name)
+        inspect_log(
+            client, build.job_path, build.number, options.log_dir, build.display_name
+        )
 
     def result(name: str, detail: str = "") -> str:
         say(f"RESULT: {name}{detail}")
@@ -364,7 +372,9 @@ def watch(
             inspect(newest)
             return result("problem")
     target = options.pattern.pattern if options.pattern else "all builds"
-    say(f"watching {target} in {options.job or 'the whole server'}; {len(previous)} builds known")
+    say(
+        f"watching {target} in {options.job or 'the whole server'}; {len(previous)} builds known"
+    )
 
     while True:
         if running(previous):
@@ -375,7 +385,9 @@ def watch(
                     inspect(build)
                 return result("heartbeat")
         if now() - last_active >= options.idle * 60:
-            return result("idle", f"; newest {describe(previous[0])}" if previous else "")
+            return result(
+                "idle", f"; newest {describe(previous[0])}" if previous else ""
+            )
 
         sleep(options.interval)
         try:
@@ -437,7 +449,11 @@ def configured_executor_job() -> str | None:
 def make_client() -> JenkinsClient | None:
     """Create a JenkinsClient from the configuration, or print what is missing."""
     config = get_jenkins_config()
-    names = {"server_url": "JENKINS_URL", "username": "JENKINS_USER", "api_token": "JENKINS_TOKEN"}
+    names = {
+        "server_url": "JENKINS_URL",
+        "username": "JENKINS_USER",
+        "api_token": "JENKINS_TOKEN",
+    }
     missing = [env for key, env in names.items() if config.get(key) is None]
     if missing:
         print(f"Jenkins not configured: missing {', '.join(missing)}.", file=sys.stderr)
@@ -478,12 +494,16 @@ def main(argv: list[str] | None = None) -> int:
         Exit code, see the module docstring
     """
     parser = argparse.ArgumentParser(description="Watch Jenkins builds.")
-    parser.add_argument("--issue", type=int, help="watch one issue's builds (default: all)")
+    parser.add_argument(
+        "--issue", type=int, help="watch one issue's builds (default: all)"
+    )
     parser.add_argument("--repo", help="repo name in the display name; needs --issue")
     parser.add_argument(
         "--job", help="job or folder path (default: the configured executor job)"
     )
-    parser.add_argument("--limit", type=int, default=30, help="newest N builds (default: 30)")
+    parser.add_argument(
+        "--limit", type=int, default=30, help="newest N builds (default: 30)"
+    )
     parser.add_argument(
         "--interval",
         type=positive_float,
@@ -491,7 +511,9 @@ def main(argv: list[str] | None = None) -> int:
         help="seconds between build listings (default: 15); a running build's log "
         f"is checked every {LOG_CHECK_MINUTES} min",
     )
-    parser.add_argument("--idle", type=positive_float, default=20, help="minutes (default: 20)")
+    parser.add_argument(
+        "--idle", type=positive_float, default=20, help="minutes (default: 20)"
+    )
     parser.add_argument(
         "--stall",
         type=positive_float,
@@ -538,13 +560,17 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     if args.inspect is not None:
         saved = [
-            inspect_log(client, job, number, args.log_dir, build_name(client, job, number))
+            inspect_log(
+                client, job, number, args.log_dir, build_name(client, job, number)
+            )
             for number in args.inspect
         ]
         return 0 if all(saved) else 3
     if args.list:
         try:
-            builds = client.get_recent_builds(limit=args.limit, path=job, name_pattern=pattern)
+            builds = client.get_recent_builds(
+                limit=args.limit, path=job, name_pattern=pattern
+            )
         except JenkinsError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 3
