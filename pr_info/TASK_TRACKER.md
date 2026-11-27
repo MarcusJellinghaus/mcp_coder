@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: `issue_analyse_supervisor` — per-issue analysis log
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: per-issue log name `pr_info/issue_analysis_log_<issue>.md`, `list_directory` existence check, no glob delete, Finalize deletes only that file (verify searches + deployed-prose/skill tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: per-issue log name `pr_info/issue_analysis_log_<issue>.md`, `list_directory` existence check, no glob delete, Finalize deletes only that file (verify searches + deployed-prose/skill tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Review supervisors — create the log in the step that picks `{n}`
 See [step_2.md](./steps/step_2.md)
