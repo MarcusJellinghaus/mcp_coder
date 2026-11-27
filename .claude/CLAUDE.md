@@ -149,7 +149,7 @@ git add / rebase / push --force-with-lease
 
 ## Shared Libraries
 
-This repo uses `mcp-coder-utils` for subprocess execution, logging, redaction, the toolkit contract, the user app data directory and status-check rendering. Six shim modules in `src/mcp_coder/utils/` re-export the upstream API:
+This repo uses `mcp-coder-utils` for subprocess execution, logging, redaction, the toolkit contract, the user app data directory, status-check rendering, and line endings / path containment. Shim modules in `src/mcp_coder/utils/` re-export the upstream API:
 
 | Shim module | Upstream module | Key imports |
 |-------------|-----------------|-------------|
@@ -159,6 +159,7 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, redaction, t
 | `mcp_coder.utils.toolkit` | `mcp_coder_utils.toolkit` | `Toolkit`, `ToolkitInfo`, `ActionRequest`, `ActionResult`, `Finding`, `VerifyItem`, `validate_params` |
 | `mcp_coder.utils.user_app_data` | `mcp_coder_utils.user_app_data` | `get_user_app_data_dir` |
 | `mcp_coder.utils.verify_render` | `mcp_coder_utils.verify_render` | `STATUS_SYMBOLS`, `Row`, `Line`, `SectionBuilder`, `hint_row`, `render_rows` |
+| `mcp_coder.utils.fs` | `mcp_coder_utils.fs` | `write_text`, `dominant_newline`, `check_path_within` |
 
 **Rules:**
 - Always import through the local shims (`from mcp_coder.utils.<module> import ...`), never from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).

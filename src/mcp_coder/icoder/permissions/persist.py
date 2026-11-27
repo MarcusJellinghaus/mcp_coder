@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 from mcp_coder.icoder.permissions.loader import _strip_jsonc
+from mcp_coder.utils.fs import dominant_newline
 
 Section = Literal["allow", "ask", "deny"]
 
@@ -213,7 +214,7 @@ def _line_indent(text: str, pos: int) -> str:
 def _insert_item(
     text: str, open_i: int, close_i: int, matcher: str, newline: str
 ) -> str:
-    """Insert ``matcher`` immediately after the opening ``[`` at ``open_i``.
+    r"""Insert ``matcher`` immediately after the opening ``[`` at ``open_i``.
 
     Existing items, their comments and their indentation are never touched.
     A newline-free array stays inline; otherwise the new item takes its own
@@ -225,7 +226,7 @@ def _insert_item(
         open_i: Offset of the list's ``[``.
         close_i: Offset of the list's ``]``.
         matcher: The matcher string to insert.
-        newline: LF or CRLF, matching the file.
+        newline: The file's dominant ending ("\n", "\r\n" or "\r").
 
     Returns:
         The updated text.
@@ -255,14 +256,14 @@ def _insert_item(
 def _insert_section(
     text: str, spans: list[Span], section: Section, matcher: str, newline: str
 ) -> str:
-    """Add a fresh ``"<section>": [ matcher ]`` block right after the root ``{``.
+    r"""Add a fresh ``"<section>": [ matcher ]`` block right after the root ``{``.
 
     Args:
         text: The JSONC source, whose root is an object.
         spans: ``_scan(text)``.
         section: The list key to add.
         matcher: The single item of the new list.
-        newline: LF or CRLF, matching the file.
+        newline: The file's dominant ending ("\n", "\r\n" or "\r").
 
     Returns:
         The updated text.
@@ -349,7 +350,8 @@ def _read(target: Path) -> tuple[str, str]:
         target: The settings file.
 
     Returns:
-        The decoded text and its newline style (CRLF if any is present, else LF).
+        The decoded text and its newline style: the file's dominant ending,
+        else LF (tie or no line breaks).
 
     Raises:
         PersistError: The file is not valid UTF-8.
@@ -362,7 +364,7 @@ def _read(target: Path) -> tuple[str, str]:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise PersistError(f"{target}: not UTF-8: {exc}") from exc
-    return text, ("\r\n" if "\r\n" in text else "\n")
+    return text, dominant_newline(raw) or "\n"
 
 
 def _parse(text: str, target: Path) -> dict[Section, list[object]]:

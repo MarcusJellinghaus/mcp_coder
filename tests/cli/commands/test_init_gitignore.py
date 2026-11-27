@@ -63,7 +63,7 @@ class TestWriteSessionLogEntries:
     """Tests for _write_session_log_entries() on its own."""
 
     def test_bom_crlf_no_trailing_newline(self, tmp_path: Path) -> None:
-        """BOM and CRLF are tolerated; the block starts on its own line, LF."""
+        """BOM is kept; the block starts on its own line in the file's CRLF."""
         gitignore = tmp_path / ".gitignore"
         original = b"\xef\xbb\xbf.mcp-coder/\r\n*.pyc"
         gitignore.write_bytes(original)
@@ -71,7 +71,7 @@ class TestWriteSessionLogEntries:
         assert _write_session_log_entries(tmp_path) == (True, True)
 
         assert gitignore.read_bytes() == (
-            original + b"\n\n# mcp-coder session logs\n/logs/\n"
+            original + b"\r\n\r\n# mcp-coder session logs\r\n/logs/\r\n"
         )
 
 
@@ -133,6 +133,38 @@ class TestExecuteInitGitignore:
         lines = _lines(gitignore)
         assert lines.count("/logs/") == 1
         assert lines.count("/.mcp-coder/*") == 1
+
+    @patch("mcp_coder.cli.commands.init.get_config_file_path")
+    @patch("mcp_coder.cli.commands.init.create_default_config")
+    def test_crlf_gitignore_stays_crlf(
+        self,
+        mock_create: object,
+        mock_path: object,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Both .gitignore writers of init follow a CRLF file's ending."""
+        mock_create.return_value = True  # type: ignore[attr-defined]
+        mock_path.return_value = "/fake/config.toml"  # type: ignore[attr-defined]
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        project.mkdir()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: source,
+        )
+        args = argparse.Namespace(
+            command="init", just_skills=False, project_dir=str(project)
+        )
+        gitignore = project / ".gitignore"
+        gitignore.write_bytes(b"*.pyc\r\n")
+
+        assert execute_init(args) == 0
+
+        raw = gitignore.read_bytes()
+        assert b".vscodeclaude_session.json" in raw  # update_gitignore ran
+        assert b".scratch/" in raw  # ensure_scratch_gitignored ran
+        assert b"\n" not in raw.replace(b"\r\n", b"")  # no lone LF
 
     @patch("mcp_coder.cli.commands.init.create_default_config")
     def test_just_skills_still_writes_gitignore(

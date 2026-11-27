@@ -16,7 +16,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_paths, get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.text_io import write_lf_text
+from mcp_coder.utils.text_io import write_repo_text
 from mcp_coder.workflow_utils.task_tracker import (
     TASK_TRACKER_TEMPLATE,
     get_step_progress,
@@ -341,7 +341,7 @@ def _repair(
         logger.warning(
             "Task tracker has no completed tasks. Resetting it to the template..."
         )
-        write_lf_text(tracker, TASK_TRACKER_TEMPLATE)
+        write_repo_text(tracker, TASK_TRACKER_TEMPLATE)
         _populate(ask, project_dir, "general")
         return
 

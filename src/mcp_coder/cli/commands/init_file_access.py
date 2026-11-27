@@ -17,7 +17,7 @@ from ...mcp_workspace import (
     validate_access_rules,
 )
 from ...utils.log_utils import OUTPUT
-from ...utils.text_io import write_lf_text
+from ...utils.text_io import write_repo_text
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +192,7 @@ def _append_missing_rules(project_dir: Path, rules_path: Path) -> int:
     # Never glue onto a last line that lacks its newline
     if text and not text.endswith("\n"):
         addition = "\n" + addition
-    write_lf_text(rules_path, addition, append=True)
+    write_repo_text(rules_path, addition, append=True)
     return len(missing)
 
 
@@ -220,7 +220,7 @@ def ensure_file_access_rules(project_dir: Path) -> RulesOutcome:
                 logger.log(OUTPUT, "File access rules: unchanged")
             changed = bool(added)
         else:
-            write_lf_text(rules_path, file_access_template())
+            write_repo_text(rules_path, file_access_template())
             logger.log(OUTPUT, "File access rules: created")
             changed = True
     except UnicodeDecodeError:
@@ -248,7 +248,7 @@ def append_gitignore_block(gitignore: Path, existing: str, block: str) -> None:
         block = "\n" + block  # blank line before the new block
         if not existing.endswith("\n"):
             block = "\n" + block
-    write_lf_text(gitignore, block, append=True)
+    write_repo_text(gitignore, block, append=True)
 
 
 def ensure_scratch_gitignored(

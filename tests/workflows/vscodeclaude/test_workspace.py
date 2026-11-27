@@ -227,19 +227,23 @@ class TestWorkspaceSetup:
         assert "# VSCodeClaude session files (auto-generated)" in content.splitlines()
         assert content.endswith("\n")
 
+    @pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
     def test_update_gitignore_preserves_existing_line_endings(
-        self, tmp_path: Path
+        self, tmp_path: Path, newline: bytes
     ) -> None:
-        """Existing bytes are untouched and the appended block uses LF."""
+        """Existing bytes stay untouched; the appended block uses the file's ending."""
         gitignore = tmp_path / ".gitignore"
-        gitignore.write_bytes(b"*.pyc\n")  # LF file, trailing newline present
+        seed = b"*.pyc" + newline
+        gitignore.write_bytes(seed)
 
         update_gitignore(tmp_path)
 
         raw = gitignore.read_bytes()
-        assert raw.startswith(b"*.pyc\n")  # existing bytes unchanged, still LF
-        assert b"\r\n" not in raw  # appended block uses LF too, also on Windows
-        assert raw.endswith(b"\n")
+        assert raw.startswith(seed)
+        assert raw.endswith(newline)
+        # Only the seed's ending remains as a line break - no mixed file.
+        rest = raw.replace(newline, b"")
+        assert b"\r" not in rest and b"\n" not in rest
 
     def test_update_gitignore_appends_missing_entry_on_upgrade(
         self, tmp_path: Path

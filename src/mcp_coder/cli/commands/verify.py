@@ -43,7 +43,7 @@ from ...utils.mcp_verification import (
     parse_claude_mcp_list,
     required_mcp_servers,
 )
-from ...utils.text_io import write_lf_text
+from ...utils.text_io import write_repo_text
 from ...utils.user_config import verify_config
 from ...utils.verify_render import STATUS_SYMBOLS, Line, Row, SectionBuilder
 from ..utils import (
@@ -187,7 +187,7 @@ def _run_mcp_edit_smoke_test(
         if skip_reason is not None:
             return Row(label, symbols["warning"], skip_reason)
         scratch_dir.mkdir(exist_ok=True)
-        write_lf_text(test_file, "A\n\nC\n")
+        write_repo_text(test_file, "A\n\nC\n")
         prompt_llm(
             f"Edit the file {_SMOKE_TEST_FILE} to insert a line 'B' between 'A' and 'C'",
             provider=provider,

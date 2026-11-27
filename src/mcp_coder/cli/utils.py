@@ -14,6 +14,7 @@ from mcp_coder.mcp_workspace_git import get_repository_identifier
 from ..llm.session import parse_llm_method
 from ..llm.types import SUPPORTED_PROVIDERS
 from ..prompts.prompt_loader import claude_md_paths
+from ..utils.fs import check_path_within
 from ..utils.log_utils import OUTPUT
 from ..utils.repo_config import get_repo_flag
 from ..utils.user_config import find_repo_section_by_url, get_config_values
@@ -429,16 +430,19 @@ def is_outside_project_dir(path: Path, project_dir: str | Path | None) -> bool:
 
     The single definition of "outside" shared by the run-time report and the
     verify report. Always False when project_dir is None - with no anchor there
-    is nothing to be outside of.
+    is nothing to be outside of. A path that fails the containment check is
+    outside; a path that cannot be resolved (OSError) is not.
     """
     if project_dir is None:
         return False
-
     try:
-        return not path.resolve().is_relative_to(Path(project_dir).resolve())
+        check_path_within(path, Path(project_dir))
+    except ValueError:
+        return True
     except OSError:
         # Do not warn about a path we could not resolve.
         return False
+    return False
 
 
 def report_context_root(project_dir: Path) -> None:

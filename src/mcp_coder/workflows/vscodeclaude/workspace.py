@@ -33,7 +33,7 @@ from ...utils.subprocess_runner import (
     CommandOptions,
     execute_subprocess,
 )
-from ...utils.text_io import write_lf_text
+from ...utils.text_io import write_repo_text
 from ...workflow_utils.issue_helpers import is_marked
 from .config import get_vscodeclaude_config, sanitize_folder_name
 from .helpers import load_to_be_deleted
@@ -432,10 +432,7 @@ def update_gitignore(folder_path: Path) -> list[str]:
     if existing_content and not existing_content.endswith("\n"):
         addition = "\n" + addition
 
-    # newline="" disables text-mode translation: the literal "\n" above is what
-    # reaches the file, so a LF .gitignore stays LF on Windows.
-    with gitignore_path.open("a", encoding="utf-8", newline="") as f:
-        f.write(addition)
+    write_repo_text(gitignore_path, addition, append=True)
 
     return missing
 
@@ -631,7 +628,7 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
 
     # Write tasks.json
     tasks_file = vscode_dir / "tasks.json"
-    write_lf_text(tasks_file, content)
+    write_repo_text(tasks_file, content)
 
 
 def _find_marked_comment(

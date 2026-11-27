@@ -214,6 +214,19 @@ def test_crlf_newlines_are_preserved(
     _assert_local_always(_reload(tmp_path, TOOL, monkeypatch))
 
 
+def test_mixed_newlines_follow_the_dominant_ending(tmp_path: Path) -> None:
+    # Mostly LF with one CRLF: inserted line breaks are LF, the CRLF stays.
+    target = _seed(
+        tmp_path, '{\n  "ask": [\r\n    "mcp__a__x"\n  ],\n  "allow": []\n}\n'
+    )
+
+    write_rule(target, OTHER, "deny")  # scaffold path builds its own newlines
+
+    raw = target.read_bytes()
+    assert raw.count(b"\r\n") == 1  # existing CRLF kept (no normalisation)
+    assert b'"deny": [\n' in raw  # new block uses LF
+
+
 def test_indentation_matches_existing_items(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
