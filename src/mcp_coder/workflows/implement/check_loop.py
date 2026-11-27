@@ -8,6 +8,7 @@ Checks and tests share one cap of MAX_FIX_TURNS fix turns per binding run.
 """
 
 import logging
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,6 +53,9 @@ CheckStatus = Literal[
 
 _CHECK_OUTPUT_HEADING = "Check output:"
 
+# Longest summary a per-request INFO line carries
+_SUMMARY_MAX = 200
+
 
 @dataclass(frozen=True)
 class CheckOutcome:
@@ -88,6 +92,22 @@ def _split_requests(binding: Sequence[str]) -> tuple[list[str], list[str]]:
     return checks, tests
 
 
+def _one_line(summary: str) -> str:
+    """Put a result summary on one line, capped at ``_SUMMARY_MAX`` characters.
+
+    Args:
+        summary: The result summary; may span several lines.
+
+    Returns:
+        The summary with newlines replaced by ``", "``, cut to
+        ``_SUMMARY_MAX`` characters ending in ``"…"`` when too long.
+    """
+    text = summary.replace("\n", ", ")
+    if len(text) <= _SUMMARY_MAX:
+        return text
+    return text[: _SUMMARY_MAX - 1] + "…"
+
+
 def _run_group(
     loaded: LoadedToolkit, project_dir: Path, requests: list[str]
 ) -> str | None:
@@ -107,12 +127,22 @@ def _run_group(
     """
     texts: list[str] = []
     for request in requests:
+        start = time.perf_counter()
         result = run_request(loaded, project_dir, request)
-        if result.status == "error":
-            raise _CheckAbort(f"{request}: {result.summary}")
         if result.status == "skipped":
             logger.info("%s skipped: %s", request, result.summary)
-        elif result.status == "findings":
+            continue
+        # Logged before an error aborts, so the log names every request run
+        logger.info(
+            "%s: %s (%.1f s): %s",
+            request,
+            result.status,
+            time.perf_counter() - start,
+            _one_line(result.summary),
+        )
+        if result.status == "error":
+            raise _CheckAbort(f"{request}: {result.summary}")
+        if result.status == "findings":
             texts.append(result.fix_text or result.summary)
     return "\n\n".join(texts) or None
 

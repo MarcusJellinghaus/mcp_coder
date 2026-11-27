@@ -1,5 +1,6 @@
 """Tests for create_plan workflow prompt execution functionality."""
 
+import logging
 from pathlib import Path
 from unittest.mock import patch
 
@@ -189,6 +190,47 @@ class TestRunPlanningPrompts:
 
         third_call_args = mock_prompt_llm.call_args_list[2]
         assert third_call_args[1]["session_id"] == "test-session-123"
+
+    def test_step_lines_logged_when_each_prompt_starts(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Each "Step N/7" line is logged right before its own prompt runs.
+
+        A step line logged earlier would claim work that has not started;
+        one logged later would hide which prompt is running.
+        """
+        issue_data = _make_issue_data()
+        responses = [
+            {"text": f"Response {n}", "session_id": "test-session-123"}
+            for n in (1, 2, 3)
+        ]
+        calls: list[int] = []
+
+        def fake_llm(*_args: object, **_kwargs: object) -> dict[str, str]:
+            calls.append(len(caplog.records))
+            return responses[len(calls) - 1]
+
+        with (
+            patch(f"{_CORE}.get_prompt", return_value="Test prompt"),
+            patch(f"{_CORE}.prompt_llm", side_effect=fake_llm),
+            patch(f"{_CORE}.store_session", return_value="/fake/path.json"),
+            caplog.at_level(logging.INFO),
+        ):
+            result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result == (True, None)
+        msgs = [r.getMessage() for r in caplog.records]
+
+        def first_index(prefix: str) -> int:
+            return next(i for i, m in enumerate(msgs) if m.startswith(prefix))
+
+        i4 = first_index("Step 4/7")
+        i5 = first_index("Step 5/7")
+        i6 = first_index("Step 6/7")
+        assert i4 < calls[0] <= i5 < calls[1] <= i6 < calls[2]
+        assert "#123" in msgs[i4]
+        assert "Test Issue" in msgs[i4]
+        assert not any(m.startswith("Executing prompt") for m in msgs)
 
     def test_run_planning_prompts_first_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when first prompt fails."""

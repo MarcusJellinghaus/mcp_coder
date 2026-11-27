@@ -265,3 +265,58 @@ class TestGuardUnit:
         )
         mocks.push.assert_called_once_with(tmp_path, force_with_lease=True)
         mocks.reset.assert_not_called()
+
+
+class TestUpToDate:
+    """HEAD already equal to ``origin/<branch>`` skips the push; anything else pushes."""
+
+    def test_head_equals_remote_skips_push(
+        self, mocks: _Mocks, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test a rebase that leaves HEAD at origin/feature does not push."""
+        mocks.latest_sha.return_value = _REMOTE_SHA
+
+        with caplog.at_level(logging.INFO, logger=_MODULE):
+            outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome.reason == "ok"
+        mocks.push.assert_not_called()
+        assert any(
+            r.levelno == logging.INFO
+            and "Already up to date with origin/feature" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_head_differs_pushes(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """Test HEAD differing from origin/feature pushes.
+
+        Also covers HEAD unchanged by the rebase while the remote is behind.
+        """
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome.reason == "ok"
+        mocks.push.assert_called_once_with(tmp_path, force_with_lease=True)
+
+    def test_no_upstream_pushes(self, mocks: _Mocks, tmp_path: Path) -> None:
+        """Test a branch without origin/feature pushes."""
+        with patch(
+            f"{_MODULE}.get_remote_branch_commit_sha",
+            lambda _d, b: _BASE_SHA if b == "main" else None,
+        ):
+            outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome.reason == "ok"
+        mocks.push.assert_called_once_with(tmp_path, force_with_lease=True)
+
+    def test_comparison_raises_pushes(
+        self, mocks: _Mocks, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test a comparison that raises pushes without a warning."""
+        mocks.latest_sha.side_effect = [_PRE_SHA, RuntimeError("boom")]
+
+        with caplog.at_level(logging.DEBUG, logger=_MODULE):
+            outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome.reason == "ok"
+        mocks.push.assert_called_once_with(tmp_path, force_with_lease=True)
+        assert not any(r.levelno == logging.WARNING for r in caplog.records)

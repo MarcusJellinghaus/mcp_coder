@@ -227,7 +227,9 @@ def run_planning_prompts(
     logger.debug(f"LLM provider: {provider}")
 
     # Execute first prompt
-    logger.info("Executing prompt 1: Initial Analysis...")
+    logger.info(
+        f"Step 4/7: Running initial analysis for issue #{issue_data['number']} '{issue_data['title']}'..."
+    )
     logger.debug(f"Sending {len(formatted_prompt_1)} chars to LLM with timeout=600s")
     try:
         response_1 = prompt_llm(
@@ -299,7 +301,7 @@ def run_planning_prompts(
         )
 
     # Execute second prompt with session continuation
-    logger.info("Executing prompt 2: Simplification Review...")
+    logger.info("Step 5/7: Running simplification review...")
     logger.debug(
         f"Sending {len(prompt_2)} chars to LLM with session_id={session_id[:16]}... timeout=600s"
     )
@@ -345,7 +347,7 @@ def run_planning_prompts(
         return (False, _prompt_failure(2, e))
 
     # Execute third prompt with session continuation
-    logger.info("Executing prompt 3: Implementation Plan Creation...")
+    logger.info("Step 6/7: Generating implementation plan...")
     logger.debug(
         f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout={PROMPT_3_TIMEOUT}s"
     )
@@ -623,16 +625,7 @@ def run_create_plan_workflow(
             )
             return 1
 
-        # Step 4: Run initial analysis
-        logger.info(
-            f"Step 4/7: Running initial analysis for issue #{issue_number} '{issue_data['title']}'...",
-        )
-
-        # Step 5: Run simplification review
-        logger.info("Step 5/7: Running simplification review...")
-
-        # Step 6: Generate implementation plan
-        logger.info("Step 6/7: Generating implementation plan...")
+        # Steps 4-6: run_planning_prompts logs each one as it starts
         prompt_success, prompt_failure = run_planning_prompts(
             project_dir,
             issue_data,

@@ -172,12 +172,13 @@ class TestAttemptRebaseOutcomes:
         mock_detect.return_value = "main"
         mock_rebase.return_value = True
         mock_push.return_value = True
-        mock_remote_sha.return_value = _FULL_SHA
+        mock_remote_sha.side_effect = lambda _d, b: _FULL_SHA if b == "main" else None
 
         outcome = _attempt_rebase_and_push(tmp_path)
 
         assert outcome == RebaseOutcome("ok", "main", "abc1234")
         assert outcome.ok
+        mock_push.assert_called_once_with(tmp_path, force_with_lease=True)
 
     def test_dirty_tree(
         self,
@@ -307,7 +308,7 @@ class TestAttemptRebaseOutcomes:
         mock_detect.return_value = "main"
         mock_rebase.return_value = True
         mock_push.return_value = False
-        mock_remote_sha.return_value = _FULL_SHA
+        mock_remote_sha.side_effect = lambda _d, b: _FULL_SHA if b == "main" else None
 
         with caplog.at_level(logging.WARNING):
             outcome = _attempt_rebase_and_push(tmp_path)

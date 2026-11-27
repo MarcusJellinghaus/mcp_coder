@@ -86,7 +86,10 @@ class RebaseOutcome:
 
     @property
     def ok(self) -> bool:
-        """Return True only when the rebase and push both succeeded."""
+        """Return True only when the rebase succeeded and ``origin/<branch>`` holds HEAD.
+
+        HEAD is there because this step pushed it or because it already was.
+        """
         return self.reason == "ok"
 
 
@@ -260,6 +263,32 @@ def _check_branch_not_moved(project_dir: Path, pre_sha: str) -> BranchCheck:
     return "error"
 
 
+def _up_to_date_branch(project_dir: Path) -> str | None:
+    """Return the branch when HEAD equals ``origin/<branch>``; None otherwise. Never raises.
+
+    Compares full SHAs of HEAD and ``origin/<branch>``, never HEAD before and
+    after the rebase, so local commits the rebase did not rewrite still push.
+    A failure is logged at DEBUG only and treated as "not up to date".
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        The current branch name when HEAD equals ``origin/<branch>``; None when
+        they differ, the remote ref is absent, or the comparison fails.
+    """
+    try:
+        branch = get_current_branch_name(project_dir)
+        head = get_latest_commit_sha(project_dir)
+        remote = get_remote_branch_commit_sha(project_dir, branch) if branch else None
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.debug(
+            "Could not compare HEAD with origin/<branch>; pushing", exc_info=True
+        )
+        return None
+    return branch if head and head == remote else None
+
+
 def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
     """Attempt to rebase onto parent branch and push. Never fails workflow.
 
@@ -270,7 +299,9 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         project_dir: Path to the project directory
 
     Returns:
-        RebaseOutcome with reason ``"ok"`` if rebase and push succeeded.
+        RebaseOutcome with reason ``"ok"`` when the rebase succeeded and the
+        push succeeded or was not needed, because HEAD already equals
+        ``origin/<branch>``.
         Otherwise the reason is ``"dirty_tree"`` (staged or modified tracked
         files with more than line-ending changes; untracked files alone do
         not count), ``"no_base"`` (no target
@@ -324,6 +355,11 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         return RebaseOutcome(
             "branch_moved" if status == "moved" else "push_failed", target, sha
         )
+
+    branch = _up_to_date_branch(project_dir)
+    if branch:
+        logger.info("Already up to date with origin/%s; nothing to push", branch)
+        return RebaseOutcome("ok", target, sha)
 
     # Push rebased branch with force_with_lease
     if not push_changes(project_dir, force_with_lease=True):
