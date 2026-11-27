@@ -17,6 +17,7 @@ The following `pyproject.toml` sections are read by the Python tools; `[tool.mcp
 | Section | Read by | Purpose |
 |---|---|---|
 | `[tool.mcp-tools-py] formatter` | mcp-tools-py (`run_format_code` MCP tool and mcp-coder's formatting) | Selects the formatter: `"black"` (isort + black) or `"ruff"` (ruff imports + ruff format). Optional while table detection is unambiguous |
+| `[tool.mcp-tools-py] script-directories` | mcp-tools-py's checks and formatter, mcp-coder's toolkit (format and check); needs mcp-tools-py with #308 | Script folders (e.g. `tools`) that get the formatter, ruff, pylint and mypy, but not vulture, bandit, deptry, coverage or pytest |
 | `[tool.ruff.format]` | `mcp__mcp-tools-py__run_format_code` | ruff format config; selects ruff when `formatter` is unset and `[tool.black]` is absent |
 | `[tool.pytest.ini_options]` | `mcp__mcp-tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
@@ -88,7 +89,7 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 
 ### Formatting Tools
 
-Format via `mcp__mcp-tools-py__run_format_code` (formatter chosen by `[tool.mcp-tools-py] formatter`); the CI formatter jobs are the backstop and also cover `tools/`.
+Format via `mcp__mcp-tools-py__run_format_code` (formatter chosen by `[tool.mcp-tools-py] formatter`); local formatting covers `tools/` too once mcp-tools-py with #308 is installed (`script-directories`); the CI formatter jobs are the backstop.
 
 ### Quality Check Tools
 

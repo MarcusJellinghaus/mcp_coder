@@ -49,9 +49,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: `script-directories = ["tools"]` in `pyproject.toml` + docs ([step_5.md](./steps/step_5.md))
 
-- [ ] Implementation: `pyproject.toml` key, `toolkits.md`, `python.md`, `quality-and-security-checks.md`
-- [ ] Quality checks (search, format, ruff, mypy, pylint, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `pyproject.toml` key, `toolkits.md`, `python.md`, `quality-and-security-checks.md`
+- [x] Quality checks (search, format, ruff, mypy, pylint, pytest) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
