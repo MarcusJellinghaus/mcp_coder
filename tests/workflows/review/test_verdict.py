@@ -2,7 +2,22 @@
 
 import pytest
 
-from mcp_coder.workflows.review.verdict import Verdict, parse_verdict
+from mcp_coder.workflows.review.verdict import Verdict, format_verdict, parse_verdict
+
+
+class TestFormatVerdict:
+    """Markdown rendering of a verdict for the round log."""
+
+    def test_dismiss(self) -> None:
+        assert format_verdict(Verdict("dismiss")) == "dismiss"
+
+    def test_tasks_as_tight_list_with_multiline_task(self) -> None:
+        verdict = Verdict("tasks", ["a", "b\n\nc"])
+        assert format_verdict(verdict) == "tasks\n\n- a\n- b\n  c"
+
+    def test_escalate_omits_reason(self) -> None:
+        verdict = Verdict("escalate", escalate_reason="r")
+        assert format_verdict(verdict) == "escalate"
 
 
 class TestParseVerdictValid:

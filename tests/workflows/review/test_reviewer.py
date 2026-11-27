@@ -6,11 +6,14 @@ known template, independent of ``prompts.md``).
 """
 
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.workflows.review import reviewer
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 
@@ -345,3 +348,226 @@ class TestPrFeedbackNote:
         # The note must not claim unresolved feedback exists.
         assert "were posted on this PR" not in note
         assert "may report that reviews are clean" in note
+
+
+# --- Final reviewer message ------------------------------------------------
+
+
+def _report_response(
+    text: str, events: list[dict[str, Any]] | None = None
+) -> LLMResponseDict:
+    """Build a reviewer response; ``events=None`` leaves ``raw_response`` empty."""
+    raw: dict[str, Any] = {} if events is None else {"events": events}
+    return cast(
+        LLMResponseDict, {"text": text, "session_id": "rev-1", "raw_response": raw}
+    )
+
+
+class TestReportText:
+    """The final assistant message is the report, not the joined narration."""
+
+    def test_uses_final_done_result(self) -> None:
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "Still reviewing."},
+            {"type": "tool_use_start", "name": "read_file"},
+            {"type": "text_delta", "text": "a.py:1 — high — x"},
+            {"type": "done", "result": "a.py:1 — high — x"},
+        ]
+        response = _report_response("Still reviewing.a.py:1 — high — x", events)
+        assert reviewer.report_text(response) == "a.py:1 — high — x"
+
+    def test_empty_done_result_falls_back_to_joined_text(self) -> None:
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "joined"},
+            {"type": "done", "result": ""},
+        ]
+        response = _report_response("joined", events)
+        assert reviewer.report_text(response) == "joined"
+
+    def test_no_events_falls_back_to_joined_text(self) -> None:
+        response = _report_response("joined")
+        assert reviewer.report_text(response) == "joined"
+
+    def test_done_without_result_falls_back_to_joined_text(self) -> None:
+        """Copilot's ``done`` event carries no ``result``."""
+        events: list[dict[str, Any]] = [
+            {"type": "text_delta", "text": "joined"},
+            {"type": "done", "session_id": "s", "usage": {}},
+        ]
+        response = _report_response("joined", events)
+        assert reviewer.report_text(response) == "joined"
+
+
+# --- Supervisor input ------------------------------------------------------
+
+
+def _branch_status(
+    pr_found: bool = False,
+    pr_number: int | None = None,
+    undeterminable: bool = False,
+    ci_status: CIStatus = CIStatus.PASSED,
+    text: str | None = None,
+) -> BranchStatusReport:
+    """Branch-status stand-in with the fields ``supervisor_input`` reads."""
+    return cast(
+        BranchStatusReport,
+        SimpleNamespace(
+            pr_found=pr_found,
+            pr_number=pr_number,
+            pr_feedback_undeterminable=undeterminable,
+            ci_status=ci_status,
+            pr_feedback_text=text,
+        ),
+    )
+
+
+class TestSupervisorInput:
+    """The supervisor sees the report, PR feedback and the PR state."""
+
+    def test_no_pr(self) -> None:
+        text = reviewer.supervisor_input("R", _branch_status())
+        assert text == "R\n\n## Review state\n\nPR: no PR exists yet for this branch."
+
+    def test_pr_exists(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(pr_found=True, pr_number=12)
+        )
+        assert "PR #12" in text
+        assert "no PR exists yet" not in text
+
+    def test_undeterminable_feedback_is_unknown(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(pr_found=True, pr_number=12, undeterminable=True)
+        )
+        assert "PR state unknown" in text
+        assert "PR #12" not in text
+
+    def test_unknown_ci_status_is_unknown(self) -> None:
+        text = reviewer.supervisor_input(
+            "R",
+            _branch_status(pr_found=True, pr_number=12, ci_status=CIStatus.UNKNOWN),
+        )
+        assert "PR state unknown" in text
+        assert "PR #12" not in text
+
+    def test_plan_lane_returns_report_unchanged(self) -> None:
+        assert reviewer.supervisor_input("R", None) == "R"
+
+    def test_feedback_precedes_review_state(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(text="changes requested on foo.py")
+        )
+        assert text.index("## PR review feedback") < text.index("## Review state")
+        assert text.startswith("R\n\n## PR review feedback\n\n")
+        assert (
+            "## PR review feedback\n\n"
+            + reviewer._quote_pr_feedback("changes requested on foo.py")
+            in text
+        )
+
+    def test_plan_lane_noop_note_without_pr_line(self) -> None:
+        text = reviewer.supervisor_input("R", None, "NOTE")
+        assert text == "R\n\n## Review state\n\nNOTE"
+        assert "PR:" not in text
+
+    def test_noop_note_follows_pr_line(self) -> None:
+        text = reviewer.supervisor_input("R", _branch_status(), "NOTE")
+        assert text == (
+            "R\n\n## Review state\n\nPR: no PR exists yet for this branch.\n\nNOTE"
+        )
+
+
+# --- No-op note ------------------------------------------------------------
+
+
+def test_noop_note_lists_tasks_and_outcomes() -> None:
+    """The note says the tasks were not applied and asks for a decision on each."""
+    note = reviewer.noop_note(["Add a PR section"], ["not applied: no PR exists"])
+
+    assert "NOT applied" in note
+    assert "- Add a PR section" in note
+    assert "not applied: no PR exists" in note
+    assert "re-issue" in note
+    assert "escalate" in note
+    assert "drop" in note
+
+
+def test_noop_note_without_outcomes() -> None:
+    """Missing outcome lines are reported as such."""
+    assert "(none reported)" in reviewer.noop_note(["Add a PR section"], [])
+
+
+# --- Task outcomes ---------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "applied\nnot applied: no PR exists\n\nfoo.py:1 — high — x",
+            ["applied", "not applied: no PR exists"],
+        ),
+        ("- applied\n- not applied: n/a", ["applied", "not applied: n/a"]),
+        (
+            "`applied`\n**not applied:** no PR exists\n* `not applied: n/a`",
+            ["applied", "not applied: no PR exists", "not applied: n/a"],
+        ),
+        ("1. applied\n2) not applied: n/a", ["applied", "not applied: n/a"]),
+        ("applied.", ["applied."]),
+        ("applied: edited foo.py", ["applied: edited foo.py"]),
+        (
+            "applied: edited foo.py\nnot applied: no PR exists\n\nfoo.py:1 — high — x",
+            ["applied: edited foo.py", "not applied: no PR exists"],
+        ),
+        ("applied edited foo.py", []),
+        ("\n\napplied\nfoo.py:1 — high — x\napplied", ["applied"]),
+        (
+            "applied\n\nnot applied: no PR exists\n\nfoo.py:1 — high — x",
+            ["applied", "not applied: no PR exists"],
+        ),
+        ("not applied — no PR exists", ["not applied — no PR exists"]),
+        ("not applied. reason", ["not applied. reason"]),
+        ("not applied", ["not applied"]),
+        (
+            "not applied\napplied\nnot applied: no PR exists",
+            ["not applied", "applied", "not applied: no PR exists"],
+        ),
+        ("not applied edited foo.py", []),
+        ("NO FINDINGS", []),
+        ("", []),
+    ],
+    ids=[
+        "plain",
+        "dash_list",
+        "markdown_wrapped",
+        "numbered",
+        "applied_trailing_period",
+        "applied_with_detail",
+        "applied_detail_then_not_applied",
+        "applied_bare_word_detail_rejected",
+        "stops_at_first_other_line",
+        "blank_line_between_outcomes",
+        "not_applied_dash_separator",
+        "not_applied_period_separator",
+        "not_applied_bare",
+        "not_applied_bare_first_then_more",
+        "not_applied_bare_word_detail_rejected",
+        "no_findings",
+        "empty",
+    ],
+)
+def test_parse_task_outcomes(text: str, expected: list[str]) -> None:
+    """Leading outcome lines are returned stripped of markers and formatting."""
+    assert reviewer.parse_task_outcomes(text) == expected
+
+
+def test_task_resume_prompt_asks_for_outcome_lines(mock_llm: MagicMock) -> None:
+    """The resume prompt names the edit tools and the leading outcome lines."""
+    _call(session_id="rev-1", tasks=["Fix foo.py:1"])
+
+    prompt = mock_llm.call_args.args[0]
+    assert "delete_this_file" in prompt
+    assert "`applied`" in prompt
+    assert "`not applied: <reason>`" in prompt
+    assert "After the edits, begin your final message" in prompt
+    assert prompt.index("After the edits") < prompt.index("- Fix foo.py:1")

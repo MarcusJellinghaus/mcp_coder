@@ -8,8 +8,10 @@ unparseable one up to :data:`VERDICT_REPAIR_RETRIES` times.
 """
 
 import logging
+import re
 from pathlib import Path
 
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
@@ -81,6 +83,152 @@ def _pr_feedback_note(pr_feedback_text: str | None) -> str | None:
     )
 
 
+def _pr_state_line(status: BranchStatusReport) -> str:
+    """One line saying whether a PR exists for the branch.
+
+    A failed status collection (undeterminable feedback, or ``ci_status``
+    ``UNKNOWN``) leaves ``pr_found`` unreliable, so it reads as unknown.
+
+    Args:
+        status: The round's branch status report.
+
+    Returns:
+        The PR-state line for the supervisor.
+    """
+    if status.pr_feedback_undeterminable or status.ci_status is CIStatus.UNKNOWN:
+        return "PR: PR state unknown (status collection failed)."
+    if status.pr_found:
+        return f"PR: PR #{status.pr_number} exists for this branch."
+    return "PR: no PR exists yet for this branch."
+
+
+def supervisor_input(
+    report: str, status: BranchStatusReport | None, noop_note: str | None = None
+) -> str:
+    """Build the supervisor's input: the report, PR feedback and review state.
+
+    ``status`` is ``None`` in the plan lane: no PR feedback, no PR-state line.
+    The no-op note reaches the supervisor in both lanes.
+
+    Args:
+        report: The reviewer's final report.
+        status: The round's branch status report, or ``None`` (plan lane).
+        noop_note: The note that last round's tasks changed nothing (see
+            :func:`noop_note`), or ``None``.
+
+    Returns:
+        The report, then the ``## PR review feedback`` section when there is
+        feedback text, then the ``## Review state`` section (PR-state line,
+        no-op note) when either of its parts exists.
+    """
+    parts = [report]
+    if status is not None and status.pr_feedback_text:
+        parts.append(
+            "## PR review feedback\n\n" + _quote_pr_feedback(status.pr_feedback_text)
+        )
+    state = [_pr_state_line(status)] if status is not None else []
+    if noop_note:
+        state.append(noop_note)
+    if state:
+        parts.append("## Review state\n\n" + "\n\n".join(state))
+    return "\n\n".join(parts)
+
+
+def noop_note(tasks: list[str], outcomes: list[str]) -> str:
+    """Tell the supervisor that last round's tasks changed nothing.
+
+    Lists the tasks and the reviewer's outcome lines, states that the tasks
+    were NOT applied (so they are not "already fixed"), and asks for each to be
+    re-issued as a file change, escalated, or dropped on purpose.
+
+    Args:
+        tasks: The tasks of the round that changed no file.
+        outcomes: The reviewer's per-task outcome lines for that round.
+
+    Returns:
+        The note text for the ``## Review state`` section.
+    """
+    lines = [
+        "Last round's tasks were NOT applied: the round changed no file on the branch.",
+        "They are not already fixed. Tasks:",
+        *[f"- {task}" for task in tasks],
+        "",
+        "Reviewer outcome:",
+        *(outcomes or ["(none reported)"]),
+        "",
+        "For each task: re-issue it as a change to files on the branch, escalate "
+        "it if it needs a human, or drop it on purpose.",
+    ]
+    return "\n".join(lines)
+
+
+def report_text(response: LLMResponseDict) -> str:
+    """Return the final assistant message of a reviewer turn.
+
+    The last ``done`` event's ``result`` in ``raw_response["events"]`` when it
+    is a non-empty string, else ``response["text"]`` (the joined text blocks).
+    Providers without a ``result`` on ``done`` (copilot) always fall back.
+    Narration the reviewer emits between tool calls is joined into
+    ``response["text"]``; the final message is the report alone.
+
+    Args:
+        response: The reviewer's response.
+
+    Returns:
+        The stripped final result, or the unchanged joined text.
+    """
+    raw = response.get("raw_response") or {}
+    events = raw.get("events") if isinstance(raw, dict) else None
+    for event in reversed(events if isinstance(events, list) else []):
+        if isinstance(event, dict) and event.get("type") == "done":
+            result = event.get("result")
+            if isinstance(result, str) and result.strip():
+                return result.strip()
+            break
+    return response["text"]
+
+
+# `*` list markers are removed together with bold/italic markers before
+# matching, so only `-` and numbered markers remain to be accepted here.
+# `applied` and `not applied` may stand alone or carry trailing punctuation or
+# a punctuation-led detail (`applied.`, `applied: edited foo.py`,
+# `not applied — no PR exists`); a bare word after them does not match.
+_OUTCOME_RE = re.compile(
+    r"^(?:-|\d+[.)])?\s*((?:not )?applied(?:\s*[.:;,!—–-].*)?)$",
+    re.IGNORECASE,
+)
+
+
+def parse_task_outcomes(text: str) -> list[str]:
+    """Return the leading per-task outcome lines of a task-application reply.
+
+    Reads lines from the start (blank lines skipped) while each matches
+    ``applied`` or ``not applied``, alone or followed by punctuation or a
+    punctuation-led detail (``applied: edited foo.py``,
+    ``not applied — <reason>``), optionally after a ``-``, ``*`` or ``1.``
+    marker; stops at the first other non-blank line. Backticks and ``*`` are
+    removed from each line before matching, so markdown-wrapped tokens
+    (`` `applied` ``, ``**not applied:** <reason>``) still parse. Returned lines
+    are stripped, without the marker and without that formatting.
+
+    Args:
+        text: The reviewer's final message after applying tasks.
+
+    Returns:
+        The outcome lines in order; empty when the reply starts otherwise.
+    """
+    outcomes: list[str] = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        plain = re.sub(r"\s+", " ", line.replace("`", "").replace("*", "")).strip()
+        match = _OUTCOME_RE.match(plain)
+        if not match:
+            break
+        outcomes.append(match.group(1).strip())
+    return outcomes
+
+
 def _run_reviewer(
     config: ReviewConfig,
     project_dir: Path,
@@ -149,9 +297,11 @@ def _run_reviewer(
     else:
         task_lines = "\n".join(f"- {task}" for task in tasks)
         prompt = (
-            "Apply the following fixes now, editing the relevant files with the "
-            "`mcp-workspace` edit tools, then re-emit your structured report:\n"
-            f"{task_lines}"
+            "Apply the following fixes now with the `mcp-workspace` tools "
+            "(`edit_file`, `save_file`, `delete_this_file`). After the edits, "
+            "begin your final message with one line per task, in order: "
+            "`applied` or `not applied: <reason>`. Then re-emit your structured "
+            f"report:\n{task_lines}"
         )
 
     return prompt_llm(

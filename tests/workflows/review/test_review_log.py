@@ -8,6 +8,7 @@ import pytest
 from mcp_coder.workflows.review import review_log
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
 from mcp_coder.workflows.review.review_log import next_run_number, write_round_log
+from mcp_coder.workflows.review.verdict import Verdict, format_verdict
 
 _BLOCK_LABELS = {"**Findings**:", "**Decisions**:", "**Changes**:"}
 
@@ -182,6 +183,70 @@ class TestWriteRoundLogInvariants:
             _assert_formatter_stable(text)
             if escalate_reason:
                 assert text.count("**Escalate reason**: x\n") == round_number
+
+
+class TestWriteRoundLogFormattedVerdict:
+    """The **Decisions** field holds ``format_verdict`` output, not a repr."""
+
+    def test_tasks_verdict_is_a_tight_list(self, tmp_path: Path) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings="f",
+            decisions=format_verdict(Verdict("tasks", ["a", "b"])),
+            changes="c",
+        )
+        text = _read(path)
+        assert "**Decisions**:\n\ntasks\n\n- a\n- b\n" in text
+        assert "Verdict(" not in text
+        _assert_formatter_stable(text)
+
+    def test_escalate_reason_written_once(self, tmp_path: Path) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings="f",
+            decisions=format_verdict(Verdict("escalate", escalate_reason="x")),
+            changes="c",
+            escalate_reason="x",
+        )
+        text = _read(path)
+        assert text.count("x") == 1
+        _assert_formatter_stable(text)
+
+    def test_multiline_task_continuation_indented(self, tmp_path: Path) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings="f",
+            decisions=format_verdict(Verdict("tasks", ["a", "b\nc"])),
+            changes="c",
+        )
+        text = _read(path)
+        assert "- b\n  c" in text
+        _assert_formatter_stable(text)
+
+
+def test_changes_with_task_outcome_lines(tmp_path: Path) -> None:
+    """Outcome lines follow the applied/no-op token as plain lines."""
+    path = write_round_log(
+        tmp_path,
+        REVIEW_IMPLEMENTATION,
+        run_number=1,
+        round_number=1,
+        findings="f",
+        decisions=format_verdict(Verdict("tasks", ["a"])),
+        changes="no-op\nnot applied: no PR exists",
+    )
+    text = _read(path)
+    assert "**Changes**:\n\nno-op\nnot applied: no PR exists\n" in text
+    _assert_formatter_stable(text)
 
 
 class TestNextRunNumber:

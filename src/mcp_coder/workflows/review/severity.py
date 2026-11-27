@@ -87,8 +87,9 @@ def _apply_severity_floor(
             anchored finding lines carry the severities.
         round_number: The current 1-based round number.
         config: The review workflow config (supplies ``strict_from_round``).
-        pending_ci_note: The carried CI-as-finding note, or ``None``. When set,
-            the round is exempt and never downgraded.
+        pending_ci_note: The carried CI-as-finding note, or else the pending
+            no-op note (last round's tasks changed nothing), or ``None``. Any
+            non-``None`` value exempts the round: it is never downgraded.
 
     Returns:
         ``Verdict("dismiss")`` when the floor applies, else ``verdict``

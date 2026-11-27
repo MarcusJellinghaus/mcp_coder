@@ -56,7 +56,7 @@ from .handoff import (
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
 from .steps import _after_steps, _resolve_context, round_applied
-from .verdict import Verdict
+from .verdict import Verdict, format_verdict
 
 logger = logging.getLogger(__name__)
 
@@ -111,11 +111,13 @@ def run_review_workflow(
     # Carries a red mid-loop CI result into the next reviewer prompt; when it is
     # still set at the rounds cap the terminal reason is "ci", not "rounds".
     pending_ci_note: str | None = None
+    # Tells the next supervisor that the last `tasks` round changed nothing.
+    pending_noop_note: str | None = None
     # Most recently parsed verdict; carried into the failure comment when set.
     last_verdict: Verdict | None = None
 
     def body() -> int:
-        nonlocal supervisor_sid, pending_ci_note, last_verdict
+        nonlocal supervisor_sid, pending_ci_note, pending_noop_note, last_verdict
 
         # Formatter pre-flight (both lanes): an unresolvable formatter would
         # only surface after an LLM round, at the formatting call below.
@@ -233,7 +235,7 @@ def run_review_workflow(
                         exc=exc,
                     )
                 reviewer_sid = report_response["session_id"]
-                report = report_response["text"]
+                report = reviewer.report_text(report_response)
                 if report.strip():
                     break
             else:
@@ -253,14 +255,11 @@ def run_review_workflow(
                 )
 
             # Supervisor: persistent session, verdict parsed with repair retries.
-            # Append the raw PR feedback section (impl lane only, non-empty) so
-            # the supervisor triages it alongside the reviewer's own findings.
-            supervisor_report = report
-            if status is not None and status.pr_feedback_text:
-                supervisor_report = (
-                    f"{report}\n\n## PR review feedback\n\n"
-                    f"{reviewer._quote_pr_feedback(status.pr_feedback_text)}"
-                )
+            # Impl lane: PR feedback and the PR-state line ride along with the
+            # report so the supervisor triages them with the reviewer's findings.
+            supervisor_report = reviewer.supervisor_input(
+                report, status, pending_noop_note
+            )
             logger.info("Round %d: supervisor triage starting", round_number)
             try:
                 verdict, supervisor_sid = reviewer._get_verdict(
@@ -304,9 +303,13 @@ def run_review_workflow(
             # `tasks` verdict with no critical/high finding is rewritten to
             # `dismiss` so the existing dismiss branch converges the loop
             # (deterministic guarantee for when the supervisor ignores the
-            # advisory prompt rule).
+            # advisory prompt rule). A pending CI or no-op note exempts the round.
             verdict = _apply_severity_floor(
-                verdict, report, round_number, config, pending_ci_note
+                verdict,
+                report,
+                round_number,
+                config,
+                pending_ci_note or pending_noop_note,
             )
 
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
@@ -337,7 +340,7 @@ def run_review_workflow(
                         run_number,
                         round_number,
                         findings=report,
-                        decisions=str(verdict),
+                        decisions=format_verdict(verdict),
                         changes="rebase-needed",
                         escalate_reason="rebase",
                     )
@@ -361,7 +364,7 @@ def run_review_workflow(
                         run_number,
                         round_number,
                         findings=report,
-                        decisions=str(verdict),
+                        decisions=format_verdict(verdict),
                         changes=details or reason,
                         escalate_reason=reason,
                     )
@@ -383,7 +386,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="dismiss",
                 )
                 _flush_round_log(project_dir)
@@ -398,7 +401,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="escalate",
                     escalate_reason=verdict.escalate_reason,
                 )
@@ -436,7 +439,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="no-reviewer-session",
                     escalate_reason="no-reviewer-session",
                 )
@@ -459,7 +462,7 @@ def run_review_workflow(
                 len(verdict.tasks),
             )
             try:
-                reviewer._run_reviewer(
+                apply_response = reviewer._run_reviewer(
                     config,
                     project_dir,
                     provider,
@@ -485,7 +488,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes=reason,
                     escalate_reason=reason,
                 )
@@ -501,6 +504,9 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                     exc=exc,
                 )
+            outcomes = reviewer.parse_task_outcomes(
+                reviewer.report_text(apply_response)
+            )
             run_formatters(project_dir)
             if not commit_changes(
                 project_dir,
@@ -517,7 +523,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="commit-failed",
                     escalate_reason="commit-failed",
                 )
@@ -542,7 +548,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="push-failed",
                     escalate_reason="push-failed",
                 )
@@ -577,7 +583,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes="rebase-needed",
                     escalate_reason="rebase",
                 )
@@ -607,7 +613,7 @@ def run_review_workflow(
                     run_number,
                     round_number,
                     findings=report,
-                    decisions=str(verdict),
+                    decisions=format_verdict(verdict),
                     changes=reason,
                     escalate_reason=reason,
                 )
@@ -628,9 +634,13 @@ def run_review_workflow(
                 pending_ci_note = None
 
             # Backstop (layer C): a `tasks` round that changed nothing besides
-            # the review logs is a silent no-op — log it, but let the round
-            # count toward the cap and keep going (the next fresh reviewer
-            # re-surfaces the finding).
+            # the review logs is a no-op — log it, let the round count toward
+            # the cap and keep going. The no-op note carries the unapplied
+            # tasks to the next supervisor, which must re-issue, escalate or
+            # drop each one.
+            pending_noop_note = (
+                None if applied else reviewer.noop_note(verdict.tasks, outcomes)
+            )
             # Left uncommitted on purpose: the top of the next iteration lands
             # it, and every terminal path flushes its own write.
             pending_log = write_round_log(
@@ -639,8 +649,8 @@ def run_review_workflow(
                 run_number,
                 round_number,
                 findings=report,
-                decisions=str(verdict),
-                changes="applied" if applied else "no-op",
+                decisions=format_verdict(verdict),
+                changes="\n".join(["applied" if applied else "no-op", *outcomes]),
             )
 
         # Rounds cap. The last `tasks` round already wrote its log at the end of
