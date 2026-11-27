@@ -49,7 +49,13 @@ from mcp_coder.workflow_utils.failure_handling import (
 from . import reviewer
 from .config import ReviewConfig
 from .gates import check_ci_proven_gate, check_open_tasks_gate
-from .handoff import _fail, _flush_round_log, _route_to_human, _set_label
+from .handoff import (
+    FORMAT_BEFORE_GATE_MESSAGE,
+    _fail,
+    _flush_round_log,
+    _route_to_human,
+    _set_label,
+)
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
 from .steps import _after_steps, _resolve_context
@@ -309,6 +315,12 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
+                if config.run_after_steps:
+                    # The rebase push in _after_steps carries this commit, so
+                    # the commit check_ci_proven_gate judges is formatted.
+                    _flush_round_log(
+                        project_dir, FORMAT_BEFORE_GATE_MESSAGE, push=False
+                    )
                 reason, rebase_outcome, ci_detail = _after_steps(
                     config,
                     project_dir,

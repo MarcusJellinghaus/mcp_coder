@@ -46,6 +46,10 @@ from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
 
+# Message of the implementation lane's whole-tree commit before the dismiss
+# round's CI gate.
+FORMAT_BEFORE_GATE_MESSAGE = "style: format before the CI gate"
+
 # reason -> (Category display, Error sentence used when `details` is None)
 _FAIL_REASONS: dict[str, tuple[str, str]] = {
     "general": (
