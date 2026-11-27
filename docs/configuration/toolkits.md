@@ -59,9 +59,10 @@ Rules:
 
 A config error surfaces as follows:
 
-- Workflows that run the format pre-flight at entry stop: implement, rebase,
-  fix_ci and review; check-branch-status only in `--fix` mode with failed CI;
-  fix_conflict only in its LLM-rebase fallback, which is then refused.
+- Workflows that run the format pre-flight at entry stop: create-plan,
+  implement, rebase, fix_ci and review; check-branch-status only in `--fix`
+  mode with failed CI; fix_conflict only in its LLM-rebase fallback, which is
+  then refused.
 - `mcp-coder verify` shows an error Toolkit row and fails.
 - LLM grant resolution and prompt-slot resolution log a warning and fall back:
   no grants, default slots.
@@ -75,7 +76,7 @@ makes.
 |-------|---------|---------|---------|
 | `implement_task` | `check@quick` | `check`, `test` | implement, after each task |
 | `implement_final` | `check@standard`, `test@quick` | `check`, `test` | implement, after the last task (gate) |
-| `commit` | `format@apply` | `format` (not `format@check`) | formatting before commits: implement, rebase, review, CI fix, and the rescue commit after a check-stage abort |
+| `commit` | `format@apply` | `format` (not `format@check`) | formatting before commits: create-plan, implement (tasks, task tracker preparation, finalisation), rebase, review, CI fix, and the rescue commit after a check-stage abort |
 | `rebase` | `check@standard`, `test@standard` | `check`, `test` | `mcp-coder rebase`: baseline and after the rebase |
 | `rebase_automated` | `check@standard`, `test@unattended` | `check`, `test` | automated rebases: the review and fix_conflict rebase fallback |
 
@@ -117,7 +118,7 @@ Rules:
 | Implement, after each task | `implement_task` | `check@quick` | task session: `implement_task` and `implement_final`; fix turns: `implement_task` |
 | Implement, after the last task | `implement_final` | `check@standard`, `test@quick` | fix turns: `implement_final` |
 | Implement finalisation | none | — | `implement_final` |
-| Formatting before commits (only while `format_code` is on): implement after each task and after the final checks, rebase after each regression-fix attempt, review rounds, CI fix, the rescue commit after a check-stage abort | `commit` | `format@apply` | no LLM session |
+| Formatting before commits (only while `format_code` is on): create-plan's plan commit, implement's task tracker preparation, after each task, after the final checks and finalisation, rebase after each regression-fix attempt, review rounds and its whole-tree round-log flush, CI fix, the rescue commit after a check-stage abort | `commit` | `format@apply` | no LLM session |
 | `mcp-coder rebase` | `rebase` | `check@standard`, `test@standard` | regression-fix turns: `rebase`; conflict turns: no Bash grants |
 | Automated rebase | `rebase_automated` | `check@standard`, `test@unattended` | regression-fix turns: `rebase_automated`; conflict turns: no Bash grants |
 | CI fix turn (implement, fix_ci, review rounds, `mcp-coder check branch-status --fix`) | none | — | `implement_final` |
@@ -130,10 +131,9 @@ Rules:
 - A request that falls back grants the lower depth's steps.
 - The Bash grant scope column applies to the command toolkit; mcp-tools-py
   passes no per-session `Bash(...)` grants.
-- Every other commit runs without formatting, e.g. finalisation,
-  `mcp-coder commit`, create_plan, create-pr's cleanup commit, review's
-  round-log commit, task-tracker prep, and the git-only rebase step's
-  line-ending renormalize commit.
+- Every other commit runs without formatting, e.g. `mcp-coder commit`,
+  create-pr's cleanup commit, review's scoped round-log commit, and the
+  git-only rebase step's line-ending renormalize commit.
 
 ## Required MCP servers
 
@@ -219,8 +219,10 @@ Rules:
   `0`. On Windows it stays 256 and falls outside `1-125`, so it is `error`.
   Windows crash codes (`0xC…`) are written in decimal, e.g. `3221225477`.
 - A `format.apply` step's exit code 1 maps to `findings` by default, which fails
-  formatting: implement fails; rebase, review, CI fix and the rescue commit
-  carry on. Set `exit_codes` for `apply` to match the formatter.
+  formatting: implement's task and final-check commits fail; create-plan, task
+  tracker preparation, finalisation, rebase, review, CI fix and the rescue
+  commit log a warning and carry on. Set `exit_codes` for `apply` to match the
+  formatter.
 
 #### Step fields
 

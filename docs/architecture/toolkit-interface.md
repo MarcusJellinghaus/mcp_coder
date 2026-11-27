@@ -80,8 +80,12 @@ page covers only how mcp-coder uses the contract.
 |---|---|
 | `format_code` off, or `commit` binding empty | `True`, nothing runs |
 | Every request `ok` or `skipped` | `True` |
-| Any other status | `False`: implement fails; rebase, review, CI fix and the rescue commit carry on |
+| Any other status | `False`: implement's task and final-check commits fail; create-plan, task tracker preparation, finalisation, rebase, review, CI fix and the rescue commit carry on |
 | Config error | raises `FormatterConfigError` |
+
+`format_best_effort` wraps `run_formatters` for create-plan, task tracker
+preparation, finalisation and review's whole-tree round-log flush. It logs a
+warning on `False` or an exception and never raises.
 
 ### Prompt slots and fragments
 

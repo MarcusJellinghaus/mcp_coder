@@ -94,9 +94,9 @@ See [step_10.md](./steps/step_10.md)
 ### Step 11: docs: formatting users, pre-flight list, failure behaviour
 See [step_11.md](./steps/step_11.md)
 
-- [ ] Implementation (docs)
-- [ ] Quality checks (pylint, pytest, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs)
+- [x] Quality checks (pylint, pytest, mypy) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
