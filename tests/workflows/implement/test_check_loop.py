@@ -1,5 +1,6 @@
 """Tests for the grouped, capped fix loop in check_loop."""
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ import pytest
 from mcp_coder.utils.toolkit import ActionResult, Finding
 from mcp_coder.utils.toolkit_runner import get_fragment as real_get_fragment
 from mcp_coder.workflows.implement.check_loop import (
+    _SUMMARY_MAX,
     MAX_FIX_TURNS,
     CheckOutcome,
     check_and_fix,
@@ -292,6 +294,67 @@ class TestErrors:
         with caplog.at_level("INFO"):
             assert _run().status == "clean"
         assert "check@quick skipped: no files" in caplog.text
+
+
+def _info_records(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+
+
+class TestRequestLogging:
+    @pytest.mark.parametrize("status", ["ok", "findings", "error"])
+    def test_one_info_line_per_request(
+        self, env: _Env, caplog: pytest.LogCaptureFixture, status: str
+    ) -> None:
+        summary = "a: ok\nb: " + status
+        findings = [Finding(key="k", message="m")] if status == "findings" else []
+        result = ActionResult(
+            status=status,  # type: ignore[arg-type]
+            summary=summary,
+            findings=findings,
+        )
+        env.binding("check@quick")
+        env.results({"check@quick": result}, {})
+
+        with caplog.at_level("INFO", logger=_CL):
+            _run()
+
+        pattern = re.compile(
+            rf"^check@quick: {status} \(\d+\.\d s\): a: ok, b: {status}$"
+        )
+        matching = [m for m in _info_records(caplog) if pattern.match(m)]
+        assert len(matching) == 1
+        if status == "error":
+            errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+            assert any("Check run failed: check@quick" in m for m in errors)
+
+    def test_long_summary_capped(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.binding("check@quick")
+        env.run.return_value = ActionResult(status="ok", summary="x" * 500)
+
+        with caplog.at_level("INFO", logger=_CL):
+            _run()
+
+        pattern = re.compile(r"^check@quick: ok \(\d+\.\d s\): (.*)$")
+        matches = [pattern.match(m) for m in _info_records(caplog)]
+        summaries = [m.group(1) for m in matches if m]
+        assert len(summaries) == 1
+        assert summaries[0].endswith("…")
+        assert len(summaries[0]) == _SUMMARY_MAX
+
+    def test_skipped_keeps_its_line(
+        self, env: _Env, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        env.binding("check@quick")
+        env.run.return_value = ActionResult(status="skipped", summary="not set up")
+
+        with caplog.at_level("INFO", logger=_CL):
+            _run()
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert "check@quick skipped: not set up" in messages
+        assert not any(re.search(r"\(\d+\.\d s\)", m) for m in messages)
 
 
 class TestMissingFragment:

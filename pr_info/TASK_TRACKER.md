@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: check loop logs each request with status, duration and summary (INFO)
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: `TestRequestLogging` tests, `_SUMMARY_MAX` / `_one_line` and `_run_group` logging in `check_loop.py`, fix-loop bullet in `docs/architecture/toolkit-interface.md`
-- [ ] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestRequestLogging` tests, `_SUMMARY_MAX` / `_one_line` and `_run_group` logging in `check_loop.py`, fix-loop bullet in `docs/architecture/toolkit-interface.md`
+- [x] Quality checks: format, pylint, mypy, pytest (fast unit set) — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: command toolkit steps log what they ran (DEBUG)
 See [step_4.md](./steps/step_4.md)

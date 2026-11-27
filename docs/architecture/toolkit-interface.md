@@ -47,7 +47,10 @@ page covers only how mcp-coder uses the contract.
 - All `check` requests of the binding run first; `test` requests run only when
   every check is clean. Any fix turn restarts from the checks.
 - `MAX_FIX_TURNS = 3` fix turns, shared by checks and tests per binding run.
-- An `error` result aborts the run. `skipped` is logged and ignored.
+- Each request logs one INFO line, `<request>: <status> (<s> s): <summary>`,
+  with the summary on one line and capped at 200 characters. `skipped` logs
+  `<request> skipped: <summary>` and is ignored. An `error` result aborts the
+  run.
 - Fix prompt (`_build_fix_prompt`), parts joined by a blank line:
   1. the `fix.check` or `fix.test` fragment, used raw;
   2. `Check output:` followed by the `fix_text` of every result with findings
