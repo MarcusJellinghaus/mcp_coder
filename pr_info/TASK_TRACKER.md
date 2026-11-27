@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Windows workflow templates print the Claude Code and mcp-coder versions — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks (pylint, pytest incl. `cmd.exe` test on Windows, mypy) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks (pylint, pytest incl. `cmd.exe` test on Windows, mypy) — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Linux workflow templates list all sessions — [step_3.md](./steps/step_3.md)
 

@@ -256,7 +256,11 @@ def _windows_template(
     before the command; on failure the watchdog moves the issue to its failed
     label and the script exits 1. VIRTUAL_ENV is set only when the project venv
     has an interpreter. Block bodies are not indented and use a literal
-    `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed).
+    `exit /b 1` (%ERRORLEVEL% would expand when the block is parsed). The
+    tool versions are printed via `claude.exe`, not `claude`, because cmd
+    searches the cwd (the repo, which may hold a `claude.bat` launcher) before
+    PATH; `call` keeps a `.cmd` from ending the batch, and the `call` lines
+    contain no `%` because `call` expands it a second time.
     """
     issue = " --issue {issue_number}" if issue_flag else ""
     watchdog = (
@@ -278,6 +282,12 @@ if exist "%WORKSPACE%\repo\.venv\Scripts\python.exe" set "VIRTUAL_ENV=%WORKSPACE
 
 set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
+
+echo tool versions =====================================
+where claude.exe
+call claude.exe --version
+where mcp-coder
+call mcp-coder --version
 
 echo command execution  =====================================
 mcp-coder --log-level {{log_level}} {command} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json

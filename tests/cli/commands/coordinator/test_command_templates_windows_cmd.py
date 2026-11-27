@@ -70,13 +70,22 @@ def _run(
     (stub_dir / "mcp-coder.cmd").write_text(
         STUB.format(log=log, setup_rc=setup_rc), newline="\r\n"
     )
+    # Writes only to stdout: the stub log is parsed as ARGS/VENV pairs.
+    (stub_dir / "claude.cmd").write_text(
+        "@echo off\necho CLAUDE_STUB %*\n", newline="\r\n"
+    )
+    (workspace / "repo" / "claude.bat").write_text(
+        "@echo off\necho CLAUDE_DECOY\n", newline="\r\n"
+    )
 
     # A .cmd invoked without `call` never returns; production runs mcp-coder.exe.
     script = template.format(log_level="INFO", issue_number=42, branch_name="b")
+    script = re.sub(r"(?m)^mcp-coder ", "call mcp-coder ", script)
+    # The test cannot create a real claude.exe. An explicit extension still
+    # skips the repo's claude.bat, so the stub is found via PATH.
+    script = script.replace("claude.exe", "claude.cmd")
     bat = tmp_path / "run.bat"
-    bat.write_text(
-        re.sub(r"(?m)^mcp-coder ", "call mcp-coder ", script), newline="\r\n"
-    )
+    bat.write_text(script, newline="\r\n")
 
     result = execute_subprocess(
         [os.environ["COMSPEC"], "/c", str(bat)],
@@ -121,6 +130,9 @@ def test_setup_succeeds(
     # The echoed `dir logs` names neither file, so this shows where it listed.
     assert "repo_log_marker.txt" in stdout
     assert "venv_log_decoy.txt" not in stdout
+    assert "CLAUDE_STUB --version" in stdout
+    assert "CLAUDE_DECOY" not in stdout
+    assert "--version" in [args for args, _ in calls]
 
 
 @pytest.mark.parametrize(

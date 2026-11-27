@@ -306,6 +306,24 @@ def test_windows_workflow_runs_in_repo_and_lists_sessions(template: str) -> None
     assert "create_plan_sessions" not in template
 
 
+WIN_VERSION_LINES = (
+    "where claude.exe",
+    "call claude.exe --version",
+    "where mcp-coder",
+    "call mcp-coder --version",
+)
+
+
+@pytest.mark.parametrize("template", WIN_WORKFLOWS)
+def test_windows_workflow_prints_tool_versions(template: str) -> None:
+    """Windows workflows print Claude Code and mcp-coder versions before the command."""
+    lines = _stripped_lines(template)
+    command_index = _anchor_index(lines, "mcp-coder --log-level ")
+    timeout_index = lines.index("set MCP_TIMEOUT=30000")
+    for line in WIN_VERSION_LINES:
+        assert timeout_index < lines.index(line) < command_index
+
+
 def test_linux_fix_conflict_does_not_list_plan_sessions() -> None:
     """fix-conflict keeps its archive section without plan sessions."""
     assert ".mcp-coder/create_plan_sessions" not in FIX_CONFLICT_COMMAND_TEMPLATE
