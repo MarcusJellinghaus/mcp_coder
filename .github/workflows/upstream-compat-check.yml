@@ -51,7 +51,7 @@ jobs:
 
       - name: Run mypy --strict
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: mypy --strict src tests
+        run: mypy --strict src tests tools
 
       - name: Import every mcp_coder module (strict)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

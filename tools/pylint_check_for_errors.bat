@@ -1,1 +1,1 @@
-pylint -E  ./src ./tests
+pylint -E ./src ./tests ./tools

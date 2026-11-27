@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Add `tools` to the mypy / pylint command lines ([step_4.md](./steps/step_4.md))
 
-- [ ] Implementation: `ci.yml`, `upstream-compat-check.yml`, `.bat` wrappers, `github.md` template
-- [ ] Quality checks (search, format, mypy, pylint, pytest) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `ci.yml`, `upstream-compat-check.yml`, `.bat` wrappers, `github.md` template
+- [x] Quality checks (search, format, mypy, pylint, pytest) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `script-directories = ["tools"]` in `pyproject.toml` + docs ([step_5.md](./steps/step_5.md))
 
