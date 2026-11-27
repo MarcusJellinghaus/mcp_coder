@@ -1,6 +1,6 @@
 # Jenkins status check
 
-Goal: for a time window, say which Executor builds succeeded and which failed, which issues need action, and which problems need recording. To catalogue failure types instead, use [`jenkins_issue_analysis.md`](jenkins_issue_analysis.md).
+Goal: for a time window, say which Executor builds succeeded and which failed, which issues need action, and which problems need recording. To catalogue failure types instead, use [`jenkins_issue_analysis.md`](jenkins_issue_analysis.md). To follow one issue's builds live until something needs a look, use `/jenkins_watch` (its logs go to its own run folder, `.scratch/jenkins_watch_<issue or all>_<date>/`, which it deletes at the end).
 
 **Scope:** the repos the coordinator serves (the JENKINS JOBS section of `mcp-coder verify`). Leave AutoRunner out: its automated runs don't work reliably yet.
 

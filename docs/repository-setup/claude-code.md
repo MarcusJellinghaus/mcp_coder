@@ -80,6 +80,7 @@ Skills provide structured workflows for common tasks. Run `mcp-coder init` to de
 | Command | Purpose |
 |---------|---------|
 | `/discuss` | Step-by-step discussion of open questions and suggestions |
+| `/jenkins_watch` | Follow an issue's (or all) Jenkins builds until something needs a look, then analyse it |
 
 ## Knowledge Base & Agents
 

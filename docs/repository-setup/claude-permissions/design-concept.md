@@ -48,7 +48,7 @@ Review checklist for every skill and agent. Agents in this repo: [agent-permissi
 | obsidian-wiki | every tool, incl. `obsidian_delete_note` |
 | Skills | `Skill(<name>)` for most skills — no effect on user-only (`disable-model-invocation`) skills |
 | Web | `WebFetch(domain:*)` — unrestricted ([#1434](https://github.com/MarcusJellinghaus/mcp_coder/issues/1434)) |
-| Bash | `mcp-coder gh-tool checkout-issue-branch:*`, `tools/jenkins_builds.sh`, `jenkins_download_log.sh`, `jenkins_download_logs.sh` |
+| Bash | `mcp-coder gh-tool checkout-issue-branch:*`, `tools/jenkins_builds.sh`, `jenkins_download_log.sh`, `jenkins_download_logs.sh`, `jenkins_watch.sh` |
 
 ## 3. Mechanisms
 
