@@ -236,6 +236,21 @@ def ensure_file_access_rules(project_dir: Path) -> RulesOutcome:
     return RulesOutcome(ok=True, changed=changed, skip_reason="")
 
 
+def append_gitignore_block(gitignore: Path, existing: str, block: str) -> None:
+    """Append a block to a .gitignore, on its own line after a blank line.
+
+    Args:
+        gitignore: Path of the .gitignore to append to.
+        existing: Its current decoded content, ``""`` when missing or empty.
+        block: Lines to append, each ending in a newline.
+    """
+    if existing:
+        block = "\n" + block  # blank line before the new block
+        if not existing.endswith("\n"):
+            block = "\n" + block
+    write_lf_text(gitignore, block, append=True)
+
+
 def ensure_scratch_gitignored(
     project_dir: Path, rules: RulesOutcome
 ) -> tuple[bool, bool]:
@@ -273,12 +288,7 @@ def ensure_scratch_gitignored(
         if _SCRATCH_SPELLINGS & {line.strip() for line in existing.splitlines()}:
             logger.log(OUTPUT, "Gitignore: .scratch/ present")
             return True, False
-        addition = SCRATCH_GITIGNORE_BLOCK
-        if existing:
-            addition = "\n" + addition  # blank line before the new block
-            if not existing.endswith("\n"):
-                addition = "\n" + addition
-        write_lf_text(gitignore, addition, append=True)
+        append_gitignore_block(gitignore, existing, SCRATCH_GITIGNORE_BLOCK)
     except (OSError, ValueError) as e:
         logger.warning(
             "Failed to add .scratch/ to .gitignore in %s: %s", project_dir, e

@@ -39,9 +39,9 @@ Files that MCP Coder workflows expect to be gitignored:
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
 
-# mcp-coder session and log files
-.mcp-coder/
-logs/
+# mcp-coder session logs
+/.mcp-coder/*
+/logs/
 
 # Scratch files for LLM sessions: MCP-writable via .mcp-file-access, never committed
 .scratch/
@@ -54,9 +54,11 @@ logs/
 - **`.scratch/` — written by `mcp-coder init`** (not by the session launch),
   only once `.mcp-file-access` keeps it writable for MCP; see below.
 - **`.mcp.*.json` — add manually.** No tool writes this line.
-- **`.mcp-coder/` and `logs/` — add manually.** Required for the automated LLM
-  rebase: review and fix-conflict hand off to a human instead of running it
-  when `.mcp-coder/` is not ignored.
+- **`/.mcp-coder/*` and `/logs/` — written by `mcp-coder init`**, missing lines
+  only. Another spelling of the whole folder (e.g. `.mcp-coder/` or `logs`)
+  counts as present; a narrower line such as `logs/claude-sessions/` does not.
+  Required for the automated LLM rebase: review and fix-conflict hand off to a
+  human instead of running it when `.mcp-coder/` is not ignored.
 
 The automated LLM rebase runs pytest in the mcp-coder tool environment
 (`sys.executable`), so the repo's test dependencies must be installed there.
