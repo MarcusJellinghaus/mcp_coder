@@ -508,6 +508,21 @@ def test_review_supervisor_declares_json_decision_contract() -> None:
     assert "escalate" in supervisor
 
 
+def test_review_supervisor_limits_tasks_to_file_changes() -> None:
+    """Tasks the reviewer cannot apply as file edits go to escalation instead."""
+    supervisor = get_prompt(str(PROMPTS_FILE_PATH), "Review Supervisor")
+    assert "files on the branch" in supervisor
+    assert "escalate_reason" in supervisor
+
+
+def test_review_supervisor_has_no_header_lines() -> None:
+    """No body line starts with '#' - the header parser would pick it up."""
+    supervisor = get_prompt(str(PROMPTS_FILE_PATH), "Review Supervisor")
+    assert not [
+        line for line in supervisor.splitlines() if line.strip().startswith("#")
+    ]
+
+
 _TRACKER_REPAIR_PROMPTS = [
     "Task Tracker Restructure Prompt",
     "Task Tracker Feedback Prompt",

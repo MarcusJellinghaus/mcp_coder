@@ -9,7 +9,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from tests.workflows.review.conftest import _DISMISS, _resp, _run
+from mcp_coder.workflows.review.config import REVIEW_PLAN
+from tests.workflows.review.conftest import (
+    _DISMISS,
+    _resp,
+    _reviewer,
+    _run,
+    _status,
+)
 
 
 def _final_resp(text: str, result: str, session_id: str = "rev-1") -> dict[str, Any]:
@@ -63,3 +70,39 @@ def test_empty_final_message_falls_back_without_retry(
 
     assert result == 0
     assert env.prompt_llm.call_count == 2
+
+
+def test_supervisor_is_told_no_pr_exists(env: SimpleNamespace, tmp_path: Path) -> None:
+    """Implementation lane without a PR: the supervisor input says so."""
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
+    assert "no PR exists yet" in supervisor_prompt
+
+
+def test_supervisor_is_told_the_pr_number(env: SimpleNamespace, tmp_path: Path) -> None:
+    """Implementation lane with a PR: the supervisor input names it."""
+    env.collect_branch_status.return_value = _status(pr_found=True, pr_number=7)
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
+    assert "PR #7" in supervisor_prompt
+
+
+def test_plan_lane_supervisor_has_no_review_state(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The plan lane fetches no branch status, so no PR-state section."""
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path, config=REVIEW_PLAN)
+
+    assert result == 0
+    supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
+    assert "## Review state" not in supervisor_prompt

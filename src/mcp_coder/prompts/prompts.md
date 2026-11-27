@@ -491,6 +491,9 @@ given to you.
 - Tie-break: when the call is borderline, {tie_break} rather than asking.
 - Escalate to a human only when you are genuinely unsure or a change needs major refactoring
   or a significant design decision. Do not escalate trivial fixes in either direction.
+- Tasks are file changes: every task must be a change to files on the branch. Do not issue
+  a task for anything else (PR text, labels, other GitHub state, rewriting history). If such a
+  finding needs a human, escalate and put the reason in escalate_reason.
 
 **Decide exactly one:**
 - `dismiss` — no substantive accepted findings remain; the work is good enough to proceed.

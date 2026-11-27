@@ -253,14 +253,9 @@ def run_review_workflow(
                 )
 
             # Supervisor: persistent session, verdict parsed with repair retries.
-            # Append the raw PR feedback section (impl lane only, non-empty) so
-            # the supervisor triages it alongside the reviewer's own findings.
-            supervisor_report = report
-            if status is not None and status.pr_feedback_text:
-                supervisor_report = (
-                    f"{report}\n\n## PR review feedback\n\n"
-                    f"{reviewer._quote_pr_feedback(status.pr_feedback_text)}"
-                )
+            # Impl lane: PR feedback and the PR-state line ride along with the
+            # report so the supervisor triages them with the reviewer's findings.
+            supervisor_report = reviewer.supervisor_input(report, status)
             logger.info("Round %d: supervisor triage starting", round_number)
             try:
                 verdict, supervisor_sid = reviewer._get_verdict(

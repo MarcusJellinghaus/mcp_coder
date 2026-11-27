@@ -10,6 +10,7 @@ unparseable one up to :data:`VERDICT_REPAIR_RETRIES` times.
 import logging
 from pathlib import Path
 
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
@@ -79,6 +80,49 @@ def _pr_feedback_note(pr_feedback_text: str | None) -> str | None:
         "your report.\n\n"
         f"{_quote_pr_feedback(pr_feedback_text)}"
     )
+
+
+def _pr_state_line(status: BranchStatusReport) -> str:
+    """One line saying whether a PR exists for the branch.
+
+    A failed status collection (undeterminable feedback, or ``ci_status``
+    ``UNKNOWN``) leaves ``pr_found`` unreliable, so it reads as unknown.
+
+    Args:
+        status: The round's branch status report.
+
+    Returns:
+        The PR-state line for the supervisor.
+    """
+    if status.pr_feedback_undeterminable or status.ci_status is CIStatus.UNKNOWN:
+        return "PR: PR state unknown (status collection failed)."
+    if status.pr_found:
+        return f"PR: PR #{status.pr_number} exists for this branch."
+    return "PR: no PR exists yet for this branch."
+
+
+def supervisor_input(report: str, status: BranchStatusReport | None) -> str:
+    """Build the supervisor's input: the report, PR feedback and review state.
+
+    ``status`` is ``None`` in the plan lane: no PR feedback, no PR-state line.
+
+    Args:
+        report: The reviewer's final report.
+        status: The round's branch status report, or ``None`` (plan lane).
+
+    Returns:
+        The report, then the ``## PR review feedback`` section when there is
+        feedback text, then the ``## Review state`` section when ``status`` is
+        given.
+    """
+    parts = [report]
+    if status is not None and status.pr_feedback_text:
+        parts.append(
+            "## PR review feedback\n\n" + _quote_pr_feedback(status.pr_feedback_text)
+        )
+    if status is not None:
+        parts.append("## Review state\n\n" + _pr_state_line(status))
+    return "\n\n".join(parts)
 
 
 def report_text(response: LLMResponseDict) -> str:

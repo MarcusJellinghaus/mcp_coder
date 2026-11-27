@@ -38,12 +38,16 @@ def _status(
     text: str | None = None,
     undeterminable: bool = False,
     ci_status: CIStatus = CIStatus.PASSED,
+    pr_found: bool = False,
+    pr_number: int | None = None,
 ) -> SimpleNamespace:
     """Build a branch-status stand-in with the fields the review loop reads."""
     return SimpleNamespace(
         pr_feedback_text=text,
         pr_feedback_undeterminable=undeterminable,
         ci_status=ci_status,
+        pr_found=pr_found,
+        pr_number=pr_number,
     )
 
 

@@ -6,11 +6,13 @@ known template, independent of ``prompts.md``).
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.workflows.review import reviewer
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
@@ -394,3 +396,71 @@ class TestReportText:
         ]
         response = _report_response("joined", events)
         assert reviewer.report_text(response) == "joined"
+
+
+# --- Supervisor input ------------------------------------------------------
+
+
+def _branch_status(
+    pr_found: bool = False,
+    pr_number: int | None = None,
+    undeterminable: bool = False,
+    ci_status: CIStatus = CIStatus.PASSED,
+    text: str | None = None,
+) -> BranchStatusReport:
+    """Branch-status stand-in with the fields ``supervisor_input`` reads."""
+    return cast(
+        BranchStatusReport,
+        SimpleNamespace(
+            pr_found=pr_found,
+            pr_number=pr_number,
+            pr_feedback_undeterminable=undeterminable,
+            ci_status=ci_status,
+            pr_feedback_text=text,
+        ),
+    )
+
+
+class TestSupervisorInput:
+    """The supervisor sees the report, PR feedback and the PR state."""
+
+    def test_no_pr(self) -> None:
+        text = reviewer.supervisor_input("R", _branch_status())
+        assert text == "R\n\n## Review state\n\nPR: no PR exists yet for this branch."
+
+    def test_pr_exists(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(pr_found=True, pr_number=12)
+        )
+        assert "PR #12" in text
+        assert "no PR exists yet" not in text
+
+    def test_undeterminable_feedback_is_unknown(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(pr_found=True, pr_number=12, undeterminable=True)
+        )
+        assert "PR state unknown" in text
+        assert "PR #12" not in text
+
+    def test_unknown_ci_status_is_unknown(self) -> None:
+        text = reviewer.supervisor_input(
+            "R",
+            _branch_status(pr_found=True, pr_number=12, ci_status=CIStatus.UNKNOWN),
+        )
+        assert "PR state unknown" in text
+        assert "PR #12" not in text
+
+    def test_plan_lane_returns_report_unchanged(self) -> None:
+        assert reviewer.supervisor_input("R", None) == "R"
+
+    def test_feedback_precedes_review_state(self) -> None:
+        text = reviewer.supervisor_input(
+            "R", _branch_status(text="changes requested on foo.py")
+        )
+        assert text.index("## PR review feedback") < text.index("## Review state")
+        assert text.startswith("R\n\n## PR review feedback\n\n")
+        assert (
+            "## PR review feedback\n\n"
+            + reviewer._quote_pr_feedback("changes requested on foo.py")
+            in text
+        )
