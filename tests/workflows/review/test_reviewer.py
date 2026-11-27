@@ -465,6 +465,37 @@ class TestSupervisorInput:
             in text
         )
 
+    def test_plan_lane_noop_note_without_pr_line(self) -> None:
+        text = reviewer.supervisor_input("R", None, "NOTE")
+        assert text == "R\n\n## Review state\n\nNOTE"
+        assert "PR:" not in text
+
+    def test_noop_note_follows_pr_line(self) -> None:
+        text = reviewer.supervisor_input("R", _branch_status(), "NOTE")
+        assert text == (
+            "R\n\n## Review state\n\nPR: no PR exists yet for this branch.\n\nNOTE"
+        )
+
+
+# --- No-op note ------------------------------------------------------------
+
+
+def test_noop_note_lists_tasks_and_outcomes() -> None:
+    """The note says the tasks were not applied and asks for a decision on each."""
+    note = reviewer.noop_note(["Add a PR section"], ["not applied: no PR exists"])
+
+    assert "NOT applied" in note
+    assert "- Add a PR section" in note
+    assert "not applied: no PR exists" in note
+    assert "re-issue" in note
+    assert "escalate" in note
+    assert "drop" in note
+
+
+def test_noop_note_without_outcomes() -> None:
+    """Missing outcome lines are reported as such."""
+    assert "(none reported)" in reviewer.noop_note(["Add a PR section"], [])
+
 
 # --- Task outcomes ---------------------------------------------------------
 

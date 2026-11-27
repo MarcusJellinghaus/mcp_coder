@@ -12,6 +12,7 @@ from typing import Any
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 from tests.workflows.review.conftest import (
     _DISMISS,
+    _REPORT_MEDIUM,
     _TASKS,
     _resp,
     _reviewer,
@@ -159,3 +160,74 @@ def test_push_failed_round_ignores_the_task_outcomes(
     log = _log(tmp_path)
     assert "**Changes**:\n\npush-failed\n\n**Escalate reason**" in log
     assert "not applied" not in log
+
+
+def test_noop_round_is_reported_to_the_next_supervisor(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Round 2's supervisor input names round 1's unapplied tasks and outcomes."""
+    env.round_applied.side_effect = [False, True]
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(_APPLY_REPLY),
+        _reviewer(),
+        _resp(_DISMISS),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    supervisor_prompt = env.prompt_llm.call_args_list[4].args[0]
+    review_state = supervisor_prompt.split("## Review state", 1)[1]
+    assert "Fix the bug at foo.py:1" in review_state
+    assert "NOT applied" in review_state
+    assert "not applied: no PR exists" in review_state
+
+
+def test_applied_round_sends_no_noop_note(env: SimpleNamespace, tmp_path: Path) -> None:
+    """After a round that changed files, the next supervisor gets no no-op note."""
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(_APPLY_REPLY),
+        _reviewer(),
+        _resp(_DISMISS),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    assert "NOT applied" not in env.prompt_llm.call_args_list[4].args[0]
+
+
+def test_pending_noop_note_exempts_round_from_severity_floor(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A round after a no-op round is never severity-downgraded.
+
+    Rounds 1-2 change nothing, so round 3 (the strict round) with an
+    all-``medium`` report still runs its apply-tasks resume.
+    """
+    env.round_applied.side_effect = [False, False, True]
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1: no-op
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2: no-op
+        _reviewer(_REPORT_MEDIUM),
+        _resp(_TASKS),  # round 3: medium + no-op note -> exempt from the floor
+        _reviewer(session_id="rev-1"),  # round 3 apply-tasks
+        _reviewer(),
+        _resp(_DISMISS),  # round 4 -> success
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    assert env.prompt_llm.call_count == 11
+    apply_call = env.prompt_llm.call_args_list[8]
+    assert apply_call.kwargs["session_id"] == "rev-1"
+    assert "Fix the bug at foo.py:1" in apply_call.args[0]

@@ -102,28 +102,64 @@ def _pr_state_line(status: BranchStatusReport) -> str:
     return "PR: no PR exists yet for this branch."
 
 
-def supervisor_input(report: str, status: BranchStatusReport | None) -> str:
+def supervisor_input(
+    report: str, status: BranchStatusReport | None, noop_note: str | None = None
+) -> str:
     """Build the supervisor's input: the report, PR feedback and review state.
 
     ``status`` is ``None`` in the plan lane: no PR feedback, no PR-state line.
+    The no-op note reaches the supervisor in both lanes.
 
     Args:
         report: The reviewer's final report.
         status: The round's branch status report, or ``None`` (plan lane).
+        noop_note: The note that last round's tasks changed nothing (see
+            :func:`noop_note`), or ``None``.
 
     Returns:
         The report, then the ``## PR review feedback`` section when there is
-        feedback text, then the ``## Review state`` section when ``status`` is
-        given.
+        feedback text, then the ``## Review state`` section (PR-state line,
+        no-op note) when either of its parts exists.
     """
     parts = [report]
     if status is not None and status.pr_feedback_text:
         parts.append(
             "## PR review feedback\n\n" + _quote_pr_feedback(status.pr_feedback_text)
         )
-    if status is not None:
-        parts.append("## Review state\n\n" + _pr_state_line(status))
+    state = [_pr_state_line(status)] if status is not None else []
+    if noop_note:
+        state.append(noop_note)
+    if state:
+        parts.append("## Review state\n\n" + "\n\n".join(state))
     return "\n\n".join(parts)
+
+
+def noop_note(tasks: list[str], outcomes: list[str]) -> str:
+    """Tell the supervisor that last round's tasks changed nothing.
+
+    Lists the tasks and the reviewer's outcome lines, states that the tasks
+    were NOT applied (so they are not "already fixed"), and asks for each to be
+    re-issued as a file change, escalated, or dropped on purpose.
+
+    Args:
+        tasks: The tasks of the round that changed no file.
+        outcomes: The reviewer's per-task outcome lines for that round.
+
+    Returns:
+        The note text for the ``## Review state`` section.
+    """
+    lines = [
+        "Last round's tasks were NOT applied: the round changed no file on the branch.",
+        "They are not already fixed. Tasks:",
+        *[f"- {task}" for task in tasks],
+        "",
+        "Reviewer outcome:",
+        *(outcomes or ["(none reported)"]),
+        "",
+        "For each task: re-issue it as a change to files on the branch, escalate "
+        "it if it needs a human, or drop it on purpose.",
+    ]
+    return "\n".join(lines)
 
 
 def report_text(response: LLMResponseDict) -> str:

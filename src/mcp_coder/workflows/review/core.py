@@ -111,11 +111,13 @@ def run_review_workflow(
     # Carries a red mid-loop CI result into the next reviewer prompt; when it is
     # still set at the rounds cap the terminal reason is "ci", not "rounds".
     pending_ci_note: str | None = None
+    # Tells the next supervisor that the last `tasks` round changed nothing.
+    pending_noop_note: str | None = None
     # Most recently parsed verdict; carried into the failure comment when set.
     last_verdict: Verdict | None = None
 
     def body() -> int:
-        nonlocal supervisor_sid, pending_ci_note, last_verdict
+        nonlocal supervisor_sid, pending_ci_note, pending_noop_note, last_verdict
 
         # Formatter pre-flight (both lanes): an unresolvable formatter would
         # only surface after an LLM round, at the formatting call below.
@@ -255,7 +257,9 @@ def run_review_workflow(
             # Supervisor: persistent session, verdict parsed with repair retries.
             # Impl lane: PR feedback and the PR-state line ride along with the
             # report so the supervisor triages them with the reviewer's findings.
-            supervisor_report = reviewer.supervisor_input(report, status)
+            supervisor_report = reviewer.supervisor_input(
+                report, status, pending_noop_note
+            )
             logger.info("Round %d: supervisor triage starting", round_number)
             try:
                 verdict, supervisor_sid = reviewer._get_verdict(
@@ -299,9 +303,13 @@ def run_review_workflow(
             # `tasks` verdict with no critical/high finding is rewritten to
             # `dismiss` so the existing dismiss branch converges the loop
             # (deterministic guarantee for when the supervisor ignores the
-            # advisory prompt rule).
+            # advisory prompt rule). A pending CI or no-op note exempts the round.
             verdict = _apply_severity_floor(
-                verdict, report, round_number, config, pending_ci_note
+                verdict,
+                report,
+                round_number,
+                config,
+                pending_ci_note or pending_noop_note,
             )
 
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
@@ -626,9 +634,13 @@ def run_review_workflow(
                 pending_ci_note = None
 
             # Backstop (layer C): a `tasks` round that changed nothing besides
-            # the review logs is a silent no-op — log it, but let the round
-            # count toward the cap and keep going (the next fresh reviewer
-            # re-surfaces the finding).
+            # the review logs is a no-op — log it, let the round count toward
+            # the cap and keep going. The no-op note carries the unapplied
+            # tasks to the next supervisor, which must re-issue, escalate or
+            # drop each one.
+            pending_noop_note = (
+                None if applied else reviewer.noop_note(verdict.tasks, outcomes)
+            )
             # Left uncommitted on purpose: the top of the next iteration lands
             # it, and every terminal path flushes its own write.
             pending_log = write_round_log(
