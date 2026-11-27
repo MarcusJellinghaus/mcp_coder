@@ -7,11 +7,14 @@ from importlib.resources import files
 from pathlib import Path
 
 from ...utils.log_utils import OUTPUT
-from ...utils.text_io import write_lf_text
 from ...utils.toolkit_runner import PYTHON_TOOLKIT, load_toolkit_config
 from ...utils.user_config import create_default_config, get_config_file_path
 from ...workflows.vscodeclaude.workspace import update_gitignore
-from .init_file_access import ensure_file_access_rules, ensure_scratch_gitignored
+from .init_file_access import (
+    append_gitignore_block,
+    ensure_file_access_rules,
+    ensure_scratch_gitignored,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -231,14 +234,8 @@ def _write_session_log_entries(project_dir: Path) -> tuple[bool, bool]:
         if not missing:
             logger.log(OUTPUT, "Gitignore: %s present", ", ".join(SESSION_LOG_LINES))
             return True, False
-        addition = SESSION_LOGS_GITIGNORE_HEADER + "".join(
-            f"{line}\n" for line in missing
-        )
-        if existing:
-            addition = "\n" + addition  # blank line before the new block
-            if not existing.endswith("\n"):
-                addition = "\n" + addition
-        write_lf_text(gitignore, addition, append=True)
+        block = SESSION_LOGS_GITIGNORE_HEADER + "".join(f"{line}\n" for line in missing)
+        append_gitignore_block(gitignore, existing, block)
     except (OSError, ValueError) as e:  # UnicodeDecodeError is a ValueError
         logger.warning(
             "Failed to add session log entries to .gitignore in %s: %s",

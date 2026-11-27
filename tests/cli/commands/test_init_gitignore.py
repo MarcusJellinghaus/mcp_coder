@@ -370,7 +370,8 @@ class TestExecuteInitGitignore:
             raise PermissionError("read-only")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.init.write_lf_text", _raise_permission_error
+            "mcp_coder.cli.commands.init.append_gitignore_block",
+            _raise_permission_error,
         )
 
         with caplog.at_level(logging.WARNING, logger="mcp_coder.cli.commands.init"):
