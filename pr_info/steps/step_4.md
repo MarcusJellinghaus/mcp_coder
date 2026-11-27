@@ -24,8 +24,10 @@ def parse_task_outcomes(text: str) -> list[str]:
 
     Reads lines from the start (blank lines skipped) while each matches
     ``applied`` or ``not applied: <reason>``, optionally after a ``-``, ``*`` or
-    ``1.`` marker; stops at the first other line. Returned lines are stripped
-    and without the marker.
+    ``1.`` marker; stops at the first other line. Backticks and ``*`` are
+    removed from each line before matching, so markdown-wrapped tokens
+    (`` `applied` ``, ``**not applied:** <reason>``) still parse. Returned lines
+    are stripped, without the marker and without that formatting.
     """
 ```
 
@@ -55,12 +57,15 @@ def parse_task_outcomes(text: str) -> list[str]:
 ## ALGORITHM
 
 ```
-_OUTCOME_RE = re.compile(r"^(?:[-*]|\d+[.)])?\s*((?:not applied:.*\S)|applied)$", re.IGNORECASE)
+# `*` list markers are removed together with bold/italic markers below,
+# so the regex only needs `-` and numbered markers.
+_OUTCOME_RE = re.compile(r"^(?:-|\d+[.)])?\s*((?:not applied:\s*\S.*)|applied)$", re.IGNORECASE)
 outcomes = []
 for line in text.splitlines():
     if not line.strip(): (continue if not outcomes else break)
-    m = _OUTCOME_RE.match(line.strip()); if not m: break
-    outcomes.append(m.group(1))
+    plain = re.sub(r"\s+", " ", line.replace("`", "").replace("*", "")).strip()
+    m = _OUTCOME_RE.match(plain); if not m: break
+    outcomes.append(m.group(1).strip())
 return outcomes
 ```
 
@@ -69,13 +74,16 @@ return outcomes
 - `"applied\nnot applied: no PR exists\n\nfoo.py:1 — high — x"` →
   `["applied", "not applied: no PR exists"]`
 - `"- applied\n- not applied: n/a"` → `["applied", "not applied: n/a"]`
+- ``"`applied`\n**not applied:** no PR exists\n* `not applied: n/a`"`` →
+  `["applied", "not applied: no PR exists", "not applied: n/a"]`
 - `"NO FINDINGS"` → `[]`
 - **Changes** body: `"no-op\nnot applied: no PR exists"` (plain lines, not a list).
 
 ## Tests (write first)
 
 `test_reviewer.py`:
-- the DATA examples for `parse_task_outcomes`.
+- the DATA examples for `parse_task_outcomes` (parametrized), including the backtick- and
+  bold-wrapped outcome lines.
 - task-resume prompt (`_call(session_id="rev-1", tasks=[...])`) contains `delete_this_file`,
   `applied`, `not applied: <reason>` and asks for them at the start of the final message,
   after the edits.
