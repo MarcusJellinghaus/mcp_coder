@@ -55,6 +55,9 @@ If any of the four bullets/steps named above no longer exists, write one line to
 
 - `mcp__mcp-workspace__search_files(pattern="(?i)delete (it|`\\.scratch/?`) before", glob=".claude/**")`
   → no matches.
+- `mcp__mcp-workspace__search_files(pattern="(?i)delete `\\.scratch/?`$", glob=".claude/agents/*.md")`
+  → no matches (catches the old `issue-analyst` wording, which wraps "delete `.scratch/`" and
+  "before you report" across two lines).
 - `mcp__mcp-workspace__search_files(pattern="\\.scratch", glob=".claude/agents/*.md")` and the
   same for `.claude/skills/**` → every cleanup instruction deletes only own files.
 - Tests: `tests/cli/commands/test_init_deployed_neutral.py`,
