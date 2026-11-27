@@ -35,6 +35,11 @@ ships. Until then the installed mcp-tools-py ignores the key.
 - **Order:** the findings are fixed (steps 1–3) before the key is set (step 5). If #308
   ships mid-way, the workflow's gates then include `tools/` only once it is clean.
 - **No `assert` in `tools/`:** ruff S101 applies there.
+- **mypy is platform-dependent:** CI runs it on Linux, local checks on Windows. Write
+  platform guards positively (`if sys.platform == "win32":` around the body), never as an
+  early return. A block that always returns takes the fallback in `else:`; otherwise
+  the shared return after the block. Anything else, and one platform reports `[unreachable]`.
+  `tools/safe_delete_folder.py` needed this (follow-up to step 2).
 - **Pytest:** always `extra_args=["-n", "auto", ...]`. Use the fast unit-test marker
   expression from `.claude/CLAUDE.md`.
 
@@ -61,7 +66,7 @@ ships. Until then the installed mcp-tools-py ignores the key.
 | `tools/mlflow/get_recent_mlflow_runs.py` | 2 |
 | `tools/jenkins_download_log.py` | 3 |
 | `tools/jenkins_download_logs.py` | 3 |
-| `tools/safe_delete_folder.py` | 3 |
+| `tools/safe_delete_folder.py` | 2 (platform guards), 3 |
 | `tools/test_profiler_plugin/__init__.py` | 3 |
 | `.github/workflows/ci.yml` | 4 |
 | `.github/workflows/upstream-compat-check.yml` | 4 |

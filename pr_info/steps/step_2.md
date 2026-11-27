@@ -24,6 +24,25 @@ existing `tests/tools/` suite must still pass.
 
 Leave `tools/mlflow/get_mlflow_config.py` (its own `import tomli`) untouched.
 
+### Cross-platform follow-up: `tools/safe_delete_folder.py`
+
+The table above was found by running mypy on Windows only. CI runs mypy on Linux, where
+`sys.platform` is a constant `"linux"`: an early return `if sys.platform != "win32": return ...`
+makes the next statement `[unreachable]` under `--strict`. That hit three functions:
+`_kill_detected_lockers`, `_delete_reserved_name`, `_delete_reserved_names_recursive`.
+
+Fix (positive guard, as in `src/mcp_coder/utils/tui_preparation.py`): wrap each Windows-only
+body in `if sys.platform == "win32":`. A return *after* the block is only reachable on Windows
+if the block can fall through; otherwise Windows reports it as `[unreachable]`. So:
+
+- `_kill_detected_lockers`, `_delete_reserved_names_recursive`: initialise the result list
+  (`results: list[str] = []`, `deleted`) before the block and return it after the block.
+- `_delete_reserved_name`: every path in the block returns, so the non-Windows return goes
+  in an `else:` branch. mypy skips the branch that doesn't match on each platform.
+
+Not `# type: ignore[unreachable]`: `warn_unused_ignores` would then fail the Windows run.
+Verified with `mypy --strict --platform {linux,win32,darwin}` on the file.
+
 ## ALGORITHM
 
 None (declarations only).
