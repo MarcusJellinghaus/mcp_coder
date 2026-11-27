@@ -41,7 +41,9 @@
         "--reference-project",
         "name=AutoRunner,path=${USERPROFILE}\\Documents\\GitHub\\AutoRunner,url=https://github.com/MarcusJellinghaus/AutoRunner",
         "--reference-project",
-        "name=agent-workbench,path=${USERPROFILE}\\Documents\\GitHub\\agent-workbench,url=https://github.com/MarcusJellinghaus/agent-workbench"
+        "name=agent-workbench,path=${USERPROFILE}\\Documents\\GitHub\\agent-workbench,url=https://github.com/MarcusJellinghaus/agent-workbench",
+        "--reference-project",
+        "name=claude-mode-gate,path=${USERPROFILE}\\Documents\\GitHub\\claude-mode-gate,url=https://github.com/MarcusJellinghaus/claude-mode-gate"
       ],
       "env": {
         "PYTHONPATH": "${MCP_CODER_VENV_DIR}\\Lib\\"
